@@ -1,0 +1,43 @@
+{
+    "lexicon": 1,
+    "id": "fun.federatedrealms.character.sheet",
+    "defs":{
+        "type": "record",
+        "key": "literal:self",
+        "record": {
+            "type": "object",
+            "properties": {
+                "name":{
+                    "type": "string",
+                    "maxGraphemes": 64,
+                    "maxLength": 640
+                },
+                "avatar": {
+                    "type": "blob",
+                    "accept": ["image/webp"],
+                    "maxSize": 1000000
+                },
+                "currentHealth":{
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "maximumHealth":{
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "attack":{
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "defense":{
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "evasiveness":{
+                    "type": "integer",
+                    "minimum": 1
+                }
+            }
+        }
+    }
+}
