@@ -1,0 +1,8 @@
+title: Dark Forest
+description: >
+  An ancient woodland where the canopy blocks most sunlight. Strange sounds
+  echo between the twisted trees, and the paths are treacherous. Only the
+  brave or foolish venture deep.
+levelRange:
+  min: 1
+  max: 8

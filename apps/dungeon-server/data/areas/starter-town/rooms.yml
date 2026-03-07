@@ -1,0 +1,169 @@
+- id: town-square
+  title: Town Square
+  description: >
+    You stand in the heart of a small frontier town. A weathered stone fountain
+    gurgles quietly at the center of the square, its basin filled with copper coins
+    tossed by hopeful travelers. Cobblestone paths branch off in several directions.
+    To the north, a sturdy wooden sign reads "The Rusty Tankard." A blacksmith's
+    hammer rings from the east. The town gate looms to the south, and a narrow
+    alley winds westward.
+  coordinates: { x: 0, y: 0, z: 0 }
+  flags: [safe]
+  exits:
+    - direction: north
+      target: tavern
+      description: The door to The Rusty Tankard tavern stands open, warm light spilling out.
+    - direction: east
+      target: blacksmith
+      description: The rhythmic clanging of a blacksmith's hammer echoes from a stone workshop.
+    - direction: south
+      target: town-gate
+      description: The town's southern gate leads to the road beyond.
+    - direction: west
+      target: alley
+      description: A narrow alley winds between cramped wooden buildings.
+
+- id: tavern
+  title: The Rusty Tankard
+  description: >
+    A cozy tavern filled with the scent of roasting meat and spilled ale. Rough
+    wooden tables are scattered across a sawdust-covered floor. A fireplace
+    crackles against the far wall, casting dancing shadows. The barkeep, a stout
+    woman with arms like tree trunks, polishes mugs behind a long oak counter.
+    A staircase in the corner leads up to the rooms above.
+  coordinates: { x: 0, y: 1, z: 0 }
+  flags: [safe]
+  exits:
+    - direction: south
+      target: town-square
+      description: The door leads back to the town square.
+    - direction: up
+      target: tavern-rooms
+      description: A creaky wooden staircase leads up to the lodging rooms.
+
+- id: tavern-rooms
+  title: Tavern - Upper Hallway
+  description: >
+    A dim hallway with three doors on each side. The floorboards creak under
+    every step. A small window at the end lets in a sliver of light. The sounds
+    of the tavern below are muffled but ever-present.
+  coordinates: { x: 0, y: 1, z: 1 }
+  flags: [safe]
+  exits:
+    - direction: down
+      target: tavern
+      description: The stairs lead back down to the tavern common room.
+
+- id: blacksmith
+  title: Ironheart's Forge
+  description: >
+    Heat blasts from the open-air forge where a massive anvil sits atop a
+    scorched stone platform. Weapons and armor of varying quality hang from
+    hooks along the walls. A grizzled dwarf with soot-streaked arms works the
+    bellows, sending showers of sparks into the air. Buckets of water hiss
+    with cooling metal.
+  coordinates: { x: 1, y: 0, z: 0 }
+  flags: [safe]
+  exits:
+    - direction: west
+      target: town-square
+      description: The path leads back to the town square.
+
+- id: alley
+  title: Narrow Alley
+  description: >
+    A cramped passage between leaning timber buildings. Laundry lines criss-cross
+    overhead, and the ground is slick with something you'd rather not identify.
+    A faded sign halfway down reads "Whispers & Wonders - Curiosities Bought
+    and Sold." The alley continues to a small courtyard to the west.
+  coordinates: { x: -1, y: 0, z: 0 }
+  exits:
+    - direction: east
+      target: town-square
+      description: The alley opens back onto the town square.
+    - direction: west
+      target: courtyard
+      description: The alley widens into a quiet courtyard.
+    - direction: north
+      target: curiosity-shop
+      description: A crooked door leads into a dimly lit shop.
+
+- id: curiosity-shop
+  title: Whispers & Wonders
+  description: >
+    Every surface of this cramped shop is covered in oddities. Jars of
+    luminescent liquids line dusty shelves. A collection of mismatched keys
+    hangs from the ceiling on strings. In the back, an elderly gnome peers
+    at you over half-moon spectacles, a knowing smile on her wrinkled face.
+  coordinates: { x: -1, y: 1, z: 0 }
+  flags: [safe]
+  exits:
+    - direction: south
+      target: alley
+      description: The door leads back to the narrow alley.
+
+- id: courtyard
+  title: Hidden Courtyard
+  description: >
+    A surprisingly serene space tucked away behind the town's buildings. A
+    gnarled oak tree grows from a crack in the flagstones, its branches
+    providing dappled shade. A moss-covered stone bench sits beneath it.
+    Someone has carved crude runes into the tree's bark. A well in the
+    corner looks deep and dark.
+  coordinates: { x: -2, y: 0, z: 0 }
+  flags: [safe]
+  exits:
+    - direction: east
+      target: alley
+      description: The alley leads back toward the town square.
+
+- id: town-gate
+  title: Southern Gate
+  description: >
+    Heavy wooden gates reinforced with iron bands stand open during the day.
+    Two bored-looking guards lean against the stone pillars flanking the
+    entrance. Beyond the gate, a dirt road stretches south through rolling
+    grasslands toward a dark tree line on the horizon. A notice board beside
+    the gate is covered in parchment notices.
+  coordinates: { x: 0, y: -1, z: 0 }
+  flags: [safe]
+  exits:
+    - direction: north
+      target: town-square
+      description: The gate opens back into town.
+    - direction: south
+      target: crossroads
+      description: The road leads south into the open countryside.
+
+- id: crossroads
+  title: The Crossroads
+  description: >
+    The dirt road from town meets an older, more worn path running east to west.
+    A crooked signpost stands at the intersection, its arms pointing in three
+    directions. "Town" reads the northern arm. "Dark Forest" warns the eastern one,
+    the letters scratched deep and painted red. The western arm simply reads
+    "Ruins" in faded script. Tall grass sways in the breeze on all sides.
+  coordinates: { x: 0, y: -2, z: 0 }
+  exits:
+    - direction: north
+      target: town-gate
+      description: The road leads back to the town gate.
+    - direction: east
+      target: dark-forest:forest-edge
+      description: A path disappears into the dark tree line to the east.
+    - direction: west
+      target: old-road
+      description: An overgrown road heads west toward some distant ruins.
+
+- id: old-road
+  title: The Old Road
+  description: >
+    This ancient road was once paved, but now only fragments of stone peek
+    through the encroaching weeds. Crumbling stone walls line portions of the
+    path. The wind carries a faint, eerie whistling from the west. You feel
+    watched, though nothing moves in the tall grass.
+  coordinates: { x: -1, y: -2, z: 0 }
+  exits:
+    - direction: east
+      target: crossroads
+      description: The road leads back to the crossroads.

@@ -1,0 +1,8 @@
+title: Starter Town
+description: >
+  A small, peaceful settlement at the edge of the known realms.
+  New adventurers begin their journey here, equipped with little more
+  than courage and curiosity.
+levelRange:
+  min: 1
+  max: 5
