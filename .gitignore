@@ -4,3 +4,6 @@
 */build
 */coverage
 *.log
+*.tsbuildinfo
+.env
+bun.lock
