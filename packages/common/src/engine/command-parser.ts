@@ -1,0 +1,82 @@
+import { resolveDirection } from "../utils/direction.js";
+
+export interface ParsedCommand {
+  verb: string;
+  args: string[];
+  target?: string;
+  raw: string;
+}
+
+const ALIASES: Record<string, string> = {
+  "l": "look",
+  "i": "inventory",
+  "inv": "inventory",
+  "eq": "equipment",
+  "ex": "examine",
+  "get": "take",
+  "pickup": "take",
+  "?": "help",
+  "quit": "disconnect",
+  "exit": "disconnect",
+};
+
+// Direction shortcuts that map to "go <direction>"
+const DIRECTION_VERBS = new Set([
+  "n", "s", "e", "w", "u", "d",
+  "ne", "nw", "se", "sw",
+  "north", "south", "east", "west",
+  "up", "down",
+  "northeast", "northwest", "southeast", "southwest",
+]);
+
+// We parse the command into a standard structure, but we don't enforce strict verb/arg patterns here. 
+// The game logic will interpret the verb and args as needed, allowing servers to define their own 
+// command sets and parsing rules on top of this basic structure.
+export function parseCommand(input: string): ParsedCommand {
+  const raw = input.trim();
+  if (!raw) {
+    return { verb: "", args: [], raw };
+  }
+
+  // Split input into verb and args by whitespace
+  const parts = raw.split(/\s+/);
+  let verb = parts[0].toLowerCase();
+  let args = parts.slice(1);
+
+  // Handle direction shortcuts: "n" -> "go north"
+  if (DIRECTION_VERBS.has(verb)) {
+    const dir = resolveDirection(verb);
+    if (dir) {
+      return { verb: "go", args: [dir], target: dir, raw };
+    }
+  }
+
+  // Handle "go <direction>"
+  if (verb === "go" && args.length > 0) {
+    const dir = resolveDirection(args[0]);
+    if (dir) {
+      return { verb: "go", args: [dir], target: dir, raw };
+    }
+  }
+
+  // Apply aliases
+  if (verb in ALIASES) {
+    verb = ALIASES[verb];
+  }
+
+  // Extract target (first arg for most commands)
+  const target = args.length > 0 ? args.join(" ") : undefined;
+
+  return { verb, args, target, raw };
+}
+
+export function getCommandHelp(): string[] {
+  return [
+    "Movement: north/n, south/s, east/e, west/w, up/u, down/d, ne, nw, se, sw",
+    "Looking:  look/l, examine/ex <target>",
+    "Items:    take/get <item>, drop <item>, inventory/i",
+    "Social:   say <message>, shout <message>, whisper <player> <message>",
+    "Info:     who, stats, help/?",
+    "System:   disconnect/quit",
+  ];
+}
