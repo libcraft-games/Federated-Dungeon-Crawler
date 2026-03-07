@@ -5,40 +5,43 @@
     "main": {
       "type": "record",
       "key": "literal:self",
-      "description": "A player's character profile in Federated Realms",
+      "description": "A player's character profile in Federated Realms. Attributes are an open map — each server defines what attributes it uses via system.attribute records.",
       "record": {
         "type": "object",
-        "required": ["name", "class", "race", "level", "stats", "createdAt"],
+        "required": ["name", "class", "race", "level", "attributes", "createdAt"],
         "properties": {
           "name": { "type": "string", "maxLength": 64 },
           "class": {
             "type": "string",
-            "knownValues": ["warrior", "mage", "rogue", "cleric", "ranger"]
+            "description": "Class ID referencing the originating server's system.class definition"
           },
           "race": {
             "type": "string",
-            "knownValues": ["human", "elf", "dwarf", "halfling", "orc"]
+            "description": "Race ID referencing the originating server's system.race definition"
           },
-          "level": { "type": "integer", "minimum": 1, "maximum": 100 },
+          "level": { "type": "integer", "minimum": 1, "maximum": 9999 },
           "experience": { "type": "integer", "minimum": 0 },
-          "stats": { "type": "ref", "ref": "#statBlock" },
+          "attributes": {
+            "type": "unknown",
+            "description": "Open map of attribute ID -> numeric value, e.g. { 'str': 14, 'dex': 12, 'sanity': 80 }. Attribute IDs reference system.attribute definitions."
+          },
+          "derived": {
+            "type": "unknown",
+            "description": "Cached derived stats computed from formulas, e.g. { 'maxHp': 50, 'maxMp': 30 }. Recomputed by each server using its own formulas."
+          },
           "description": { "type": "string", "maxLength": 2048 },
-          "homeServer": { "type": "string", "format": "did" },
+          "homeServer": {
+            "type": "string",
+            "format": "did",
+            "description": "DID of the server where this character was created. Used to resolve class/race/attribute definitions."
+          },
+          "extensions": {
+            "type": "unknown",
+            "description": "Server-specific extension data, keyed by server DID. Preserved across transfers even if the destination server doesn't understand it."
+          },
           "createdAt": { "type": "string", "format": "datetime" },
           "updatedAt": { "type": "string", "format": "datetime" }
         }
-      }
-    },
-    "statBlock": {
-      "type": "object",
-      "required": ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"],
-      "properties": {
-        "strength": { "type": "integer", "minimum": 1, "maximum": 999 },
-        "dexterity": { "type": "integer", "minimum": 1, "maximum": 999 },
-        "constitution": { "type": "integer", "minimum": 1, "maximum": 999 },
-        "intelligence": { "type": "integer", "minimum": 1, "maximum": 999 },
-        "wisdom": { "type": "integer", "minimum": 1, "maximum": 999 },
-        "charisma": { "type": "integer", "minimum": 1, "maximum": 999 }
       }
     }
   }
