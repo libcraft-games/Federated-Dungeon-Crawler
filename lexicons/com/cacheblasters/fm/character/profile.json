@@ -1,0 +1,45 @@
+{
+  "lexicon": 1,
+  "id": "com.cacheblasters.fm.character.profile",
+  "defs": {
+    "main": {
+      "type": "record",
+      "key": "literal:self",
+      "description": "A player's character profile in Federated Realms",
+      "record": {
+        "type": "object",
+        "required": ["name", "class", "race", "level", "stats", "createdAt"],
+        "properties": {
+          "name": { "type": "string", "maxLength": 64 },
+          "class": {
+            "type": "string",
+            "knownValues": ["warrior", "mage", "rogue", "cleric", "ranger"]
+          },
+          "race": {
+            "type": "string",
+            "knownValues": ["human", "elf", "dwarf", "halfling", "orc"]
+          },
+          "level": { "type": "integer", "minimum": 1, "maximum": 100 },
+          "experience": { "type": "integer", "minimum": 0 },
+          "stats": { "type": "ref", "ref": "#statBlock" },
+          "description": { "type": "string", "maxLength": 2048 },
+          "homeServer": { "type": "string", "format": "did" },
+          "createdAt": { "type": "string", "format": "datetime" },
+          "updatedAt": { "type": "string", "format": "datetime" }
+        }
+      }
+    },
+    "statBlock": {
+      "type": "object",
+      "required": ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"],
+      "properties": {
+        "strength": { "type": "integer", "minimum": 1, "maximum": 999 },
+        "dexterity": { "type": "integer", "minimum": 1, "maximum": 999 },
+        "constitution": { "type": "integer", "minimum": 1, "maximum": 999 },
+        "intelligence": { "type": "integer", "minimum": 1, "maximum": 999 },
+        "wisdom": { "type": "integer", "minimum": 1, "maximum": 999 },
+        "charisma": { "type": "integer", "minimum": 1, "maximum": 999 }
+      }
+    }
+  }
+}
