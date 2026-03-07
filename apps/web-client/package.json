@@ -1,0 +1,19 @@
+{
+  "name": "web-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@realms/common": "workspace:*",
+    "@realms/atproto": "workspace:*",
+    "@realms/protocol": "workspace:*"
+  },
+  "devDependencies": {
+    "bun-types": "latest"
+  }
+}

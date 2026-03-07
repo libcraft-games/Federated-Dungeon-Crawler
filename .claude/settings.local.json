@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:atproto.com)",
+      "WebFetch(domain:ranviermud.com)",
+      "WebFetch(domain:writing-games.org)",
+      "WebFetch(domain:blog.oestrich.org)",
+      "WebFetch(domain:docs.bsky.app)"
+    ]
+  }
+}

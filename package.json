@@ -1,0 +1,23 @@
+{
+  "name": "federated-realms",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "bun run --filter '*' build",
+    "dev:server": "bun run --filter dungeon-server dev",
+    "dev:cli": "bun run --filter cli-client dev",
+    "dev:web": "bun run --filter web-client dev",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf packages/*/dist apps/*/dist"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  },
+  "dependencies": {
+    "oxfmt": "^0.36.0",
+    "oxlint": "^1.51.0"
+  }
+}
