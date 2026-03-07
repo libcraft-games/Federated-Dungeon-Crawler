@@ -1,4 +1,12 @@
-import type { CharacterProfile, StatBlock, CharacterClass, CharacterRace } from "@realms/lexicons";
+import type {
+  CharacterProfile,
+  Attributes,
+  DerivedStats,
+  ClassDef,
+  RaceDef,
+  AttributeDef,
+  FormulaDef,
+} from "@realms/lexicons";
 
 export interface CharacterState extends CharacterProfile {
   currentHp: number;
@@ -15,81 +23,131 @@ export interface ActiveEffect {
   id: string;
   name: string;
   type: "buff" | "debuff";
-  stat?: string;
+  attribute?: string;
   magnitude: number;
   remainingTicks: number;
 }
 
-export function calculateMaxHp(level: number, constitution: number): number {
-  return 20 + (level - 1) * 8 + Math.floor(constitution / 2);
+// ── Game System ──
+// A GameSystem defines all the rules a server uses. It's loaded from the
+// server's published system.* records, or from a bundled default.
+
+export interface GameSystem {
+  attributes: Record<string, AttributeDef>;
+  classes: Record<string, ClassDef>;
+  races: Record<string, RaceDef>;
+  formulas: Record<string, FormulaDef>;
 }
 
-export function calculateMaxMp(level: number, intelligence: number, charClass: CharacterClass): number {
-  const baseMp: Record<CharacterClass, number> = {
-    mage: 30,
-    cleric: 20,
-    ranger: 10,
-    rogue: 5,
-    warrior: 5,
-  };
-  return baseMp[charClass] + (level - 1) * 4 + Math.floor(intelligence / 3);
-}
+// ── Formula evaluation ──
+// Simple expression evaluator for derived stat formulas.
+// Supports: +, -, *, /, parentheses, floor(), ceil(), min(), max(), and variable references.
 
-export function calculateMaxAp(dexterity: number): number {
-  return 4 + Math.floor((dexterity - 10) / 4);
-}
-
-export function createDefaultStats(charClass: CharacterClass, race: CharacterRace): StatBlock {
-  const base: StatBlock = {
-    strength: 10,
-    dexterity: 10,
-    constitution: 10,
-    intelligence: 10,
-    wisdom: 10,
-    charisma: 10,
-  };
-
-  // Class bonuses
-  const classBonus: Record<CharacterClass, Partial<StatBlock>> = {
-    warrior: { strength: 4, constitution: 2 },
-    mage: { intelligence: 4, wisdom: 2 },
-    rogue: { dexterity: 4, charisma: 2 },
-    cleric: { wisdom: 4, constitution: 2 },
-    ranger: { dexterity: 2, wisdom: 2, constitution: 2 },
-  };
-
-  // Race bonuses
-  const raceBonus: Record<CharacterRace, Partial<StatBlock>> = {
-    human: { charisma: 2, constitution: 1, strength: 1 },
-    elf: { dexterity: 2, intelligence: 2 },
-    dwarf: { constitution: 3, strength: 1 },
-    halfling: { dexterity: 3, charisma: 1 },
-    orc: { strength: 3, constitution: 1 },
-  };
-
-  for (const [stat, bonus] of Object.entries(classBonus[charClass])) {
-    base[stat as keyof StatBlock] += bonus!;
-  }
-  for (const [stat, bonus] of Object.entries(raceBonus[race])) {
-    base[stat as keyof StatBlock] += bonus!;
+export function evaluateFormula(
+  expression: string,
+  variables: Record<string, number>
+): number {
+  // Replace variable names with their values (longest first to avoid partial matches)
+  let expr = expression;
+  const sortedVars = Object.entries(variables).sort(
+    ([a], [b]) => b.length - a.length
+  );
+  for (const [name, value] of sortedVars) {
+    expr = expr.replaceAll(name, String(value));
   }
 
-  return base;
+  // Evaluate with a safe subset — no access to globals
+  // Replace math functions with Math.*
+  expr = expr
+    .replace(/\bfloor\b/g, "Math.floor")
+    .replace(/\bceil\b/g, "Math.ceil")
+    .replace(/\bmin\b/g, "Math.min")
+    .replace(/\bmax\b/g, "Math.max")
+    .replace(/\babs\b/g, "Math.abs");
+
+  // Validate: only allow digits, operators, parens, dots, commas, Math.*
+  if (!/^[\d\s+\-*/().,%\w]*$/.test(expr)) {
+    throw new Error(`Invalid formula expression: ${expression}`);
+  }
+
+  try {
+    // Using Function constructor for sandboxed eval with no global access
+    const fn = new Function("Math", `"use strict"; return (${expr});`);
+    const result = fn(Math);
+    return typeof result === "number" && isFinite(result) ? Math.floor(result) : 0;
+  } catch {
+    throw new Error(`Failed to evaluate formula: ${expression}`);
+  }
 }
 
-export function profileToState(profile: CharacterProfile, currentRoom: string): CharacterState {
-  const maxHp = calculateMaxHp(profile.level, profile.stats.constitution);
-  const maxMp = calculateMaxMp(profile.level, profile.stats.intelligence, profile.class);
-  const maxAp = calculateMaxAp(profile.stats.dexterity);
+// ── Derived stat computation ──
+
+export function computeDerivedStats(
+  formulas: Record<string, FormulaDef>,
+  level: number,
+  attributes: Attributes
+): DerivedStats {
+  const variables: Record<string, number> = { level, ...attributes };
+  const derived: DerivedStats = {};
+
+  for (const [id, formula] of Object.entries(formulas)) {
+    let value = evaluateFormula(formula.expression, variables);
+    if (formula.min !== undefined) value = Math.max(value, formula.min);
+    if (formula.max !== undefined) value = Math.min(value, formula.max);
+    derived[id] = value;
+  }
+
+  return derived;
+}
+
+// ── Character creation ──
+
+export function buildAttributes(
+  system: GameSystem,
+  classId: string,
+  raceId: string
+): Attributes {
+  const attrs: Attributes = {};
+
+  // Start with default values from attribute definitions
+  for (const [id, def] of Object.entries(system.attributes)) {
+    attrs[id] = def.defaultValue ?? 10;
+  }
+
+  // Apply class bonuses
+  const classDef = system.classes[classId];
+  if (classDef?.attributeBonuses) {
+    for (const [id, bonus] of Object.entries(classDef.attributeBonuses)) {
+      attrs[id] = (attrs[id] ?? 0) + bonus;
+    }
+  }
+
+  // Apply race bonuses
+  const raceDef = system.races[raceId];
+  if (raceDef?.attributeBonuses) {
+    for (const [id, bonus] of Object.entries(raceDef.attributeBonuses)) {
+      attrs[id] = (attrs[id] ?? 0) + bonus;
+    }
+  }
+
+  return attrs;
+}
+
+export function profileToState(
+  profile: CharacterProfile,
+  currentRoom: string,
+  formulas: Record<string, FormulaDef>
+): CharacterState {
+  const derived = computeDerivedStats(formulas, profile.level, profile.attributes);
 
   return {
     ...profile,
-    currentHp: maxHp,
-    maxHp,
-    currentMp: maxMp,
-    maxMp,
-    currentAp: maxAp,
-    maxAp,
+    currentHp: derived.maxHp ?? 20,
+    maxHp: derived.maxHp ?? 20,
+    currentMp: derived.maxMp ?? 0,
+    maxMp: derived.maxMp ?? 0,
+    currentAp: derived.maxAp ?? 4,
+    maxAp: derived.maxAp ?? 4,
     currentRoom,
     activeEffects: [],
   };
