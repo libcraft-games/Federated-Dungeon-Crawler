@@ -1,5 +1,5 @@
 import type { RoomRecord, Direction, RoomExit } from "@realms/lexicons";
-import type { RoomState, EntityBrief, ItemBrief } from "@realms/common";
+import type { RoomState, EntityBrief, ItemBrief, ItemInstance } from "@realms/common";
 import { findExit, hasFlag } from "@realms/common";
 
 export class Room {
@@ -13,7 +13,7 @@ export class Room {
 
   private players = new Map<string, EntityBrief>();
   private npcs = new Map<string, EntityBrief>();
-  private items: ItemBrief[] = [];
+  private groundItems: ItemInstance[] = [];
 
   constructor(id: string, record: RoomRecord) {
     this.id = id;
@@ -43,6 +43,67 @@ export class Room {
     return [...this.players.keys()];
   }
 
+  addNpc(id: string, name: string): void {
+    this.npcs.set(id, { id, name, type: "npc" });
+  }
+
+  removeNpc(id: string): EntityBrief | undefined {
+    const npc = this.npcs.get(id);
+    this.npcs.delete(id);
+    return npc;
+  }
+
+  getNpcIds(): string[] {
+    return [...this.npcs.keys()];
+  }
+
+  addGroundItem(item: ItemInstance): void {
+    // Stack with existing item of same definition if stackable
+    const existing = this.groundItems.find((i) => i.definitionId === item.definitionId);
+    if (existing) {
+      existing.quantity += item.quantity;
+    } else {
+      this.groundItems.push(item);
+    }
+  }
+
+  removeGroundItem(identifier: string, quantity: number = 1): ItemInstance | undefined {
+    // Find by instanceId first, then by name (case-insensitive partial match)
+    let index = this.groundItems.findIndex((i) => i.instanceId === identifier);
+    if (index === -1) {
+      const lower = identifier.toLowerCase();
+      index = this.groundItems.findIndex((i) => i.name.toLowerCase().includes(lower));
+    }
+    if (index === -1) return undefined;
+
+    const item = this.groundItems[index];
+    if (quantity >= item.quantity) {
+      this.groundItems.splice(index, 1);
+      return item;
+    }
+
+    // Partial take — split the stack
+    item.quantity -= quantity;
+    return {
+      instanceId: item.instanceId,
+      definitionId: item.definitionId,
+      name: item.name,
+      quantity,
+      properties: item.properties,
+    };
+  }
+
+  findGroundItem(identifier: string): ItemInstance | undefined {
+    const lower = identifier.toLowerCase();
+    return this.groundItems.find(
+      (i) => i.instanceId === identifier || i.name.toLowerCase().includes(lower)
+    );
+  }
+
+  getGroundItems(): ItemInstance[] {
+    return this.groundItems;
+  }
+
   getExit(direction: Direction): RoomExit | undefined {
     return findExit(this.toState(), direction);
   }
@@ -62,7 +123,7 @@ export class Room {
       flags: this.flags,
       players: [...this.players.values()],
       npcs: [...this.npcs.values()],
-      items: [...this.items],
+      items: this.groundItems.map((i) => ({ id: i.instanceId, name: i.name, quantity: i.quantity })),
     };
   }
 }
