@@ -1,4 +1,4 @@
-import type { RoomState, EntityBrief, ItemBrief } from "@realms/common";
+import type { RoomState, EntityBrief, ItemBrief, ItemInstance } from "@realms/common";
 
 // Client -> Server messages
 export type ClientMessage =
@@ -18,7 +18,8 @@ export type ServerMessage =
   | { type: "error"; code: string; message: string }
   | { type: "ack"; id: string }
   | { type: "pong"; serverTime: number }
-  | { type: "welcome"; sessionId: string; serverName: string };
+  | { type: "welcome"; sessionId: string; serverName: string }
+  | { type: "inventory_update"; inventory: ItemInstance[] };
 
 export function encodeMessage(msg: ClientMessage | ServerMessage): string {
   return JSON.stringify(msg);
