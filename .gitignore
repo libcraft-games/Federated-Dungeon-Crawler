@@ -7,3 +7,4 @@
 .env
 bun.lock
 **/dist
+**/settings.local.json
