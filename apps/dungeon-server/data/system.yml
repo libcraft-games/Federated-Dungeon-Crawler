@@ -88,6 +88,56 @@ races:
     attributeBonuses: { str: 3, con: 1 }
     tags: [fierce]
 
+equipSlots:
+  mainHand:
+    name: Main Hand
+    category: weapon
+    aliases: [weapon, main hand, mainhand]
+  offHand:
+    name: Off Hand
+    category: weapon
+    aliases: [shield, off hand, offhand]
+  head:
+    name: Head
+    category: armor
+    aliases: [helmet, hat, helm]
+  body:
+    name: Body
+    category: armor
+    aliases: [armor, chest, torso]
+  feet:
+    name: Feet
+    category: armor
+    aliases: [boots, shoes]
+  ring:
+    name: Ring
+    category: accessory
+    aliases: [finger]
+
+itemTypes:
+  weapon:
+    name: Weapon
+    equippable: true
+    defaultSlot: mainHand
+  armor:
+    name: Armor
+    equippable: true
+    defaultSlot: body
+    equipSlots: [head, body, feet, offHand]
+  accessory:
+    name: Accessory
+    equippable: true
+    defaultSlot: ring
+    equipSlots: [ring]
+  consumable:
+    name: Consumable
+    stackable: true
+  material:
+    name: Material
+    stackable: true
+  key:
+    name: Key
+
 formulas:
   maxHp:
     name: Max Hit Points
