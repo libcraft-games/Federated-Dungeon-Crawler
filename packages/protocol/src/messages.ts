@@ -19,7 +19,20 @@ export type ServerMessage =
   | { type: "ack"; id: string }
   | { type: "pong"; serverTime: number }
   | { type: "welcome"; sessionId: string; serverName: string }
-  | { type: "inventory_update"; inventory: ItemInstance[] };
+  | { type: "inventory_update"; inventory: ItemInstance[] }
+  | {
+      type: "character_update";
+      hp: number;
+      maxHp: number;
+      mp: number;
+      maxMp: number;
+      level: number;
+      xp: number;
+      xpToNext: number;
+    }
+  | { type: "combat_start"; target: string }
+  | { type: "combat_end"; reason: "victory" | "flee" | "death" }
+  | { type: "level_up"; level: number; message: string };
 
 export function encodeMessage(msg: ClientMessage | ServerMessage): string {
   return JSON.stringify(msg);
