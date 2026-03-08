@@ -8,6 +8,7 @@ import { handleCommand, sendRoomState, sendNarrative, type CommandContext } from
 import type { CharacterProfile } from "@realms/lexicons";
 import { buildAttributes, computeDerivedStats } from "@realms/common";
 import { BlueskyBridge } from "./bluesky/bridge.js";
+import { CombatSystem } from "./systems/combat-system.js";
 
 const config = loadConfig();
 const world = new WorldManager(config);
@@ -29,10 +30,12 @@ function broadcast(roomId: string, msg: ServerMessage, excludeSessionId?: string
   }
 }
 
+const combat = new CombatSystem({ world, sessions, broadcast });
+
 function makeContext(sessionId: string): CommandContext | null {
   const session = sessions.getSession(sessionId);
   if (!session) return null;
-  return { session, world, sessions, broadcast, bluesky };
+  return { session, world, sessions, broadcast, bluesky, combat };
 }
 
 // Dev mode: create a quick character profile for testing without AT Proto auth
@@ -53,7 +56,26 @@ function createDevProfile(name: string, classId: string = "warrior", raceId: str
   };
 }
 
-const server = Bun.serve({
+// ── Game Tick Loop ──
+// Processes NPC respawns and other periodic game events
+const TICK_INTERVAL_MS = 5000; // 5 second tick for respawns
+
+setInterval(() => {
+  // Process NPC respawns
+  const respawned = world.npcManager.processRespawns((id) => world.getRoom(id));
+  for (const npc of respawned) {
+    const room = world.getRoom(npc.currentRoom);
+    if (room) {
+      broadcast(room.id, {
+        type: "narrative",
+        text: `${npc.name} appears.`,
+        style: "info",
+      });
+    }
+  }
+}, TICK_INTERVAL_MS);
+
+const server = Bun.serve<SessionData>({
   port: config.port,
   hostname: config.host,
 
@@ -209,6 +231,13 @@ const server = Bun.serve({
       if (!session) return;
 
       console.log(`Player disconnected: ${session.name}`);
+
+      // End combat if in combat
+      if (session.inCombat) {
+        const npc = world.npcManager.getInstance(session.combatTarget!);
+        if (npc) npc.state = "idle";
+        session.combatTarget = null;
+      }
 
       // Remove from room
       const room = world.getRoom(session.currentRoom);
