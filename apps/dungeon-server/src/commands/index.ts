@@ -4,8 +4,9 @@ import type { WorldManager } from "../world/world-manager.js";
 import type { SessionManager } from "../server/session-manager.js";
 import type { BlueskyBridge } from "../bluesky/bridge.js";
 import { handleMovement } from "./movement.js";
-import { handleLook } from "./interaction.js";
+import { handleLook, handleTalk } from "./interaction.js";
 import { handleSocial } from "./social.js";
+import { handleInventory } from "./inventory.js";
 import { encodeMessage, type ServerMessage } from "@realms/protocol";
 import { getCommandHelp } from "@realms/common";
 
@@ -29,10 +30,21 @@ export function handleCommand(cmd: ParsedCommand, ctx: CommandContext): void {
       handleLook(cmd, ctx);
       break;
 
+    case "talk":
+      handleTalk(cmd, ctx);
+      break;
+
     case "say":
     case "shout":
     case "whisper":
       handleSocial(cmd, ctx);
+      break;
+
+    case "inventory":
+    case "take":
+    case "drop":
+    case "examine":
+      handleInventory(cmd, ctx);
       break;
 
     case "who":
