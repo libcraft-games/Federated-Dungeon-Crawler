@@ -4,7 +4,7 @@ import { parse as parseYaml } from "yaml";
 import type { RoomRecord, AreaRecord, ItemDefinition, NpcDefinition, NpcBehavior, DialogueNode, DialogueResponse } from "@realms/lexicons";
 import { Room } from "./room.js";
 import { createItemInstance, type ItemRegistry } from "@realms/common";
-import { NpcManager } from "../entities/npc-manager.js";
+import { NpcManager, type LootEntry } from "../entities/npc-manager.js";
 
 interface AreaManifest {
   id: string;
@@ -61,6 +61,7 @@ interface NpcDef {
   level?: number;
   attributes?: Record<string, number>;
   dialogue?: Record<string, { text: string; responses?: Array<{ text: string; next?: string }> }>;
+  loot?: LootEntry[];
   tags?: string[];
 }
 
@@ -204,7 +205,7 @@ export class AreaManager {
           dialogue: def.dialogue as NpcDefinition["dialogue"],
           tags: def.tags,
         };
-        this.npcManager.registerDefinition(defId, npcDef);
+        this.npcManager.registerDefinition(defId, npcDef, def.loot);
         npcCount++;
       }
 

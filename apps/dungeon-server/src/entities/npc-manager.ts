@@ -1,14 +1,36 @@
-import type { NpcDefinition } from "@realms/lexicons";
-import type { NpcInstance } from "@realms/common";
-import { createNpcInstance } from "@realms/common";
+import type { NpcDefinition, ItemDefinition } from "@realms/lexicons";
+import type { NpcInstance, ItemInstance } from "@realms/common";
+import { createNpcInstance, computeNpcMaxHp, createItemInstance } from "@realms/common";
 import type { Room } from "../world/room.js";
+
+/** Server-internal loot table entry (not part of AT Proto lexicon) */
+export interface LootEntry {
+  itemId: string;
+  chance: number; // 0-100 percentage
+  minQuantity?: number;
+  maxQuantity?: number;
+}
+
+interface RespawnEntry {
+  definitionId: string;
+  roomId: string;
+  respawnAt: number; // timestamp
+}
 
 export class NpcManager {
   private definitions = new Map<string, NpcDefinition>();
+  private lootTables = new Map<string, LootEntry[]>();
   private instances = new Map<string, NpcInstance>();
+  private respawnQueue: RespawnEntry[] = [];
 
-  registerDefinition(id: string, def: NpcDefinition): void {
+  /** Default respawn time in ms (30 seconds for MVP) */
+  static RESPAWN_TIME_MS = 30_000;
+
+  registerDefinition(id: string, def: NpcDefinition, loot?: LootEntry[]): void {
     this.definitions.set(id, def);
+    if (loot && loot.length > 0) {
+      this.lootTables.set(id, loot);
+    }
   }
 
   getDefinition(id: string): NpcDefinition | undefined {
@@ -36,7 +58,7 @@ export class NpcManager {
   findInRoom(roomId: string, name: string): NpcInstance | undefined {
     const lower = name.toLowerCase();
     for (const npc of this.instances.values()) {
-      if (npc.currentRoom === roomId && npc.name.toLowerCase().includes(lower)) {
+      if (npc.currentRoom === roomId && npc.state !== "dead" && npc.name.toLowerCase().includes(lower)) {
         return npc;
       }
     }
@@ -46,11 +68,94 @@ export class NpcManager {
   getAllInRoom(roomId: string): NpcInstance[] {
     const result: NpcInstance[] = [];
     for (const npc of this.instances.values()) {
-      if (npc.currentRoom === roomId) {
+      if (npc.currentRoom === roomId && npc.state !== "dead") {
         result.push(npc);
       }
     }
     return result;
+  }
+
+  // ── Combat ──
+
+  /** Apply damage to an NPC. Returns true if the NPC died. */
+  damageNpc(instanceId: string, amount: number): boolean {
+    const npc = this.instances.get(instanceId);
+    if (!npc) return false;
+
+    npc.currentHp = Math.max(0, npc.currentHp - amount);
+
+    if (npc.currentHp <= 0) {
+      npc.state = "dead";
+      return true;
+    }
+
+    return false;
+  }
+
+  /** Kill an NPC and queue it for respawn */
+  killNpc(instanceId: string, room: Room): void {
+    const npc = this.instances.get(instanceId);
+    if (!npc) return;
+
+    npc.state = "dead";
+    npc.currentHp = 0;
+
+    // Remove from room display
+    room.removeNpc(instanceId);
+
+    // Queue respawn
+    this.respawnQueue.push({
+      definitionId: npc.definitionId,
+      roomId: npc.currentRoom,
+      respawnAt: Date.now() + NpcManager.RESPAWN_TIME_MS,
+    });
+
+    // Remove the dead instance
+    this.instances.delete(instanceId);
+  }
+
+  /** Generate loot drops for a killed NPC */
+  generateLoot(definitionId: string, getItemDef: (id: string) => ItemDefinition | undefined): ItemInstance[] {
+    const loot = this.lootTables.get(definitionId);
+    if (!loot) return [];
+
+    const drops: ItemInstance[] = [];
+    for (const entry of loot) {
+      const roll = Math.random() * 100;
+      if (roll < entry.chance) {
+        const itemDef = getItemDef(entry.itemId);
+        if (itemDef) {
+          const qty = entry.minQuantity && entry.maxQuantity
+            ? Math.floor(Math.random() * (entry.maxQuantity - entry.minQuantity + 1)) + entry.minQuantity
+            : entry.minQuantity ?? 1;
+          drops.push(createItemInstance(entry.itemId, itemDef, qty));
+        }
+      }
+    }
+
+    return drops;
+  }
+
+  /** Process respawn queue — call on game tick */
+  processRespawns(getRoom: (id: string) => Room | undefined): NpcInstance[] {
+    const now = Date.now();
+    const respawned: NpcInstance[] = [];
+    const remaining: RespawnEntry[] = [];
+
+    for (const entry of this.respawnQueue) {
+      if (now >= entry.respawnAt) {
+        const room = getRoom(entry.roomId);
+        if (room) {
+          const npc = this.spawnNpc(entry.definitionId, room);
+          if (npc) respawned.push(npc);
+        }
+      } else {
+        remaining.push(entry);
+      }
+    }
+
+    this.respawnQueue = remaining;
+    return respawned;
   }
 
   get definitionCount(): number {
@@ -59,5 +164,9 @@ export class NpcManager {
 
   get instanceCount(): number {
     return this.instances.size;
+  }
+
+  get pendingRespawns(): number {
+    return this.respawnQueue.length;
   }
 }
