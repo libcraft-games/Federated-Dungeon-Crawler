@@ -1,0 +1,86 @@
+import { encodeMessage, decodeServerMessage, type ClientMessage, type ServerMessage } from "@realms/protocol";
+import { parseCommand } from "@realms/common";
+
+export type MessageHandler = (msg: ServerMessage) => void;
+
+export interface ConnectionOptions {
+  host: string;
+  port: number;
+  name: string;
+  classId: string;
+  raceId: string;
+}
+
+export class WsClient {
+  private ws: WebSocket | null = null;
+  private handlers: MessageHandler[] = [];
+  private cmdId = 0;
+  private _connected = false;
+
+  get connected(): boolean {
+    return this._connected;
+  }
+
+  onMessage(handler: MessageHandler): () => void {
+    this.handlers.push(handler);
+    return () => {
+      this.handlers = this.handlers.filter((h) => h !== handler);
+    };
+  }
+
+  connect(opts: ConnectionOptions): void {
+    const url = `ws://${opts.host}:${opts.port}/ws?name=${encodeURIComponent(opts.name)}&class=${opts.classId}&race=${opts.raceId}`;
+
+    this.ws = new WebSocket(url);
+
+    this.ws.onopen = () => {
+      this._connected = true;
+    };
+
+    this.ws.onmessage = (event) => {
+      const data = typeof event.data === "string" ? event.data : event.data.toString();
+      const msg = decodeServerMessage(data);
+      if (msg) {
+        for (const handler of this.handlers) {
+          handler(msg);
+        }
+      }
+    };
+
+    this.ws.onclose = () => {
+      this._connected = false;
+      for (const handler of this.handlers) {
+        handler({ type: "error", code: "DISCONNECTED", message: "Connection closed" });
+      }
+    };
+
+    this.ws.onerror = () => {
+      this._connected = false;
+    };
+  }
+
+  sendCommand(input: string): void {
+    if (!this.ws || !this._connected) return;
+
+    if (input === "quit" || input === "disconnect") {
+      this.ws.close();
+      return;
+    }
+
+    const parsed = parseCommand(input);
+    const id = String(++this.cmdId);
+
+    const msg: ClientMessage = {
+      type: "command",
+      id,
+      command: parsed.verb,
+      args: parsed.args,
+    };
+
+    this.ws.send(encodeMessage(msg));
+  }
+
+  disconnect(): void {
+    this.ws?.close();
+  }
+}
