@@ -3,5 +3,6 @@ export * from "./types/room.js";
 export * from "./types/item.js";
 export * from "./types/npc.js";
 export * from "./engine/command-parser.js";
+export * from "./engine/combat-engine.js";
 export * from "./utils/direction.js";
 export * from "./utils/text-formatter.js";
