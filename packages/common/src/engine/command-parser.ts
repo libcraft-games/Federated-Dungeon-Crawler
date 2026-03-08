@@ -75,6 +75,7 @@ export function getCommandHelp(): string[] {
     "Movement: north/n, south/s, east/e, west/w, up/u, down/d, ne, nw, se, sw",
     "Looking:  look/l, examine/ex <target>",
     "Items:    take/get <item>, drop <item>, inventory/i",
+    "NPCs:     talk <npc> [topic], look <npc>",
     "Social:   say <message>, shout <message>, whisper <player> <message>",
     "Info:     who, stats, help/?",
     "System:   disconnect/quit",
