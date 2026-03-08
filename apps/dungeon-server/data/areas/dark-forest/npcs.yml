@@ -16,6 +16,15 @@ definitions:
       int: 2
       wis: 6
       cha: 2
+    loot:
+      - itemId: spider-silk
+        chance: 60
+        minQuantity: 1
+        maxQuantity: 2
+      - itemId: poison-fang
+        chance: 30
+        minQuantity: 1
+        maxQuantity: 1
     tags: [beast, spider, hostile]
 
   - id: grey-wolf
@@ -33,6 +42,11 @@ definitions:
       int: 3
       wis: 12
       cha: 4
+    loot:
+      - itemId: forest-cloak
+        chance: 15
+        minQuantity: 1
+        maxQuantity: 1
     tags: [beast, wolf, hostile]
 
   - id: hermit-gatherer
