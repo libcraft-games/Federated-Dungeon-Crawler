@@ -65,6 +65,7 @@ export interface EquipSlotDef {
   description?: string;
   category?: string;
   maxItems?: number;
+  aliases?: string[];
 }
 
 export interface ItemTypeDef {
@@ -74,6 +75,7 @@ export interface ItemTypeDef {
   stackable?: boolean;
   equippable?: boolean;
   equipSlots?: string[];
+  defaultSlot?: string;
 }
 
 export interface PropertyDef {

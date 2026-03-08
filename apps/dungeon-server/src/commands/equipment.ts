@@ -1,5 +1,6 @@
 import type { ParsedCommand } from "@realms/common";
-import { getEquipSlot, getEquippedDefense, getWeaponDamage } from "@realms/common";
+import { getEquipSlot, buildSlotAliases, getEquippedDefense, getWeaponDamage } from "@realms/common";
+import type { EquipmentConfig } from "@realms/common";
 import { encodeMessage } from "@realms/protocol";
 import type { CommandContext } from "./index.js";
 import { sendNarrative } from "./index.js";
@@ -19,6 +20,10 @@ export function handleEquipment(cmd: ParsedCommand, ctx: CommandContext): void {
       showEquipment(ctx);
       break;
   }
+}
+
+function getConfig(ctx: CommandContext): EquipmentConfig {
+  return ctx.world.gameSystem;
 }
 
 function handleEquip(cmd: ParsedCommand, ctx: CommandContext): void {
@@ -44,7 +49,8 @@ function handleEquip(cmd: ParsedCommand, ctx: CommandContext): void {
     return;
   }
 
-  const slot = getEquipSlot(def.type, def.properties, def.tags);
+  const config = getConfig(ctx);
+  const slot = getEquipSlot(config, def.type, def.properties, def.tags);
   if (!slot) {
     sendNarrative(session, `${item.name} is not equippable.`, "error");
     return;
@@ -73,16 +79,8 @@ function handleEquip(cmd: ParsedCommand, ctx: CommandContext): void {
   // Equip the new item
   session.equip(slot, { ...removed, quantity: 1 });
 
-  const slotNames: Record<string, string> = {
-    mainHand: "main hand",
-    offHand: "off hand",
-    head: "head",
-    body: "body",
-    feet: "feet",
-    ring: "ring",
-  };
-
-  sendNarrative(session, `You equip ${removed.name} (${slotNames[slot] ?? slot}).`, "info");
+  const slotName = config.equipSlots[slot]?.name ?? slot;
+  sendNarrative(session, `You equip ${removed.name} (${slotName}).`, "info");
   sendUpdates(ctx);
 }
 
@@ -96,26 +94,11 @@ function handleUnequip(cmd: ParsedCommand, ctx: CommandContext): void {
   }
 
   const lower = slotOrName.toLowerCase();
+  const config = getConfig(ctx);
 
-  // Try as slot name first
-  const slotAliases: Record<string, string> = {
-    "main hand": "mainHand",
-    "mainhand": "mainHand",
-    "weapon": "mainHand",
-    "off hand": "offHand",
-    "offhand": "offHand",
-    "shield": "offHand",
-    "head": "head",
-    "helmet": "head",
-    "body": "body",
-    "armor": "body",
-    "chest": "body",
-    "feet": "feet",
-    "boots": "feet",
-    "ring": "ring",
-  };
-
-  let slot = slotAliases[lower];
+  // Try as slot alias first (data-driven)
+  const aliases = buildSlotAliases(config);
+  let slot = aliases[lower];
 
   // If not a slot alias, search equipment by item name
   if (!slot) {
@@ -146,15 +129,13 @@ function handleUnequip(cmd: ParsedCommand, ctx: CommandContext): void {
 function showEquipment(ctx: CommandContext): void {
   const { session } = ctx;
   const eq = session.equipment;
+  const config = getConfig(ctx);
 
-  const slots = [
-    { key: "mainHand", label: "Main Hand" },
-    { key: "offHand", label: "Off Hand" },
-    { key: "head", label: "Head" },
-    { key: "body", label: "Body" },
-    { key: "feet", label: "Feet" },
-    { key: "ring", label: "Ring" },
-  ];
+  // Build slot display list from config (preserves insertion order from YAML)
+  const slots = Object.entries(config.equipSlots).map(([key, def]) => ({
+    key,
+    label: def.name,
+  }));
 
   const lines = ["Equipment:"];
   for (const { key, label } of slots) {
@@ -170,9 +151,9 @@ function showEquipment(ctx: CommandContext): void {
     }
   }
 
-  // Also show equipped slots not in the standard list
+  // Also show equipped slots not in the config (shouldn't happen, but defensive)
   for (const [key, item] of Object.entries(eq)) {
-    if (!slots.some((s) => s.key === key)) {
+    if (!config.equipSlots[key]) {
       lines.push(`  ${key}: ${item.name}`);
     }
   }
