@@ -1,0 +1,116 @@
+# NPC definitions and spawns for Dark Forest
+
+definitions:
+  - id: forest-spider
+    name: Forest Spider
+    description: >
+      A spider the size of a large dog, with mottled green-and-brown
+      chitin and eight gleaming black eyes. Thick strands of silk trail
+      from its spinnerets. It clicks its fangs menacingly.
+    behavior: hostile
+    level: 2
+    attributes:
+      str: 8
+      dex: 14
+      con: 10
+      int: 2
+      wis: 6
+      cha: 2
+    tags: [beast, spider, hostile]
+
+  - id: grey-wolf
+    name: Grey Wolf
+    description: >
+      A lean, scarred wolf with matted grey fur and hungry yellow eyes.
+      It watches you warily, hackles raised, deciding whether you're
+      predator or prey.
+    behavior: hostile
+    level: 2
+    attributes:
+      str: 12
+      dex: 14
+      con: 12
+      int: 3
+      wis: 12
+      cha: 4
+    tags: [beast, wolf, hostile]
+
+  - id: hermit-gatherer
+    name: Old Morel
+    description: >
+      A wizened old man in a tattered green robe, hunched over and
+      peering at mushrooms through a magnifying glass. His long grey
+      beard is braided with dried herbs, and a wicker basket on his
+      back overflows with colorful fungi.
+    behavior: static
+    level: 4
+    dialogue:
+      greeting:
+        text: >
+          Eh? What's that? Oh, a visitor! Don't step on the mycena,
+          they're nearly ripe. You're not here to steal my mushrooms,
+          are you?
+        responses:
+          - text: No, I'm just passing through.
+            next: passing
+          - text: Tell me about these mushrooms.
+            next: mushrooms
+          - text: Have you seen anything strange?
+            next: strange
+      passing:
+        text: >
+          Passing through the Dark Forest? Brave or foolish — hard to
+          tell which at your age. Watch for the webs deeper in. The
+          spiders have been busy lately.
+        responses:
+          - text: Thanks for the warning.
+            next: farewell
+      mushrooms:
+        text: >
+          The glowing ones are Luminaris caps — good for healing poultices.
+          The red-spotted ones will kill you dead in three heartbeats. And
+          the purple ones... well, those make you see things. Not the good
+          kind of things.
+        responses:
+          - text: Can I have some of the glowing ones?
+            next: trade
+          - text: Fascinating. I should go.
+            next: farewell
+      trade:
+        text: >
+          Help yourself to what's on the ground. I've got more than I can
+          carry. But if you find any Dreamcap mushrooms — deep purple with
+          silver spots — bring them to me. I'll trade you something nice.
+        responses:
+          - text: I'll keep an eye out.
+            next: farewell
+      strange:
+        text: >
+          Strange? Everything in this forest is strange, child. But yes...
+          the spiders have been moving toward the hollow in the southeast.
+          Something's drawing them. Something unnatural. I can feel it in
+          the soil.
+        responses:
+          - text: I'll investigate.
+            next: farewell
+      farewell:
+        text: Mind your step. And don't eat the purple ones!
+    tags: [hermit, gatherer]
+
+spawns:
+  - room: spider-hollow
+    npcs:
+      - id: forest-spider
+      - id: forest-spider
+
+  - room: deep-forest
+    npcs:
+      - id: grey-wolf
+
+  - room: forest-path
+    npcs:
+      - id: grey-wolf
+
+  - room: mushroom-grove
+    npcs:
+      - id: hermit-gatherer

@@ -1,0 +1,214 @@
+# NPC definitions and spawns for Starter Town
+
+definitions:
+  - id: barkeep-marta
+    name: Marta the Barkeep
+    description: >
+      A stout woman with arms like tree trunks and a no-nonsense demeanor.
+      Her apron is perpetually stained with ale, and she wields a polishing
+      rag like a weapon. She's seen every kind of adventurer come through
+      these doors and has a story for each.
+    behavior: merchant
+    level: 5
+    dialogue:
+      greeting:
+        text: >
+          Welcome to The Rusty Tankard, traveler! What'll it be?
+          A warm meal and a cold drink, or are you looking for something more?
+        responses:
+          - text: What do you have for sale?
+            next: shop
+          - text: Any news around town?
+            next: rumors
+          - text: Just passing through.
+            next: farewell
+      shop:
+        text: >
+          I've got fresh bread, some health potions the alchemist dropped off,
+          and the house special — Marta's Mystery Stew. Don't ask what's in it.
+        responses:
+          - text: I'll take a look.
+            next: greeting
+          - text: Thanks, maybe later.
+            next: farewell
+      rumors:
+        text: >
+          Well, they say strange lights have been seen in the Dark Forest to the
+          east. And old Grimjaw at the forge has been grumbling about missing
+          tools. If you're looking for work, check the notice board by the
+          southern gate.
+        responses:
+          - text: Tell me more about the forest.
+            next: forest
+          - text: Thanks for the tip.
+            next: farewell
+      forest:
+        text: >
+          The Dark Forest has always been dangerous — wolves, spiders, the usual.
+          But lately folk say they've seen things moving between the trees that
+          aren't natural. Glowing eyes, whispering voices. I'd stay clear if I
+          were you... but you adventurer types never listen.
+        responses:
+          - text: I'll be careful.
+            next: farewell
+      farewell:
+        text: >
+          Safe travels, friend. The Tankard's always open if you need a rest.
+    tags: [merchant, tavern]
+
+  - id: grimjaw
+    name: Grimjaw the Blacksmith
+    description: >
+      A grizzled dwarf with a magnificent braided beard streaked with soot
+      and grey. His forearms are thick with muscle and crisscrossed with old
+      burn scars. He squints at you through the heat shimmer of the forge
+      with appraising eyes.
+    behavior: merchant
+    level: 8
+    dialogue:
+      greeting:
+        text: >
+          Aye, what d'ye need? I've got blades, shields, and armor. Nothing
+          fancy, but it'll keep ye alive out there. Mostly.
+        responses:
+          - text: What do you have for sale?
+            next: shop
+          - text: I found some of your tools.
+            next: tools
+          - text: Just looking around.
+            next: farewell
+      shop:
+        text: >
+          Got a fine selection of iron gear. The sword's a bit rough around the
+          edges, but it'll cut through goblin hide just fine. The shield'll
+          stop an arrow or two before it splinters.
+        responses:
+          - text: I'll take a look.
+            next: greeting
+          - text: Thanks.
+            next: farewell
+      tools:
+        text: >
+          Ye found me tools? Where were they? I've been missing me best tongs
+          for a week now. Blasted goblins probably nicked 'em again...
+        responses:
+          - text: I haven't actually found them yet.
+            next: tools_no
+          - text: I'll keep an eye out.
+            next: farewell
+      tools_no:
+        text: >
+          Then why'd ye get me hopes up? Bah. If ye find 'em, bring 'em back
+          and I'll make it worth yer while.
+        responses:
+          - text: I'll keep looking.
+            next: farewell
+      farewell:
+        text: Keep yer blade sharp, adventurer.
+    tags: [merchant, blacksmith]
+
+  - id: elara
+    name: Elara the Curiosity Dealer
+    description: >
+      An elderly gnome with wild silver hair and half-moon spectacles perched
+      on a button nose. Her eyes gleam with knowing mischief. She sits
+      surrounded by a chaotic collection of oddities, each one seemingly
+      watching you.
+    behavior: merchant
+    level: 10
+    dialogue:
+      greeting:
+        text: >
+          Ah, a new face! Or is it? Sometimes I forget... but I never forget
+          an interesting trinket. See anything that catches your eye?
+          Everything here has a story, you know.
+        responses:
+          - text: What stories can you tell me?
+            next: stories
+          - text: What do you have for sale?
+            next: shop
+          - text: This place is... interesting.
+            next: farewell
+      stories:
+        text: >
+          Stories? Oh, I have thousands. See that copper ring? It once belonged
+          to a prince who forgot his own name. And those keys hanging from the
+          ceiling — each one opens a door that doesn't exist anymore.
+          Probably.
+        responses:
+          - text: Tell me about the ring.
+            next: ring
+          - text: Fascinating. I should go.
+            next: farewell
+      ring:
+        text: >
+          The Copper Ring of Minor Fortitude, I call it. Wearing it makes you
+          feel just a tiny bit tougher. Nothing dramatic — you won't wrestle
+          a dragon. But it might be the difference between walking home and
+          being carried.
+        responses:
+          - text: Interesting. What else do you have?
+            next: shop
+          - text: I'll think about it.
+            next: farewell
+      shop:
+        text: >
+          I've got potions, a curious ring, and... well, some things aren't
+          for sale. Not yet, anyway. Not to just anyone.
+        responses:
+          - text: Fair enough.
+            next: farewell
+      farewell:
+        text: >
+          Do come back, dear. I have a feeling we'll see each other again.
+          The trinkets told me so.
+    tags: [merchant, curiosities]
+
+  - id: guard-south
+    name: Town Guard
+    description: >
+      A bored-looking guard in dented chainmail, leaning against the gate
+      pillar. He chews on a piece of dried meat and barely glances at
+      passersby. A shortsword hangs at his hip, more decorative than
+      dangerous.
+    behavior: static
+    level: 3
+    dialogue:
+      greeting:
+        text: >
+          Heading out? Watch yourself on the roads. We've had reports of
+          goblin activity near the crossroads. And whatever you do, stay
+          out of the Dark Forest at night.
+        responses:
+          - text: What's in the Dark Forest?
+            next: forest
+          - text: Thanks for the warning.
+            next: farewell
+      forest:
+        text: >
+          Spiders, wolves, and worse. The deeper you go, the nastier it gets.
+          We lost a patrol in there last month. Found their armor but not
+          them. Make of that what you will.
+        responses:
+          - text: I can handle it.
+            next: farewell
+      farewell:
+        text: Good luck out there. Try not to die.
+    tags: [guard]
+
+spawns:
+  - room: tavern
+    npcs:
+      - id: barkeep-marta
+
+  - room: blacksmith
+    npcs:
+      - id: grimjaw
+
+  - room: curiosity-shop
+    npcs:
+      - id: elara
+
+  - room: town-gate
+    npcs:
+      - id: guard-south

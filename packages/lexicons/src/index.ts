@@ -168,6 +168,30 @@ export interface ItemDefinition {
   tags?: string[];
 }
 
+// ── NPCs ──
+
+export type NpcBehavior = "hostile" | "merchant" | "questgiver" | "wanderer" | "static";
+
+export interface DialogueNode {
+  text: string;
+  responses?: DialogueResponse[];
+}
+
+export interface DialogueResponse {
+  text: string;
+  next?: string;
+}
+
+export interface NpcDefinition {
+  name: string;
+  description: string;
+  behavior: NpcBehavior;
+  level?: number;
+  attributes?: Attributes;
+  dialogue?: Record<string, DialogueNode>;
+  tags?: string[];
+}
+
 // ── NSID constants ──
 
 export const NSID = {
@@ -190,6 +214,9 @@ export const NSID = {
 
   // Items
   ItemDefinition: "com.cacheblasters.fm.item.definition",
+
+  // NPCs
+  NpcDefinition: "com.cacheblasters.fm.npc.definition",
 
   // Actions
   ActionConnect: "com.cacheblasters.fm.action.connect",

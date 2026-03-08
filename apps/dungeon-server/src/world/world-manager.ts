@@ -3,15 +3,18 @@ import { loadGameSystem } from "./system-loader.js";
 import { Room } from "./room.js";
 import type { GameSystem } from "@realms/common";
 import type { ServerConfig } from "../config.js";
+import { NpcManager } from "../entities/npc-manager.js";
 
 export class WorldManager {
   readonly areaManager: AreaManager;
+  readonly npcManager: NpcManager;
   gameSystem!: GameSystem;
   private config: ServerConfig;
 
   constructor(config: ServerConfig) {
     this.config = config;
-    this.areaManager = new AreaManager();
+    this.npcManager = new NpcManager();
+    this.areaManager = new AreaManager(this.npcManager);
   }
 
   async initialize(): Promise<void> {

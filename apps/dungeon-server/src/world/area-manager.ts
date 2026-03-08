@@ -1,9 +1,10 @@
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
-import type { RoomRecord, AreaRecord, ItemDefinition } from "@realms/lexicons";
+import type { RoomRecord, AreaRecord, ItemDefinition, NpcDefinition, NpcBehavior, DialogueNode, DialogueResponse } from "@realms/lexicons";
 import { Room } from "./room.js";
 import { createItemInstance, type ItemRegistry } from "@realms/common";
+import { NpcManager } from "../entities/npc-manager.js";
 
 interface AreaManifest {
   id: string;
@@ -52,10 +53,36 @@ interface ItemsFile {
   spawns?: ItemSpawn[];
 }
 
+interface NpcDef {
+  id: string;
+  name: string;
+  description: string;
+  behavior: string;
+  level?: number;
+  attributes?: Record<string, number>;
+  dialogue?: Record<string, { text: string; responses?: Array<{ text: string; next?: string }> }>;
+  tags?: string[];
+}
+
+interface NpcSpawn {
+  room: string;
+  npcs: Array<{ id: string }>;
+}
+
+interface NpcsFile {
+  definitions: NpcDef[];
+  spawns?: NpcSpawn[];
+}
+
 export class AreaManager {
   private rooms = new Map<string, Room>();
   private areas = new Map<string, AreaManifest>();
   private itemDefinitions: ItemRegistry = new Map();
+  private npcManager: NpcManager;
+
+  constructor(npcManager: NpcManager) {
+    this.npcManager = npcManager;
+  }
 
   async loadFromDirectory(basePath: string): Promise<void> {
     const entries = await readdir(basePath, { withFileTypes: true });
@@ -156,6 +183,48 @@ export class AreaManager {
       }
 
       console.log(`  Items: ${itemCount} definitions loaded`);
+    }
+
+    // Load NPCs
+    const npcsFile = Bun.file(join(areaPath, "npcs.yml"));
+    if (await npcsFile.exists()) {
+      const npcsText = await npcsFile.text();
+      const npcsData: NpcsFile = parseYaml(npcsText);
+      let npcCount = 0;
+
+      // Register definitions
+      for (const def of npcsData.definitions) {
+        const defId = `${areaId}:${def.id}`;
+        const npcDef: NpcDefinition = {
+          name: def.name,
+          description: def.description,
+          behavior: def.behavior as NpcBehavior,
+          level: def.level,
+          attributes: def.attributes,
+          dialogue: def.dialogue as NpcDefinition["dialogue"],
+          tags: def.tags,
+        };
+        this.npcManager.registerDefinition(defId, npcDef);
+        npcCount++;
+      }
+
+      // Spawn NPCs into rooms
+      if (npcsData.spawns) {
+        for (const spawn of npcsData.spawns) {
+          const roomId = `${areaId}:${spawn.room}`;
+          const room = this.rooms.get(roomId);
+          if (!room) {
+            console.warn(`NPC spawn references unknown room: ${roomId}`);
+            continue;
+          }
+          for (const npc of spawn.npcs) {
+            const defId = `${areaId}:${npc.id}`;
+            this.npcManager.spawnNpc(defId, room);
+          }
+        }
+      }
+
+      console.log(`  NPCs: ${npcCount} definitions loaded`);
     }
 
     console.log(`Loaded area: ${manifest.title} (${this.getRoomCountForArea(areaId)} rooms)`);
