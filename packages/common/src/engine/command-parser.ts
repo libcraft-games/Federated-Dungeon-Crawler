@@ -15,6 +15,17 @@ const ALIASES: Record<string, string> = {
   "ex": "examine",
   "get": "take",
   "pickup": "take",
+  "k": "kill",
+  "hit": "attack",
+  "fight": "attack",
+  "def": "defend",
+  "block": "defend",
+  "run": "flee",
+  "escape": "flee",
+  "drink": "use",
+  "quaff": "use",
+  "wear": "equip",
+  "wield": "equip",
   "?": "help",
   "quit": "disconnect",
   "exit": "disconnect",
@@ -29,8 +40,8 @@ const DIRECTION_VERBS = new Set([
   "northeast", "northwest", "southeast", "southwest",
 ]);
 
-// We parse the command into a standard structure, but we don't enforce strict verb/arg patterns here. 
-// The game logic will interpret the verb and args as needed, allowing servers to define their own 
+// We parse the command into a standard structure, but we don't enforce strict verb/arg patterns here.
+// The game logic will interpret the verb and args as needed, allowing servers to define their own
 // command sets and parsing rules on top of this basic structure.
 export function parseCommand(input: string): ParsedCommand {
   const raw = input.trim();
@@ -74,7 +85,9 @@ export function getCommandHelp(): string[] {
   return [
     "Movement: north/n, south/s, east/e, west/w, up/u, down/d, ne, nw, se, sw",
     "Looking:  look/l, examine/ex <target>",
-    "Items:    take/get <item>, drop <item>, inventory/i",
+    "Items:    take/get <item>, drop <item>, inventory/i, use/drink <item>",
+    "Equip:    equip/wield <item>, unequip/remove <item>, equipment/eq",
+    "Combat:   attack/kill <target>, defend, flee/retreat",
     "NPCs:     talk <npc> [topic], look <npc>",
     "Social:   say <message>, shout <message>, whisper <player> <message>",
     "Info:     who, stats, help/?",
