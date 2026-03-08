@@ -68,6 +68,13 @@ ws.onmessage = (event) => {
       if (r.npcs.length > 0) {
         console.log(fmt.dim(`NPCs: ${r.npcs.map((n) => fmt.npcName(n.name)).join(", ")}`));
       }
+      if (r.items.length > 0) {
+        const itemNames = r.items.map((i) => {
+          const qty = i.quantity > 1 ? ` (x${i.quantity})` : "";
+          return `${i.name}${qty}`;
+        });
+        console.log(fmt.dim(`Items: ${itemNames.join(", ")}`));
+      }
       if (r.flags.length > 0) {
         console.log(fmt.dim(`[${r.flags.join(", ")}]`));
       }
@@ -117,6 +124,11 @@ ws.onmessage = (event) => {
       break;
 
     case "ack":
+      break;
+
+    case "inventory_update":
+      console.log(fmt.dim(`[Inventory updated: ${msg.inventory.length} item(s)]`));
+      rl.prompt();
       break;
 
     case "pong":
