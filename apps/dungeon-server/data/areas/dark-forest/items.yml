@@ -1,0 +1,127 @@
+# Item definitions for Dark Forest
+
+definitions:
+  - id: gnarled-staff
+    name: Gnarled Staff
+    type: weapon
+    description: >
+      A twisted wooden staff carved from a dark forest oak. Faint green
+      runes are etched into the bark, pulsing dimly with residual magic.
+    weight: 3
+    value: 18
+    rarity: uncommon
+    levelRequired: 2
+    properties:
+      damage: 5
+      damageType: bludgeoning
+      speed: slow
+      magicBonus: 2
+    tags: [melee, two-handed, staff, magic]
+
+  - id: spider-silk
+    name: Spider Silk
+    type: material
+    description: >
+      A bundle of surprisingly strong silk harvested from forest spiders.
+      Weavers and alchemists prize it equally.
+    weight: 0.2
+    value: 8
+    rarity: uncommon
+    stackable: true
+    maxStack: 20
+    properties:
+      craftingMaterial: true
+    tags: [material, crafting]
+
+  - id: glowing-mushroom
+    name: Glowing Mushroom
+    type: consumable
+    description: >
+      A plump mushroom that emits a soft blue-green glow. It smells
+      earthy and slightly sweet. Alchemists use them in healing brews.
+    weight: 0.2
+    value: 5
+    rarity: common
+    stackable: true
+    maxStack: 10
+    properties:
+      healAmount: 8
+      effect: restore_hp
+      craftingMaterial: true
+    tags: [mushroom, food, crafting, healing]
+
+  - id: poison-fang
+    name: Poison Fang
+    type: material
+    description: >
+      A curved fang dripping with a sickly green venom. Handle with care.
+    weight: 0.1
+    value: 12
+    rarity: uncommon
+    stackable: true
+    maxStack: 10
+    properties:
+      craftingMaterial: true
+      poisonDamage: 3
+    tags: [material, crafting, poison]
+
+  - id: forest-cloak
+    name: Tattered Forest Cloak
+    type: armor
+    description: >
+      A dark green cloak woven with leaves and bark fragments. It blends
+      remarkably well with the forest surroundings despite its worn state.
+    weight: 2
+    value: 15
+    rarity: uncommon
+    levelRequired: 2
+    properties:
+      defense: 1
+      slot: body
+      stealthBonus: 5
+    tags: [cloak, body, light-armor]
+
+  - id: antidote
+    name: Crude Antidote
+    type: consumable
+    description: >
+      A murky brown liquid in a clay flask. It tastes like dirt and
+      vinegar but neutralizes most common poisons.
+    weight: 0.5
+    value: 10
+    rarity: common
+    stackable: true
+    maxStack: 5
+    properties:
+      effect: cure_poison
+    tags: [potion, antidote]
+
+spawns:
+  - room: forest-edge
+    items:
+      - id: gnarled-staff
+        quantity: 1
+
+  - room: mushroom-grove
+    items:
+      - id: glowing-mushroom
+        quantity: 4
+
+  - room: spider-hollow
+    items:
+      - id: spider-silk
+        quantity: 2
+      - id: poison-fang
+        quantity: 1
+
+  - room: deep-forest
+    items:
+      - id: forest-cloak
+        quantity: 1
+      - id: antidote
+        quantity: 1
+
+  - room: ravine
+    items:
+      - id: antidote
+        quantity: 2
