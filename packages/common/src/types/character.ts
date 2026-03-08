@@ -19,6 +19,7 @@ export interface CharacterState extends CharacterProfile {
   currentRoom: string;
   activeEffects: ActiveEffect[];
   inventory: ItemInstance[];
+  equipment: Record<string, ItemInstance>;
 }
 
 export interface ActiveEffect {
@@ -155,5 +156,6 @@ export function profileToState(
     currentRoom,
     activeEffects: [],
     inventory: [],
+    equipment: {},
   };
 }
