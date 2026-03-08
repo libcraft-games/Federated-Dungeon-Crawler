@@ -11,6 +11,14 @@ export interface NpcInstance {
   level: number;
   currentRoom: string;
   attributes?: Attributes;
+  currentHp: number;
+  maxHp: number;
+}
+
+/** Compute NPC max HP from level and constitution */
+export function computeNpcMaxHp(level: number, attributes?: Attributes): number {
+  const con = attributes?.con ?? 10;
+  return 10 + level * 5 + Math.max(0, Math.floor((con - 10) / 2));
 }
 
 export function generateNpcId(): string {
@@ -22,14 +30,19 @@ export function createNpcInstance(
   definition: NpcDefinition,
   roomId: string
 ): NpcInstance {
+  const level = definition.level ?? 1;
+  const maxHp = computeNpcMaxHp(level, definition.attributes);
+
   return {
     instanceId: generateNpcId(),
     definitionId,
     name: definition.name,
     behavior: definition.behavior,
     state: "idle",
-    level: definition.level ?? 1,
+    level,
     currentRoom: roomId,
     attributes: definition.attributes ? { ...definition.attributes } : undefined,
+    currentHp: maxHp,
+    maxHp,
   };
 }
