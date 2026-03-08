@@ -1,8 +1,9 @@
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
-import type { RoomRecord, AreaRecord } from "@realms/lexicons";
+import type { RoomRecord, AreaRecord, ItemDefinition } from "@realms/lexicons";
 import { Room } from "./room.js";
+import { createItemInstance, type ItemRegistry } from "@realms/common";
 
 interface AreaManifest {
   id: string;
@@ -26,9 +27,35 @@ interface RoomDef {
   flags?: string[];
 }
 
+interface ItemDef {
+  id: string;
+  name: string;
+  type: string;
+  description: string;
+  weight?: number;
+  value?: number;
+  rarity?: string;
+  levelRequired?: number;
+  stackable?: boolean;
+  maxStack?: number;
+  properties?: Record<string, unknown>;
+  tags?: string[];
+}
+
+interface ItemSpawn {
+  room: string;
+  items: Array<{ id: string; quantity: number }>;
+}
+
+interface ItemsFile {
+  definitions: ItemDef[];
+  spawns?: ItemSpawn[];
+}
+
 export class AreaManager {
   private rooms = new Map<string, Room>();
   private areas = new Map<string, AreaManifest>();
+  private itemDefinitions: ItemRegistry = new Map();
 
   async loadFromDirectory(basePath: string): Promise<void> {
     const entries = await readdir(basePath, { withFileTypes: true });
@@ -79,6 +106,58 @@ export class AreaManager {
       }
     }
 
+    // Load items
+    const itemsFile = Bun.file(join(areaPath, "items.yml"));
+    if (await itemsFile.exists()) {
+      const itemsText = await itemsFile.text();
+      const itemsData: ItemsFile = parseYaml(itemsText);
+      let itemCount = 0;
+
+      // Register definitions
+      for (const def of itemsData.definitions) {
+        const defId = `${areaId}:${def.id}`;
+        const itemDef: ItemDefinition = {
+          name: def.name,
+          type: def.type,
+          description: def.description,
+          weight: def.weight,
+          value: def.value,
+          rarity: def.rarity,
+          levelRequired: def.levelRequired,
+          stackable: def.stackable,
+          maxStack: def.maxStack,
+          properties: def.properties,
+          tags: def.tags,
+        };
+        this.itemDefinitions.set(defId, itemDef);
+        itemCount++;
+      }
+
+      // Spawn items into rooms
+      if (itemsData.spawns) {
+        for (const spawn of itemsData.spawns) {
+          const roomId = `${areaId}:${spawn.room}`;
+          const room = this.rooms.get(roomId);
+          if (!room) {
+            console.warn(`Item spawn references unknown room: ${roomId}`);
+            continue;
+          }
+          for (const item of spawn.items) {
+            const defId = `${areaId}:${item.id}`;
+            const def = this.itemDefinitions.get(defId);
+            if (!def) {
+              console.warn(`Item spawn references unknown item: ${defId}`);
+              continue;
+            }
+            const instance = createItemInstance(defId, def, item.quantity);
+            room.addGroundItem(instance);
+          }
+        }
+      }
+
+      console.log(`  Items: ${itemCount} definitions loaded`);
+    }
+
     console.log(`Loaded area: ${manifest.title} (${this.getRoomCountForArea(areaId)} rooms)`);
   }
 
@@ -92,6 +171,14 @@ export class AreaManager {
 
   getArea(id: string): AreaManifest | undefined {
     return this.areas.get(id);
+  }
+
+  getItemDefinition(id: string): ItemDefinition | undefined {
+    return this.itemDefinitions.get(id);
+  }
+
+  getAllItemDefinitions(): ItemRegistry {
+    return this.itemDefinitions;
   }
 
   private getRoomCountForArea(areaId: string): number {
