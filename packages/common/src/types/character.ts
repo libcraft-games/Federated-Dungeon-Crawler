@@ -67,13 +67,15 @@ export function evaluateFormula(
     .replace(/\bmax\b/g, "Math.max")
     .replace(/\babs\b/g, "Math.abs");
 
-  // Validate: only allow digits, operators, parens, dots, commas, Math.*
-  if (!/^[\d\s+\-*/().,%\w]*$/.test(expr)) {
+  // Validate: after variable substitution and math function replacement,
+  // only allow digits, operators, parens, commas, whitespace, and Math.*
+  // Reject any other identifiers (prevents access to process, globalThis, etc.)
+  const sanitized = expr.replace(/Math\.(floor|ceil|min|max|abs)/g, "0");
+  if (!/^[\d\s+\-*/().,]*$/.test(sanitized)) {
     throw new Error(`Invalid formula expression: ${expression}`);
   }
 
   try {
-    // Using Function constructor for sandboxed eval with no global access
     const fn = new Function("Math", `"use strict"; return (${expr});`);
     const result = fn(Math);
     return typeof result === "number" && isFinite(result) ? Math.floor(result) : 0;

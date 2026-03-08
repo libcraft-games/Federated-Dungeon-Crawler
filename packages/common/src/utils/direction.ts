@@ -36,10 +36,10 @@ export const OPPOSITE_DIRECTION: Record<Direction, Direction> = {
   southwest: "northeast",
 };
 
-export function resolveDirection(input: string): Direction | null {
-  return DIRECTION_ALIASES[input.toLowerCase()] ?? null;
+export function resolveDirection(input: string): Direction | undefined {
+  return DIRECTION_ALIASES[input.toLowerCase()];
 }
 
 export function isDirection(input: string): input is Direction {
-  return resolveDirection(input) !== null;
+  return resolveDirection(input) !== undefined;
 }
