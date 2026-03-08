@@ -31,6 +31,7 @@ definitions:
     properties:
       defense: 2
       blockChance: 15
+      slot: offHand
     tags: [shield, one-handed]
 
   - id: leather-cap
@@ -169,7 +170,7 @@ spawns:
   - room: blacksmith
     items:
       - id: rusty-sword
-        quantity: 1
+        quantity: 2
       - id: wooden-shield
         quantity: 1
       - id: leather-cap
