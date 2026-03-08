@@ -3,12 +3,15 @@ import type { CharacterSession } from "../entities/character-session.js";
 import type { WorldManager } from "../world/world-manager.js";
 import type { SessionManager } from "../server/session-manager.js";
 import type { BlueskyBridge } from "../bluesky/bridge.js";
+import type { CombatSystem } from "../systems/combat-system.js";
 import { handleMovement } from "./movement.js";
 import { handleLook, handleTalk } from "./interaction.js";
 import { handleSocial } from "./social.js";
 import { handleInventory } from "./inventory.js";
+import { handleCombat } from "./combat.js";
+import { handleEquipment } from "./equipment.js";
 import { encodeMessage, type ServerMessage } from "@realms/protocol";
-import { getCommandHelp } from "@realms/common";
+import { getCommandHelp, xpToNextLevel } from "@realms/common";
 
 export interface CommandContext {
   session: CharacterSession;
@@ -16,10 +19,27 @@ export interface CommandContext {
   sessions: SessionManager;
   broadcast: (roomId: string, msg: ServerMessage, excludeSessionId?: string) => void;
   bluesky: BlueskyBridge;
+  combat: CombatSystem;
 }
 
 export function handleCommand(cmd: ParsedCommand, ctx: CommandContext): void {
   const { session } = ctx;
+
+  // Block most actions during combat (except combat commands, look, inventory, equipment, stats)
+  if (session.inCombat) {
+    const allowedInCombat = new Set([
+      "attack", "kill", "defend", "flee", "retreat", "use",
+      "look", "inventory", "equipment", "stats", "help", "",
+    ]);
+    if (!allowedInCombat.has(cmd.verb)) {
+      if (cmd.verb === "go") {
+        sendNarrative(session, "You can't move while in combat! Use 'flee' to escape.", "error");
+      } else {
+        sendNarrative(session, "You're in combat! Fight, flee, or use an item.", "error");
+      }
+      return;
+    }
+  }
 
   switch (cmd.verb) {
     case "go":
@@ -45,6 +65,24 @@ export function handleCommand(cmd: ParsedCommand, ctx: CommandContext): void {
     case "drop":
     case "examine":
       handleInventory(cmd, ctx);
+      break;
+
+    case "attack":
+    case "kill":
+    case "defend":
+    case "flee":
+    case "retreat":
+    case "use":
+      handleCombat(cmd, ctx);
+      break;
+
+    case "equip":
+    case "wear":
+    case "wield":
+    case "unequip":
+    case "remove":
+    case "equipment":
+      handleEquipment(cmd, ctx);
       break;
 
     case "who":
@@ -78,7 +116,8 @@ function handleWho(ctx: CommandContext): void {
   const lines = ["Adventurers online:"];
   for (const s of online) {
     const room = ctx.world.getRoom(s.currentRoom);
-    lines.push(`  ${s.name} - Level ${s.state.level} ${s.state.race} ${s.state.class} (${room?.title ?? "unknown"})`);
+    const combatStr = s.inCombat ? " [COMBAT]" : "";
+    lines.push(`  ${s.name} - Level ${s.state.level} ${s.state.race} ${s.state.class} (${room?.title ?? "unknown"})${combatStr}`);
   }
   sendNarrative(ctx.session, lines.join("\n"), "system");
 }
@@ -89,6 +128,7 @@ function handleStats(ctx: CommandContext): void {
 
   const lines = [`${s.name} - Level ${s.level} ${s.race} ${s.class}`];
   lines.push(`HP: ${s.currentHp}/${s.maxHp}  MP: ${s.currentMp}/${s.maxMp}  AP: ${s.currentAp}/${s.maxAp}`);
+  lines.push(`XP: ${s.experience}  (${xpToNextLevel(s.level, s.experience)} to next level)`);
   lines.push("");
   lines.push("Attributes:");
   for (const [id, value] of Object.entries(s.attributes)) {
