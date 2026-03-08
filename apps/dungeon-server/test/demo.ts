@@ -3,7 +3,7 @@
  * Federated Realms — Interactive Demo
  *
  * Starts the server, connects a hero, and plays through an adventure
- * with full narrative output. Run with:
+ * with full narrative output including combat. Run with:
  *
  *   bun run test/demo.ts
  */
@@ -13,6 +13,7 @@ import { TestClient, startServer, stopServer } from "./helpers.ts";
 const CYAN = "\x1b[36m";
 const GREEN = "\x1b[32m";
 const YELLOW = "\x1b[33m";
+const RED = "\x1b[31m";
 const DIM = "\x1b[2m";
 const BOLD = "\x1b[1m";
 const RESET = "\x1b[0m";
@@ -24,6 +25,12 @@ function step(label: string) {
 function narrate(text: string) {
   for (const line of text.split("\n")) {
     console.log(`  ${GREEN}${line}${RESET}`);
+  }
+}
+
+function combat(text: string) {
+  for (const line of text.split("\n")) {
+    console.log(`  ${RED}${line}${RESET}`);
   }
 }
 
@@ -83,7 +90,7 @@ async function main() {
     narrate(await hero.commandAndWait("talk grimjaw"));
 
     // ── Gear Up ──
-    step("Picking Up Gear");
+    step("Picking Up and Equipping Gear");
     cmd("take rusty sword");
     narrate(await hero.commandAndWait("take rusty sword"));
     await hero.waitFor("inventory_update");
@@ -92,11 +99,17 @@ async function main() {
     narrate(await hero.commandAndWait("take wooden shield"));
     await hero.waitFor("inventory_update");
 
+    cmd("equip rusty sword");
+    narrate(await hero.commandAndWait("equip rusty sword"));
+
+    cmd("equip wooden shield");
+    narrate(await hero.commandAndWait("equip wooden shield"));
+
+    cmd("equipment");
+    narrate(await hero.commandAndWait("eq"));
+
     cmd("examine rusty sword");
     narrate(await hero.commandAndWait("ex rusty sword"));
-
-    cmd("inventory");
-    narrate(await hero.commandAndWait("i"));
 
     // ── Tavern ──
     step("Stopping at the Tavern");
@@ -114,9 +127,6 @@ async function main() {
 
     cmd("talk marta rumors");
     narrate(await hero.commandAndWait("talk marta rumors"));
-
-    cmd("talk marta forest");
-    narrate(await hero.commandAndWait("talk marta forest"));
 
     cmd("take bread");
     narrate(await hero.commandAndWait("take bread"));
@@ -145,11 +155,43 @@ async function main() {
     narrate(await hero.commandAndWait("take staff"));
     await hero.waitFor("inventory_update");
 
+    // ── Forest Path — First Combat ──
+    step("Encountering the Grey Wolf");
     cmd("east");
     r = await hero.commandAndWaitRoom("e");
     room(r.room.title, r.room.description, [
       `NPCs: ${r.room.npcs.map((n) => n.name).join(", ")}`,
     ]);
+
+    cmd("attack wolf");
+    let combatText = await hero.commandAndWait("attack wolf");
+    combat(combatText);
+
+    // Fight until wolf dies or hero falls
+    let wolfSlain = false;
+    for (let i = 0; i < 20; i++) {
+      if (combatText.includes("slain")) {
+        wolfSlain = true;
+        break;
+      }
+      if (combatText.includes("defeated")) {
+        break;
+      }
+      cmd("attack");
+      combatText = await hero.commandAndWait("attack");
+      combat(combatText);
+    }
+
+    if (wolfSlain) {
+      console.log(`  ${BOLD}${GREEN}The Grey Wolf has been defeated!${RESET}`);
+    } else {
+      console.log(`  ${BOLD}${RED}Kaelith was defeated... but awakes at the town square.${RESET}`);
+      // Navigate back if needed
+      await hero.commandAndWaitRoom("s");
+      await hero.commandAndWaitRoom("s");
+      await hero.commandAndWaitRoom("e");
+      await hero.commandAndWaitRoom("e");
+    }
 
     // ── Mushroom Grove ──
     step("Discovering the Mushroom Grove");
@@ -174,7 +216,12 @@ async function main() {
     narrate(await hero.commandAndWait("take mushroom"));
     await hero.waitFor("inventory_update");
 
-    // ── Spider Hollow ──
+    // ── Use a consumable ──
+    step("Using a Healing Item");
+    cmd("use mushroom");
+    narrate(await hero.commandAndWait("use mushroom"));
+
+    // ── Spider Hollow — Boss Fight ──
     step("Venturing to Spider Hollow");
     cmd("south → east → east");
     await hero.commandAndWaitRoom("s");
@@ -187,16 +234,39 @@ async function main() {
       `Flags: ${r.room.flags.join(", ")}`,
     ]);
 
-    cmd("look spider");
-    narrate(await hero.commandAndWait("look spider"));
+    step("Fighting the Forest Spider");
+    cmd("attack spider");
+    combatText = await hero.commandAndWait("attack spider");
+    combat(combatText);
 
-    cmd("talk spider");
-    narrate(await hero.commandAndWait("talk spider"));
+    let spiderSlain = false;
+    for (let i = 0; i < 20; i++) {
+      if (combatText.includes("slain")) {
+        spiderSlain = true;
+        break;
+      }
+      if (combatText.includes("defeated")) {
+        break;
+      }
+      cmd("attack");
+      combatText = await hero.commandAndWait("attack");
+      combat(combatText);
+    }
 
-    // ── Final Inventory ──
-    step("Final Inventory Check");
+    if (spiderSlain) {
+      console.log(`  ${BOLD}${GREEN}The Forest Spider has been defeated!${RESET}`);
+    }
+
+    // ── Final Status ──
+    step("Final Character Status");
+    cmd("stats");
+    narrate(await hero.commandAndWait("stats"));
+
     cmd("inventory");
     narrate(await hero.commandAndWait("i"));
+
+    cmd("equipment");
+    narrate(await hero.commandAndWait("eq"));
 
     // ── Who ──
     step("Who's Online?");
@@ -205,7 +275,7 @@ async function main() {
 
     // ── Done ──
     step("Adventure Complete!");
-    console.log(`  ${BOLD}${GREEN}Kaelith the elf rogue has explored the realm!${RESET}`);
+    console.log(`  ${BOLD}${GREEN}Kaelith the elf rogue has explored the realm and fought monsters!${RESET}`);
     console.log(`  ${DIM}Visited: Town Square, Blacksmith, Tavern, Gate, Crossroads,`);
     console.log(`  Forest Edge, Forest Path, Mushroom Grove, Spider Hollow${RESET}`);
 

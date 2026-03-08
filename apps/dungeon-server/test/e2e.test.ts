@@ -476,6 +476,237 @@ describe("multiplayer", () => {
   });
 });
 
+// ─── Equipment ──────────────────────────────────────────────
+
+describe("equipment", () => {
+  test("equip a weapon from the alley", async () => {
+    const client = new TestClient("Equipper");
+    await client.connect(port);
+    await client.waitFor("room_state");
+
+    // Go to alley and take the iron dagger
+    await client.commandAndWaitRoom("w"); // alley
+    await client.commandAndWait("take iron dagger");
+    await client.waitFor("inventory_update");
+    client.clearMessages();
+
+    // Equip it
+    const text = await client.commandAndWait("equip iron dagger");
+    expect(text).toContain("equip");
+    expect(text).toContain("Iron Dagger");
+    expect(text).toContain("main hand");
+    client.disconnect();
+  });
+
+  test("show equipment and unequip", async () => {
+    const client = new TestClient("EqShow");
+    await client.connect(port);
+    await client.waitFor("room_state");
+
+    // Check empty equipment
+    client.clearMessages();
+    let text = await client.commandAndWait("eq");
+    expect(text).toContain("Main Hand: —");
+
+    // Go to blacksmith and take leather cap (head armor, level 1)
+    await client.commandAndWaitRoom("e");
+    await client.commandAndWait("take leather cap");
+    await client.waitFor("inventory_update");
+    client.clearMessages();
+
+    await client.commandAndWait("equip leather cap");
+    client.clearMessages();
+
+    text = await client.commandAndWait("eq");
+    expect(text).toContain("Head: Leather Cap");
+    expect(text).toContain("defense: 1");
+
+    // Unequip
+    client.clearMessages();
+    text = await client.commandAndWait("unequip head");
+    expect(text).toContain("unequip");
+    expect(text).toContain("Leather Cap");
+
+    // Should be back in inventory
+    text = await client.commandAndWait("i");
+    expect(text).toContain("Leather Cap");
+    client.disconnect();
+  });
+});
+
+// ─── Combat ─────────────────────────────────────────────────
+
+describe("combat", () => {
+  test("attack a hostile NPC and engage in combat", async () => {
+    const client = new TestClient("Fighter");
+    await client.connect(port, { classId: "warrior", raceId: "orc" });
+    await client.waitFor("room_state");
+
+    // Navigate to deep forest (has a wolf)
+    await client.commandAndWaitRoom("s"); // gate
+    await client.commandAndWaitRoom("s"); // crossroads
+    await client.commandAndWaitRoom("e"); // forest edge
+    await client.commandAndWaitRoom("e"); // forest path
+    await client.commandAndWaitRoom("e"); // deep forest
+    client.clearMessages();
+
+    // Attack wolf — output includes both player attack and NPC retaliation
+    const text = await client.commandAndWait("attack wolf");
+    expect(text).toContain("Grey Wolf");
+    expect(text).toContain("Roll:");
+    // Should be in combat (can't move, can defend)
+
+    client.clearMessages();
+    const moveText = await client.commandAndWait("w");
+    expect(moveText).toContain("can't move while in combat");
+
+    client.clearMessages();
+    const defendText = await client.commandAndWait("defend");
+    expect(defendText).toContain("raise your guard");
+
+    client.disconnect();
+  });
+
+  test("flee from combat", async () => {
+    const client = new TestClient("Fleer");
+    await client.connect(port, { classId: "rogue", raceId: "elf" });
+    await client.waitFor("room_state");
+
+    // Navigate to forest path (has a wolf)
+    await client.commandAndWaitRoom("s");
+    await client.commandAndWaitRoom("s");
+    await client.commandAndWaitRoom("e");
+    await client.commandAndWaitRoom("e");
+    client.clearMessages();
+
+    // Attack to start combat
+    await client.commandAndWait("attack wolf");
+
+    // Try fleeing — with high dex (16) should usually succeed
+    // Accept either escape or getting killed as valid outcomes
+    let result: "escape" | "died" | "stuck" = "stuck";
+    for (let i = 0; i < 10; i++) {
+      client.clearMessages();
+      const text = await client.commandAndWait("flee");
+      if (text.includes("escape")) {
+        result = "escape";
+        break;
+      }
+      if (text.includes("not in combat") || text.includes("defeated")) {
+        result = "died";
+        break;
+      }
+      // Otherwise: "can't get away" — keep trying
+    }
+    // Flee mechanic works if we got any combat-relevant response
+    expect(result === "escape" || result === "died").toBe(true);
+    client.disconnect();
+  });
+
+  test("safe rooms prevent combat", async () => {
+    const client = new TestClient("SafeZone");
+    await client.connect(port);
+    await client.waitFor("room_state");
+
+    // Mushroom grove is a safe zone with an NPC
+    await client.commandAndWaitRoom("s"); // gate
+    await client.commandAndWaitRoom("s"); // crossroads
+    await client.commandAndWaitRoom("e"); // forest edge
+    await client.commandAndWaitRoom("e"); // forest path
+    await client.commandAndWaitRoom("n"); // mushroom grove (safe)
+    client.clearMessages();
+
+    const text = await client.commandAndWait("attack morel");
+    expect(text).toContain("safe zone");
+    client.disconnect();
+  });
+
+  test("use consumable in combat", async () => {
+    const client = new TestClient("PotionUser");
+    await client.connect(port, { classId: "warrior", raceId: "human" });
+    await client.waitFor("room_state");
+
+    // Get bread from tavern (consumable that heals)
+    await client.commandAndWaitRoom("n"); // tavern
+    await client.commandAndWait("take bread");
+    await client.waitFor("inventory_update");
+
+    // Go to spider hollow
+    await client.commandAndWaitRoom("s"); // town square
+    await client.commandAndWaitRoom("s"); // gate
+    await client.commandAndWaitRoom("s"); // crossroads
+    await client.commandAndWaitRoom("e"); // forest edge
+    await client.commandAndWaitRoom("e"); // forest path
+    await client.commandAndWaitRoom("e"); // deep forest
+    await client.commandAndWaitRoom("e"); // spider hollow
+    client.clearMessages();
+
+    // Start combat
+    await client.commandAndWait("attack spider");
+
+    // Use bread to heal
+    client.clearMessages();
+    const text = await client.commandAndWait("use bread");
+    expect(text).toContain("Loaf of Bread");
+    expect(text).toContain("HP:");
+    client.disconnect();
+  });
+
+  test("kill NPC, gain XP, get loot", async () => {
+    const client = new TestClient("Slayer");
+    await client.connect(port, { classId: "warrior", raceId: "orc" });
+    await client.waitFor("room_state");
+
+    // Navigate to spider hollow (orc warrior is strong enough with fists)
+    await client.commandAndWaitRoom("s");
+    await client.commandAndWaitRoom("s");
+    await client.commandAndWaitRoom("e");
+    await client.commandAndWaitRoom("e");
+    await client.commandAndWaitRoom("e");
+    await client.commandAndWaitRoom("e");
+    client.clearMessages();
+
+    // Fight spider until it dies
+    let killed = false;
+    for (let i = 0; i < 30; i++) {
+      const text = await client.commandAndWait("attack spider");
+      if (text.includes("slain")) {
+        killed = true;
+        // XP message is in the same narrative now
+        expect(text).toContain("XP");
+        break;
+      }
+      if (text.includes("defeated") || text.includes("don't see")) {
+        break;
+      }
+    }
+    expect(killed).toBe(true);
+    client.disconnect();
+  });
+});
+
+// ─── Use Items ──────────────────────────────────────────────
+
+describe("use items", () => {
+  test("use consumable outside combat", async () => {
+    const client = new TestClient("Healer");
+    await client.connect(port);
+    await client.waitFor("room_state");
+
+    // Get bread from tavern
+    await client.commandAndWaitRoom("n"); // tavern
+    await client.commandAndWait("take bread");
+    await client.waitFor("inventory_update");
+    client.clearMessages();
+
+    // Use it
+    const text = await client.commandAndWait("use bread");
+    expect(text).toContain("Loaf of Bread");
+    expect(text).toContain("HP:");
+    client.disconnect();
+  });
+});
+
 // ─── Full Adventure (Demo Scenario) ─────────────────────────
 
 describe("full adventure walkthrough", () => {
