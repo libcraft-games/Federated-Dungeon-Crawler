@@ -7,6 +7,7 @@ import type {
   AttributeDef,
   FormulaDef,
 } from "@realms/lexicons";
+import type { ItemInstance } from "./item.js";
 
 export interface CharacterState extends CharacterProfile {
   currentHp: number;
@@ -17,6 +18,7 @@ export interface CharacterState extends CharacterProfile {
   maxAp: number;
   currentRoom: string;
   activeEffects: ActiveEffect[];
+  inventory: ItemInstance[];
 }
 
 export interface ActiveEffect {
@@ -150,5 +152,6 @@ export function profileToState(
     maxAp: derived.maxAp ?? 4,
     currentRoom,
     activeEffects: [],
+    inventory: [],
   };
 }
