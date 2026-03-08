@@ -1,5 +1,11 @@
-import type { Attributes, ItemProperties } from "@realms/lexicons";
+import type { Attributes, ItemProperties, ItemTypeDef, EquipSlotDef } from "@realms/lexicons";
 import type { ItemInstance } from "../types/item.js";
+
+/** Subset of GameSystem needed for equipment resolution */
+export interface EquipmentConfig {
+  equipSlots: Record<string, EquipSlotDef>;
+  itemTypes: Record<string, ItemTypeDef>;
+}
 
 // ── Dice ──
 
@@ -27,33 +33,66 @@ function getAttr(attrs: Attributes | undefined, key: string, fallback: number = 
 
 // ── Equipment Helpers ──
 
+/**
+ * Resolve the equip slot for an item, driven by server's system config.
+ *
+ * Priority:
+ * 1. Explicit `properties.slot` if it's a valid slot ID
+ * 2. Tag matching — if a tag matches a slot ID in the config
+ * 3. Item type's `defaultSlot`
+ * 4. null (not equippable)
+ */
 export function getEquipSlot(
+  config: EquipmentConfig,
   type: string,
   properties?: ItemProperties,
   tags?: string[]
 ): string | null {
-  // Explicit slot in properties takes priority
+  const typeDef = config.itemTypes[type];
+
+  // Not equippable if the type isn't registered or isn't marked equippable
+  if (!typeDef?.equippable) return null;
+
+  // Priority 1: Explicit slot in properties
   if (properties?.slot && typeof properties.slot === "string") {
-    // Map common slot names
-    if (properties.slot === "head") return "head";
-    if (properties.slot === "body") return "body";
-    if (properties.slot === "feet") return "feet";
-    if (properties.slot === "ring") return "ring";
-    return properties.slot;
+    if (config.equipSlots[properties.slot]) return properties.slot;
   }
 
-  // Infer from type/tags
-  if (type === "weapon") return "mainHand";
-  if (tags?.includes("shield")) return "offHand";
-  if (type === "armor") {
-    if (tags?.includes("head")) return "head";
-    if (tags?.includes("body") || tags?.includes("cloak")) return "body";
-    if (tags?.includes("feet")) return "feet";
-    return "body"; // default armor slot
+  // Priority 2: Tag matches a slot ID (e.g., tag "head" matches slot "head")
+  if (tags) {
+    const validSlots = typeDef.equipSlots;
+    for (const tag of tags) {
+      if (config.equipSlots[tag]) {
+        // If the item type restricts which slots it can go in, enforce that
+        if (!validSlots || validSlots.includes(tag)) return tag;
+      }
+    }
   }
-  if (type === "accessory") return "ring";
 
-  return null; // not equippable (consumables, materials, keys, etc.)
+  // Priority 3: Item type's default slot
+  if (typeDef.defaultSlot && config.equipSlots[typeDef.defaultSlot]) {
+    return typeDef.defaultSlot;
+  }
+
+  return null;
+}
+
+/**
+ * Build a map of alias -> slot ID from the equip slot config.
+ * Includes the slot ID itself and its name (lowercased) as aliases.
+ */
+export function buildSlotAliases(config: EquipmentConfig): Record<string, string> {
+  const aliases: Record<string, string> = {};
+  for (const [slotId, def] of Object.entries(config.equipSlots)) {
+    aliases[slotId.toLowerCase()] = slotId;
+    aliases[def.name.toLowerCase()] = slotId;
+    if (def.aliases) {
+      for (const alias of def.aliases) {
+        aliases[alias.toLowerCase()] = slotId;
+      }
+    }
+  }
+  return aliases;
 }
 
 export function getEquippedDefense(equipment: Record<string, ItemInstance>): number {

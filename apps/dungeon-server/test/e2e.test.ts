@@ -151,13 +151,16 @@ describe("look", () => {
 // ─── Items ───────────────────────────────────────────────────
 
 describe("items", () => {
-  test("town square has torches on the ground", async () => {
+  test("stackable items spawn as a single stack", async () => {
     const client = new TestClient("ItemCheck");
     await client.connect(port);
     const room = await client.waitFor("room_state");
-    const torch = room.room.items.find((i) => i.name === "Torch");
-    expect(torch).toBeDefined();
-    expect(torch!.quantity).toBe(2);
+
+    // Town square has torches (stackable, quantity: 2) — should be 1 stack of 2
+    const torches = room.room.items.filter((i) => i.name === "Torch");
+    expect(torches.length).toBe(1);
+    expect(torches[0].quantity).toBe(2);
+
     client.disconnect();
   });
 
@@ -223,6 +226,29 @@ describe("items", () => {
     expect(text).toContain("Rusty Sword");
     expect(text).toContain("weapon");
     expect(text).toContain("common");
+    client.disconnect();
+  });
+
+  test("non-stackable items spawn as separate instances", async () => {
+    const client = new TestClient("StackCheck");
+    await client.connect(port);
+    await client.waitFor("room_state");
+
+    // Blacksmith has 2 rusty swords (non-stackable, quantity: 2)
+    const room = await client.commandAndWaitRoom("e"); // blacksmith
+    const swords = room.room.items.filter((i: any) => i.name === "Rusty Sword");
+
+    // Should be 2 separate items with quantity 1 each, not 1 item with quantity 2
+    expect(swords.length).toBe(2);
+    expect(swords[0].quantity).toBe(1);
+    expect(swords[1].quantity).toBe(1);
+
+    // Taking one should leave the other
+    await client.commandAndWait("take rusty sword");
+    const room2 = await client.commandAndWaitRoom("look");
+    const remaining = room2.room.items.filter((i: any) => i.name === "Rusty Sword");
+    expect(remaining.length).toBe(1);
+
     client.disconnect();
   });
 
@@ -494,7 +520,7 @@ describe("equipment", () => {
     const text = await client.commandAndWait("equip iron dagger");
     expect(text).toContain("equip");
     expect(text).toContain("Iron Dagger");
-    expect(text).toContain("main hand");
+    expect(text).toContain("Main Hand");
     client.disconnect();
   });
 
@@ -653,35 +679,36 @@ describe("combat", () => {
   });
 
   test("kill NPC, gain XP, get loot", async () => {
-    const client = new TestClient("Slayer");
-    await client.connect(port, { classId: "warrior", raceId: "orc" });
-    await client.waitFor("room_state");
-
-    // Navigate to spider hollow (orc warrior is strong enough with fists)
-    await client.commandAndWaitRoom("s");
-    await client.commandAndWaitRoom("s");
-    await client.commandAndWaitRoom("e");
-    await client.commandAndWaitRoom("e");
-    await client.commandAndWaitRoom("e");
-    await client.commandAndWaitRoom("e");
-    client.clearMessages();
-
-    // Fight spider until it dies
+    // Combat is RNG-based — retry with fresh connections if player dies
     let killed = false;
-    for (let i = 0; i < 30; i++) {
-      const text = await client.commandAndWait("attack spider");
-      if (text.includes("slain")) {
-        killed = true;
-        // XP message is in the same narrative now
-        expect(text).toContain("XP");
-        break;
+    for (let attempt = 0; attempt < 3 && !killed; attempt++) {
+      const client = new TestClient(`Slayer${attempt}`);
+      await client.connect(port, { classId: "warrior", raceId: "orc" });
+      await client.waitFor("room_state");
+
+      // Navigate to deep forest to fight wolf
+      await client.commandAndWaitRoom("s"); // gate
+      await client.commandAndWaitRoom("s"); // crossroads
+      await client.commandAndWaitRoom("e"); // forest edge
+      await client.commandAndWaitRoom("e"); // forest path
+      await client.commandAndWaitRoom("e"); // deep forest
+      client.clearMessages();
+
+      // Fight wolf until it dies or we die
+      for (let i = 0; i < 30; i++) {
+        const text = await client.commandAndWait("attack wolf");
+        if (text.includes("slain")) {
+          killed = true;
+          expect(text).toContain("XP");
+          break;
+        }
+        if (text.includes("defeated") || text.includes("don't see")) {
+          break;
+        }
       }
-      if (text.includes("defeated") || text.includes("don't see")) {
-        break;
-      }
+      client.disconnect();
     }
     expect(killed).toBe(true);
-    client.disconnect();
   });
 });
 

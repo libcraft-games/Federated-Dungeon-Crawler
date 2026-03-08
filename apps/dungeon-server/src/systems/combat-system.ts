@@ -314,7 +314,8 @@ export class CombatSystem {
       const lootNames = loot.map((i) => i.name).join(", ");
       lines.push(`${npc.name} drops: ${lootNames}`);
       for (const item of loot) {
-        room.addGroundItem(item);
+        const def = getItemDef(item.definitionId);
+        room.addGroundItem(item, def?.stackable ?? false);
       }
     }
 
