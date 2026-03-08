@@ -177,8 +177,15 @@ export class AreaManager {
               console.warn(`Item spawn references unknown item: ${defId}`);
               continue;
             }
-            const instance = createItemInstance(defId, def, item.quantity);
-            room.addGroundItem(instance);
+            if (def.stackable) {
+              // Stackable items: one instance with full quantity
+              room.addGroundItem(createItemInstance(defId, def, item.quantity), true);
+            } else {
+              // Non-stackable items: spawn separate instances
+              for (let n = 0; n < item.quantity; n++) {
+                room.addGroundItem(createItemInstance(defId, def, 1));
+              }
+            }
           }
         }
       }

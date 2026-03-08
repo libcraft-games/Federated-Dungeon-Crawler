@@ -94,7 +94,8 @@ function handleDrop(cmd: ParsedCommand, ctx: CommandContext): void {
     return;
   }
 
-  room.addGroundItem(item);
+  const def = world.areaManager.getItemDefinition(item.definitionId);
+  room.addGroundItem(item, def?.stackable ?? false);
 
   const qty = item.quantity > 1 ? ` (x${item.quantity})` : "";
   sendNarrative(session, `You drop ${item.name}${qty}.`, "info");

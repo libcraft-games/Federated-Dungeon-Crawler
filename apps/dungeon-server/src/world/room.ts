@@ -57,14 +57,15 @@ export class Room {
     return [...this.npcs.keys()];
   }
 
-  addGroundItem(item: ItemInstance): void {
-    // Stack with existing item of same definition if stackable
-    const existing = this.groundItems.find((i) => i.definitionId === item.definitionId);
-    if (existing) {
-      existing.quantity += item.quantity;
-    } else {
-      this.groundItems.push(item);
+  addGroundItem(item: ItemInstance, stackable: boolean = false): void {
+    if (stackable) {
+      const existing = this.groundItems.find((i) => i.definitionId === item.definitionId);
+      if (existing) {
+        existing.quantity += item.quantity;
+        return;
+      }
     }
+    this.groundItems.push(item);
   }
 
   removeGroundItem(identifier: string, quantity: number = 1): ItemInstance | undefined {
