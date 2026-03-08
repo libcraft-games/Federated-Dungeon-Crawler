@@ -152,6 +152,22 @@ export interface FlagEffect {
   description?: string;
 }
 
+// ── Items ──
+
+export interface ItemDefinition {
+  name: string;
+  type: string;
+  description: string;
+  weight?: number;
+  value?: number;
+  rarity?: string;
+  levelRequired?: number;
+  stackable?: boolean;
+  maxStack?: number;
+  properties?: ItemProperties;
+  tags?: string[];
+}
+
 // ── NSID constants ──
 
 export const NSID = {
@@ -171,6 +187,9 @@ export const NSID = {
   WorldArea: "com.cacheblasters.fm.world.area",
   WorldRoom: "com.cacheblasters.fm.world.room",
   WorldFlag: "com.cacheblasters.fm.world.flag",
+
+  // Items
+  ItemDefinition: "com.cacheblasters.fm.item.definition",
 
   // Actions
   ActionConnect: "com.cacheblasters.fm.action.connect",
