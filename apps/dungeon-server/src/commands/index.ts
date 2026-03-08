@@ -2,6 +2,7 @@ import type { ParsedCommand } from "@realms/common";
 import type { CharacterSession } from "../entities/character-session.js";
 import type { WorldManager } from "../world/world-manager.js";
 import type { SessionManager } from "../server/session-manager.js";
+import type { BlueskyBridge } from "../bluesky/bridge.js";
 import { handleMovement } from "./movement.js";
 import { handleLook } from "./interaction.js";
 import { handleSocial } from "./social.js";
@@ -13,6 +14,7 @@ export interface CommandContext {
   world: WorldManager;
   sessions: SessionManager;
   broadcast: (roomId: string, msg: ServerMessage, excludeSessionId?: string) => void;
+  bluesky: BlueskyBridge;
 }
 
 export function handleCommand(cmd: ParsedCommand, ctx: CommandContext): void {

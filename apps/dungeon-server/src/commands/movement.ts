@@ -69,4 +69,14 @@ export function handleMovement(cmd: ParsedCommand, ctx: CommandContext): void {
 
   // Send room state to the moving player
   sendRoomState(session, ctx);
+
+  // Post movement to Bluesky
+  ctx.bluesky.post({
+    type: "movement",
+    roomId: targetRoom.id,
+    roomTitle: targetRoom.title,
+    playerName: session.name,
+    playerDid: session.characterDid,
+    text: `${session.name} arrived at ${targetRoom.title}.`,
+  });
 }

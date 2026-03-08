@@ -7,12 +7,15 @@ import { encodeMessage, decodeClientMessage, type ServerMessage } from "@realms/
 import { handleCommand, sendRoomState, sendNarrative, type CommandContext } from "./commands/index.js";
 import type { CharacterProfile } from "@realms/lexicons";
 import { buildAttributes, computeDerivedStats } from "@realms/common";
+import { BlueskyBridge } from "./bluesky/bridge.js";
 
 const config = loadConfig();
 const world = new WorldManager(config);
 const sessions = new SessionManager();
+const bluesky = new BlueskyBridge(config.bluesky);
 
 await world.initialize();
+await bluesky.initialize();
 
 function broadcast(roomId: string, msg: ServerMessage, excludeSessionId?: string): void {
   const room = world.getRoom(roomId);
@@ -29,7 +32,7 @@ function broadcast(roomId: string, msg: ServerMessage, excludeSessionId?: string
 function makeContext(sessionId: string): CommandContext | null {
   const session = sessions.getSession(sessionId);
   if (!session) return null;
-  return { session, world, sessions, broadcast };
+  return { session, world, sessions, broadcast, bluesky };
 }
 
 // Dev mode: create a quick character profile for testing without AT Proto auth
@@ -148,6 +151,16 @@ const server = Bun.serve({
         })
       );
 
+      // Post to Bluesky
+      bluesky.post({
+        type: "system",
+        roomId: session.currentRoom,
+        roomTitle: spawnRoom?.title ?? session.currentRoom,
+        playerName: session.name,
+        playerDid: session.characterDid,
+        text: `${session.name} has entered the realm.`,
+      });
+
       // Send initial room state
       const ctx = makeContext(session.sessionId);
       if (ctx) sendRoomState(session, ctx);
@@ -209,6 +222,16 @@ const server = Bun.serve({
           });
         }
       }
+
+      // Post to Bluesky
+      bluesky.post({
+        type: "system",
+        roomId: session.currentRoom,
+        roomTitle: room?.title ?? session.currentRoom,
+        playerName: session.name,
+        playerDid: session.characterDid,
+        text: `${session.name} has left the realm.`,
+      });
 
       sessions.removeSession(session.sessionId);
     },

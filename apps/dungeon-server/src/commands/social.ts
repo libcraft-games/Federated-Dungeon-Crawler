@@ -4,7 +4,7 @@ import type { CommandContext } from "./index.js";
 import { sendNarrative } from "./index.js";
 
 export function handleSocial(cmd: ParsedCommand, ctx: CommandContext): void {
-  const { session, broadcast, sessions } = ctx;
+  const { session, broadcast, sessions, bluesky } = ctx;
 
   switch (cmd.verb) {
     case "say": {
@@ -18,6 +18,17 @@ export function handleSocial(cmd: ParsedCommand, ctx: CommandContext): void {
         channel: "room",
         sender: session.name,
         message,
+      });
+
+      // Post to Bluesky
+      const room = ctx.world.getRoom(session.currentRoom);
+      bluesky.post({
+        type: "chat",
+        roomId: session.currentRoom,
+        roomTitle: room?.title ?? session.currentRoom,
+        playerName: session.name,
+        playerDid: session.characterDid,
+        text: message,
       });
       break;
     }
@@ -39,6 +50,17 @@ export function handleSocial(cmd: ParsedCommand, ctx: CommandContext): void {
           })
         );
       }
+
+      // Post to Bluesky
+      const room = ctx.world.getRoom(session.currentRoom);
+      bluesky.post({
+        type: "shout",
+        roomId: session.currentRoom,
+        roomTitle: room?.title ?? session.currentRoom,
+        playerName: session.name,
+        playerDid: session.characterDid,
+        text: message,
+      });
       break;
     }
 
@@ -63,6 +85,7 @@ export function handleSocial(cmd: ParsedCommand, ctx: CommandContext): void {
         })
       );
       sendNarrative(session, `You whisper to ${target.name}: ${message}`, "chat");
+      // Whispers are private — never posted to Bluesky
       break;
     }
   }
