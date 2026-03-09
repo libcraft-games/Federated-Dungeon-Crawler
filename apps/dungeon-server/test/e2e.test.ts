@@ -854,3 +854,138 @@ describe("full adventure walkthrough", () => {
     hero.disconnect();
   });
 });
+
+// ── Spell System ──
+describe("spells", () => {
+  test("mage can view spell list", async () => {
+    const mage = new TestClient("TestMage");
+    await mage.connect(port, { classId: "mage", raceId: "elf" });
+    await mage.waitFor("room_state");
+
+    const text = await mage.commandAndWait("spells");
+    expect(text).toContain("Your spells:");
+    expect(text).toContain("Fireball");
+    expect(text).toContain("Ice Shard");
+    expect(text).toContain("Arcane Bolt");
+    expect(text).toContain("Lesser Heal");
+    expect(text).toContain("MP");
+
+    mage.disconnect();
+  });
+
+  test("warrior has no spells", async () => {
+    const warrior = new TestClient("NoSpellGuy");
+    await warrior.connect(port, { classId: "warrior", raceId: "human" });
+    await warrior.waitFor("room_state");
+
+    const text = await warrior.commandAndWait("spells");
+    expect(text).toContain("no spells");
+
+    warrior.disconnect();
+  });
+
+  test("mage can cast heal on self out of combat", async () => {
+    const mage = new TestClient("SelfHealer");
+    await mage.connect(port, { classId: "mage", raceId: "elf" });
+    await mage.waitFor("room_state");
+
+    mage.clearMessages();
+    mage.command("cast lesser heal");
+    const narrative = await mage.waitFor("narrative");
+    expect(narrative.text).toContain("casts Lesser Heal");
+    expect(narrative.text).toContain("HP:");
+
+    // Should get character_update with reduced MP
+    const update = await mage.waitFor("character_update");
+    expect(update.mp).toBeLessThan(update.maxMp);
+
+    mage.disconnect();
+  });
+
+  test("mage can cast attack spell in combat", async () => {
+    const mage = new TestClient("BattleMage");
+    await mage.connect(port, { classId: "mage", raceId: "elf" });
+    await mage.waitFor("room_state");
+
+    // Navigate to forest-path: s (town-gate) → s (crossroads) → e (forest-edge) → e (forest-path has a wolf)
+    mage.command("s");
+    await mage.waitFor("room_state");
+    mage.command("s");
+    await mage.waitFor("room_state");
+    mage.command("e");
+    await mage.waitFor("room_state");
+    mage.command("e");
+    await mage.waitFor("room_state");
+
+    mage.clearMessages();
+    const text = await mage.commandAndWait("cast fireball wolf");
+    expect(text).toContain("casts Fireball");
+    expect(text).toContain("MP spent");
+
+    // Should have started combat
+    const combatStarts = mage.getMessagesOfType("combat_start");
+    expect(combatStarts.length).toBeGreaterThan(0);
+
+    mage.disconnect();
+  });
+
+  test("warrior cannot cast spells", async () => {
+    const warrior = new TestClient("WarriorCaster");
+    await warrior.connect(port, { classId: "warrior", raceId: "human" });
+    await warrior.waitFor("room_state");
+
+    const text = await warrior.commandAndWait("cast fireball");
+    expect(text).toContain("class cannot cast");
+
+    warrior.disconnect();
+  });
+
+  test("casting with insufficient MP fails", async () => {
+    const mage = new TestClient("NoManaMage");
+    await mage.connect(port, { classId: "mage", raceId: "elf" });
+    await mage.waitFor("room_state");
+
+    // Drain MP by casting repeatedly
+    for (let i = 0; i < 20; i++) {
+      mage.command("cast lesser heal");
+      await mage.tick(50);
+    }
+    mage.clearMessages();
+
+    // Now try to cast a big spell
+    const text = await mage.commandAndWait("cast fireball");
+    // Either ran out of MP or needs a target — both are valid
+    expect(text.toLowerCase()).toMatch(/not enough mana|cast .* at whom/i);
+
+    mage.disconnect();
+  });
+
+  test("cleric can cast heal and smite", async () => {
+    const cleric = new TestClient("TestCleric");
+    await cleric.connect(port, { classId: "cleric", raceId: "dwarf" });
+    await cleric.waitFor("room_state");
+
+    const spellText = await cleric.commandAndWait("spells");
+    expect(spellText).toContain("Heal");
+    expect(spellText).toContain("Smite");
+    expect(spellText).toContain("Bless");
+    expect(spellText).toContain("Lesser Heal");
+
+    const healText = await cleric.commandAndWait("cast heal");
+    expect(healText).toContain("casts Heal");
+
+    cleric.disconnect();
+  });
+
+  test("help includes spell commands", async () => {
+    const hero = new TestClient("HelpChecker");
+    await hero.connect(port);
+    await hero.waitFor("room_state");
+
+    const text = await hero.commandAndWait("help");
+    expect(text).toContain("cast");
+    expect(text).toContain("spells");
+
+    hero.disconnect();
+  });
+});

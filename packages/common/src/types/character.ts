@@ -8,6 +8,7 @@ import type {
   FormulaDef,
   EquipSlotDef,
   ItemTypeDef,
+  SpellDef,
 } from "@realms/lexicons";
 import type { ItemInstance } from "./item.js";
 
@@ -44,6 +45,7 @@ export interface GameSystem {
   formulas: Record<string, FormulaDef>;
   equipSlots: Record<string, EquipSlotDef>;
   itemTypes: Record<string, ItemTypeDef>;
+  spells: Record<string, SpellDef>;
 }
 
 // ── Formula evaluation ──

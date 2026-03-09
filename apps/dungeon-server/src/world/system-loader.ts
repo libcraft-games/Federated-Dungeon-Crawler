@@ -7,6 +7,7 @@ import type {
   FormulaDef,
   EquipSlotDef,
   ItemTypeDef,
+  SpellDef,
 } from "@realms/lexicons";
 
 interface SystemYaml {
@@ -16,6 +17,7 @@ interface SystemYaml {
   formulas: Record<string, FormulaDef>;
   equipSlots: Record<string, EquipSlotDef>;
   itemTypes: Record<string, ItemTypeDef>;
+  spells: Record<string, SpellDef>;
 }
 
 export async function loadGameSystem(dataPath: string): Promise<GameSystem> {
@@ -34,6 +36,7 @@ export async function loadGameSystem(dataPath: string): Promise<GameSystem> {
     formulas: raw.formulas ?? {},
     equipSlots: raw.equipSlots ?? {},
     itemTypes: raw.itemTypes ?? {},
+    spells: raw.spells ?? {},
   };
 
   const attrCount = Object.keys(system.attributes).length;
@@ -42,9 +45,10 @@ export async function loadGameSystem(dataPath: string): Promise<GameSystem> {
   const formulaCount = Object.keys(system.formulas).length;
   const slotCount = Object.keys(system.equipSlots).length;
   const typeCount = Object.keys(system.itemTypes).length;
+  const spellCount = Object.keys(system.spells).length;
 
   console.log(
-    `Game system loaded: ${attrCount} attributes, ${classCount} classes, ${raceCount} races, ${formulaCount} formulas, ${slotCount} equip slots, ${typeCount} item types`
+    `Game system loaded: ${attrCount} attributes, ${classCount} classes, ${raceCount} races, ${formulaCount} formulas, ${slotCount} equip slots, ${typeCount} item types, ${spellCount} spells`
   );
 
   return system;

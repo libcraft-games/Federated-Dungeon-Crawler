@@ -50,6 +50,24 @@ export interface ClassDef {
   description: string;
   baseAttributes?: Attributes;
   attributeBonuses?: Attributes;
+  spells?: string[];
+  tags?: string[];
+}
+
+export interface SpellDef {
+  name: string;
+  description: string;
+  mpCost: number;
+  levelRequired?: number;
+  /** Attribute used for spell power scaling (e.g. "int", "wis") */
+  attribute: string;
+  effect: "damage" | "heal" | "buff" | "debuff";
+  /** Base power before attribute scaling */
+  power: number;
+  /** Dice notation for variable component, e.g. "2d6" */
+  dice?: string;
+  /** Target type */
+  target: "enemy" | "self" | "ally";
   tags?: string[];
 }
 
