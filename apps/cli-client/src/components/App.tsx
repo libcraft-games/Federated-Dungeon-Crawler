@@ -10,19 +10,20 @@ import { InputBar } from "./InputBar.js";
 interface Props {
   host: string;
   port: number;
+  tls: boolean;
   name: string;
   classId: string;
   raceId: string;
 }
 
-export function App({ host, port, name, classId, raceId }: Props) {
+export function App({ host, port, tls, name, classId, raceId }: Props) {
   const { exit } = useApp();
 
   const client = useMemo(() => {
     const c = new WsClient();
-    c.connect({ host, port, name, classId, raceId });
+    c.connect({ host, port, tls, name, classId, raceId });
     return c;
-  }, [host, port, name, classId, raceId]);
+  }, [host, port, tls, name, classId, raceId]);
 
   const state = useGameState(client);
   const [connecting, setConnecting] = useState(true);

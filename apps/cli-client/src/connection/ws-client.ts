@@ -6,6 +6,7 @@ export type MessageHandler = (msg: ServerMessage) => void;
 export interface ConnectionOptions {
   host: string;
   port: number;
+  tls: boolean;
   name: string;
   classId: string;
   raceId: string;
@@ -29,7 +30,10 @@ export class WsClient {
   }
 
   connect(opts: ConnectionOptions): void {
-    const url = `ws://${opts.host}:${opts.port}/ws?name=${encodeURIComponent(opts.name)}&class=${opts.classId}&race=${opts.raceId}`;
+    const protocol = opts.tls ? "wss" : "ws";
+    const defaultPort = opts.tls ? 443 : 80;
+    const portSuffix = opts.port === defaultPort ? "" : `:${opts.port}`;
+    const url = `${protocol}://${opts.host}${portSuffix}/ws?name=${encodeURIComponent(opts.name)}&class=${opts.classId}&race=${opts.raceId}`;
 
     this.ws = new WebSocket(url);
 

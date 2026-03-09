@@ -18,17 +18,22 @@ for (let i = 0; i < args.length; i++) {
 }
 
 const host = flags.host ?? "localhost";
-const port = parseInt(flags.port ?? "3333", 10);
+const tls = "tls" in flags || "ssl" in flags || host !== "localhost";
+const port = parseInt(flags.port ?? (tls ? "443" : "3333"), 10);
 const name = flags.name ?? positional[0] ?? `Adventurer_${Math.floor(Math.random() * 9999)}`;
 const classId = flags.class ?? "warrior";
 const raceId = flags.race ?? "human";
 
-console.log(`Federated Realms - Connecting to ${host}:${port} as ${name}...\n`);
+const protocol = tls ? "wss" : "ws";
+const defaultPort = tls ? 443 : 80;
+const portDisplay = port === defaultPort ? "" : `:${port}`;
+console.log(`Federated Realms - Connecting to ${protocol}://${host}${portDisplay} as ${name}...\n`);
 
 render(
   <App
     host={host}
     port={port}
+    tls={tls}
     name={name}
     classId={classId}
     raceId={raceId}
