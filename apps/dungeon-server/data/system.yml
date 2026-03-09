@@ -1,0 +1,158 @@
+# Default Game System - Classic Fantasy
+# This defines the attributes, classes, races, and formulas for this server.
+# Servers can modify this file or create entirely different systems.
+
+attributes:
+  str:
+    name: Strength
+    description: Physical power. Affects melee damage and carry weight.
+    defaultValue: 10
+    category: physical
+  dex:
+    name: Dexterity
+    description: Agility and reflexes. Affects accuracy, evasion, and action points.
+    defaultValue: 10
+    category: physical
+  con:
+    name: Constitution
+    description: Endurance and vitality. Affects hit points and resistance.
+    defaultValue: 10
+    category: physical
+  int:
+    name: Intelligence
+    description: Mental acuity. Affects mana pool and spell power.
+    defaultValue: 10
+    category: mental
+  wis:
+    name: Wisdom
+    description: Perception and insight. Affects healing power and detection.
+    defaultValue: 10
+    category: mental
+  cha:
+    name: Charisma
+    description: Force of personality. Affects NPC interactions and prices.
+    defaultValue: 10
+    category: social
+
+classes:
+  warrior:
+    name: Warrior
+    description: A frontline fighter skilled with weapons and heavy armor.
+    attributeBonuses: { str: 4, con: 2 }
+    tags: [melee, tank]
+  mage:
+    name: Mage
+    description: A wielder of arcane magic, powerful but fragile.
+    attributeBonuses: { int: 4, wis: 2 }
+    tags: [caster, ranged]
+  rogue:
+    name: Rogue
+    description: A nimble trickster who strikes from the shadows.
+    attributeBonuses: { dex: 4, cha: 2 }
+    tags: [melee, stealth]
+  cleric:
+    name: Cleric
+    description: A divine healer and protector, equally adept in combat.
+    attributeBonuses: { wis: 4, con: 2 }
+    tags: [caster, healer]
+  ranger:
+    name: Ranger
+    description: A versatile wilderness survivor, skilled with bow and blade.
+    attributeBonuses: { dex: 2, wis: 2, con: 2 }
+    tags: [ranged, melee]
+
+races:
+  human:
+    name: Human
+    description: Versatile and adaptable, humans excel in every field.
+    attributeBonuses: { cha: 2, con: 1, str: 1 }
+    tags: [adaptable]
+  elf:
+    name: Elf
+    description: Graceful and long-lived, elves are keen of mind and body.
+    attributeBonuses: { dex: 2, int: 2 }
+    tags: [fey]
+  dwarf:
+    name: Dwarf
+    description: Stout and resilient, dwarves are master craftsmen.
+    attributeBonuses: { con: 3, str: 1 }
+    tags: [sturdy]
+  halfling:
+    name: Halfling
+    description: Small but nimble, halflings are naturally lucky.
+    attributeBonuses: { dex: 3, cha: 1 }
+    tags: [small, lucky]
+  orc:
+    name: Orc
+    description: Powerful and fierce, orcs are born warriors.
+    attributeBonuses: { str: 3, con: 1 }
+    tags: [fierce]
+
+equipSlots:
+  mainHand:
+    name: Main Hand
+    category: weapon
+    aliases: [weapon, main hand, mainhand]
+  offHand:
+    name: Off Hand
+    category: weapon
+    aliases: [shield, off hand, offhand]
+  head:
+    name: Head
+    category: armor
+    aliases: [helmet, hat, helm]
+  body:
+    name: Body
+    category: armor
+    aliases: [armor, chest, torso]
+  feet:
+    name: Feet
+    category: armor
+    aliases: [boots, shoes]
+  ring:
+    name: Ring
+    category: accessory
+    aliases: [finger]
+
+itemTypes:
+  weapon:
+    name: Weapon
+    equippable: true
+    defaultSlot: mainHand
+  armor:
+    name: Armor
+    equippable: true
+    defaultSlot: body
+    equipSlots: [head, body, feet, offHand]
+  accessory:
+    name: Accessory
+    equippable: true
+    defaultSlot: ring
+    equipSlots: [ring]
+  consumable:
+    name: Consumable
+    stackable: true
+  material:
+    name: Material
+    stackable: true
+  key:
+    name: Key
+
+formulas:
+  maxHp:
+    name: Max Hit Points
+    expression: "20 + (level - 1) * 8 + floor(con / 2)"
+    min: 1
+  maxMp:
+    name: Max Mana Points
+    expression: "10 + (level - 1) * 4 + floor(int / 3)"
+    min: 0
+  maxAp:
+    name: Max Action Points
+    expression: "4 + floor((dex - 10) / 4)"
+    min: 2
+    max: 12
+  carryWeight:
+    name: Carry Weight
+    expression: "50 + str * 5"
+    min: 10

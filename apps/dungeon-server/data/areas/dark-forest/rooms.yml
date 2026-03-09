@@ -1,0 +1,100 @@
+- id: forest-edge
+  title: Edge of the Dark Forest
+  description: >
+    The grasslands give way abruptly to dense, ancient woodland. Gnarled oaks
+    and towering pines crowd together, their branches interlocking overhead
+    to form a natural archway. The light dims noticeably as you peer into the
+    forest. Animal tracks crisscross the muddy ground, some disturbingly large.
+  coordinates: { x: 1, y: -2, z: 0 }
+  exits:
+    - direction: west
+      target: starter-town:crossroads
+      description: The open grasslands and crossroads lie to the west.
+    - direction: east
+      target: forest-path
+      description: A narrow path winds deeper into the forest.
+
+- id: forest-path
+  title: Winding Forest Path
+  description: >
+    The path twists between massive tree trunks, each one wider than a house.
+    Thick roots snake across the trail, threatening to trip the unwary. Shafts
+    of pale light filter through gaps in the canopy far above. The air is cool
+    and damp, smelling of moss and decay. Something rustles in the undergrowth.
+  coordinates: { x: 2, y: -2, z: 0 }
+  exits:
+    - direction: west
+      target: forest-edge
+      description: The path leads back toward the forest edge and open sky.
+    - direction: north
+      target: mushroom-grove
+      description: A faint glow beckons from a grove to the north.
+    - direction: east
+      target: deep-forest
+      description: The path grows darker as it continues east into the heart of the forest.
+
+- id: mushroom-grove
+  title: Luminous Mushroom Grove
+  description: >
+    A clearing filled with enormous mushrooms that pulse with soft blue and
+    green bioluminescence. The largest stands taller than a man, its cap wide
+    enough to shelter beneath. Tiny motes of light drift lazily through the
+    air like underwater stars. The ground is soft with a thick carpet of
+    moss. There is a strange peacefulness here.
+  coordinates: { x: 2, y: -1, z: 0 }
+  flags: [safe]
+  exits:
+    - direction: south
+      target: forest-path
+      description: The winding path continues to the south.
+
+- id: deep-forest
+  title: Heart of the Dark Forest
+  description: >
+    The trees press close, their bark blackened and twisted into unsettling
+    shapes. Almost no light reaches the forest floor here. The silence is
+    oppressive, broken only by the occasional crack of a branch or distant
+    howl. Spider webs as thick as rope stretch between the trees. The path
+    splits — one branch descends into a ravine, the other continues through
+    the darkness.
+  coordinates: { x: 3, y: -2, z: 0 }
+  flags: [dark]
+  exits:
+    - direction: west
+      target: forest-path
+      description: The path leads back toward lighter woods.
+    - direction: down
+      target: ravine
+      description: A steep, root-tangled slope descends into a rocky ravine.
+    - direction: east
+      target: spider-hollow
+      description: Thick webs drape across the path ahead.
+
+- id: ravine
+  title: Forest Ravine
+  description: >
+    A deep gash in the forest floor, its walls of dark earth and exposed
+    stone. A thin stream trickles along the bottom, barely visible in the
+    gloom. The air is noticeably colder down here. Strange fungi cling to
+    the damp rock walls, and bones of small animals are scattered among
+    the stones.
+  coordinates: { x: 3, y: -2, z: -1 }
+  flags: [dark]
+  exits:
+    - direction: up
+      target: deep-forest
+      description: The slope climbs back up to the forest floor.
+
+- id: spider-hollow
+  title: Spider Hollow
+  description: >
+    The trees here are completely wrapped in layers of thick, sticky webbing.
+    Cocooned shapes dangle from the branches — some the size of deer. The
+    ground crackles with dried husks and shed exoskeletons. Multiple pairs
+    of eyes glint in the darkness above. This place reeks of venom and death.
+  coordinates: { x: 4, y: -2, z: 0 }
+  flags: [dark]
+  exits:
+    - direction: west
+      target: deep-forest
+      description: The web-covered path leads back toward the heart of the forest.

@@ -1,0 +1,20 @@
+services:
+  dungeon-server:
+    build: .
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - PORT=3000
+      - HOST=0.0.0.0
+      - SERVER_NAME=${SERVER_NAME:-Federated Realms}
+      - SERVER_DESCRIPTION=${SERVER_DESCRIPTION:-A mysterious dungeon awaits...}
+      - DEFAULT_SPAWN=${DEFAULT_SPAWN:-starter-town:town-square}
+      - BSKY_ENABLED=${BSKY_ENABLED:-false}
+      - BSKY_IDENTIFIER=${BSKY_IDENTIFIER:-}
+      - BSKY_PASSWORD=${BSKY_PASSWORD:-}
+      - BSKY_SERVICE=${BSKY_SERVICE:-https://bsky.social}
+      - BSKY_POST_TYPES=${BSKY_POST_TYPES:-chat,shout,event}
+      - BSKY_PLAYER_CROSSPOST=${BSKY_PLAYER_CROSSPOST:-true}
+      - BSKY_THREAD_REFRESH=${BSKY_THREAD_REFRESH:-60}
+      - BSKY_THROTTLE_MS=${BSKY_THROTTLE_MS:-2000}
+    restart: unless-stopped

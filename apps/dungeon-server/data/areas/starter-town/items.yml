@@ -1,0 +1,196 @@
+# Item definitions for Starter Town
+# These are templates — instances are placed in rooms via spawns below
+
+definitions:
+  - id: rusty-sword
+    name: Rusty Sword
+    type: weapon
+    description: >
+      A battered iron sword with a pitted blade and worn leather grip.
+      It's seen better days, but it still has an edge.
+    weight: 3
+    value: 5
+    rarity: common
+    levelRequired: 1
+    properties:
+      damage: 4
+      damageType: slashing
+      speed: medium
+    tags: [melee, one-handed]
+
+  - id: wooden-shield
+    name: Wooden Shield
+    type: armor
+    description: >
+      A round wooden shield reinforced with iron bands. Splintered around
+      the edges but still serviceable for blocking blows.
+    weight: 4
+    value: 8
+    rarity: common
+    levelRequired: 1
+    properties:
+      defense: 2
+      blockChance: 15
+      slot: offHand
+    tags: [shield, one-handed]
+
+  - id: leather-cap
+    name: Leather Cap
+    type: armor
+    description: >
+      A simple leather skullcap lined with wool. Offers modest protection
+      against glancing blows.
+    weight: 1
+    value: 3
+    rarity: common
+    levelRequired: 1
+    properties:
+      defense: 1
+      slot: head
+    tags: [head, light-armor]
+
+  - id: health-potion
+    name: Health Potion
+    type: consumable
+    description: >
+      A small glass vial filled with a bubbling red liquid. It tastes
+      awful but mends wounds quickly.
+    weight: 0.5
+    value: 15
+    rarity: common
+    stackable: true
+    maxStack: 10
+    properties:
+      healAmount: 20
+      effect: restore_hp
+    tags: [potion, healing]
+
+  - id: mana-potion
+    name: Mana Potion
+    type: consumable
+    description: >
+      A glass vial containing a shimmering blue liquid. It crackles faintly
+      with arcane energy.
+    weight: 0.5
+    value: 20
+    rarity: common
+    stackable: true
+    maxStack: 10
+    properties:
+      manaAmount: 15
+      effect: restore_mp
+    tags: [potion, mana]
+
+  - id: torch
+    name: Torch
+    type: consumable
+    description: >
+      A wooden shaft wrapped in oil-soaked rags. When lit, it provides
+      a flickering circle of warm light.
+    weight: 1
+    value: 1
+    rarity: common
+    stackable: true
+    maxStack: 5
+    properties:
+      duration: 60
+      effect: light
+    tags: [light, utility]
+
+  - id: bread-loaf
+    name: Loaf of Bread
+    type: consumable
+    description: A crusty loaf of fresh bread, still slightly warm.
+    weight: 0.5
+    value: 2
+    rarity: common
+    stackable: true
+    maxStack: 5
+    properties:
+      healAmount: 5
+      effect: restore_hp
+    tags: [food]
+
+  - id: copper-ring
+    name: Copper Ring
+    type: accessory
+    description: >
+      A plain copper ring, slightly green with age. It hums faintly
+      when held up to the light.
+    weight: 0.1
+    value: 12
+    rarity: uncommon
+    levelRequired: 1
+    properties:
+      slot: ring
+      bonus_hp: 5
+    tags: [ring, accessory]
+
+  - id: iron-dagger
+    name: Iron Dagger
+    type: weapon
+    description: >
+      A short, well-balanced dagger with a narrow blade. Good for quick
+      strikes and easy to conceal.
+    weight: 1
+    value: 10
+    rarity: common
+    levelRequired: 1
+    properties:
+      damage: 3
+      damageType: piercing
+      speed: fast
+    tags: [melee, one-handed, dagger]
+
+  - id: old-key
+    name: Old Iron Key
+    type: key
+    description: >
+      A heavy iron key with an ornate bow. Whatever lock it opens must
+      be ancient.
+    weight: 0.1
+    value: 0
+    rarity: uncommon
+    properties:
+      keyId: old-iron
+    tags: [key, quest]
+
+# Item spawns — place instances in rooms
+spawns:
+  - room: town-square
+    items:
+      - id: torch
+        quantity: 2
+
+  - room: tavern
+    items:
+      - id: bread-loaf
+        quantity: 3
+
+  - room: blacksmith
+    items:
+      - id: rusty-sword
+        quantity: 2
+      - id: wooden-shield
+        quantity: 1
+      - id: leather-cap
+        quantity: 1
+
+  - room: curiosity-shop
+    items:
+      - id: health-potion
+        quantity: 2
+      - id: mana-potion
+        quantity: 1
+      - id: copper-ring
+        quantity: 1
+
+  - room: courtyard
+    items:
+      - id: old-key
+        quantity: 1
+
+  - room: alley
+    items:
+      - id: iron-dagger
+        quantity: 1

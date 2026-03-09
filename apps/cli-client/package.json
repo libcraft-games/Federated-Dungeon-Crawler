@@ -1,0 +1,24 @@
+{
+  "name": "cli-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/index.tsx",
+    "build": "tsc",
+    "start": "bun src/index.tsx",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@realms/common": "workspace:*",
+    "@realms/lexicons": "workspace:*",
+    "@realms/protocol": "workspace:*",
+    "ink": "^5.1.0",
+    "ink-text-input": "^6.0.0",
+    "react": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.0",
+    "bun-types": "latest"
+  }
+}

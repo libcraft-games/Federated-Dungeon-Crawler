@@ -1,0 +1,9 @@
+node_modules
+dist
+.git
+.github
+*.md
+.env
+apps/web-client
+apps/cli-client
+lexicons

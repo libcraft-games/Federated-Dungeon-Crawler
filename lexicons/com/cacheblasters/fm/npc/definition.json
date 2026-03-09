@@ -1,0 +1,36 @@
+{
+  "lexicon": 1,
+  "id": "com.cacheblasters.fm.npc.definition",
+  "defs": {
+    "main": {
+      "type": "record",
+      "key": "any",
+      "description": "An NPC definition template. Servers define NPC behavior via the behavior field and dialogue trees.",
+      "record": {
+        "type": "object",
+        "required": ["name", "description", "behavior"],
+        "properties": {
+          "name": { "type": "string", "maxLength": 128 },
+          "description": { "type": "string", "maxLength": 4096 },
+          "behavior": {
+            "type": "string",
+            "description": "NPC behavior archetype: hostile, merchant, questgiver, wanderer, static"
+          },
+          "level": { "type": "integer", "minimum": 1 },
+          "attributes": {
+            "type": "unknown",
+            "description": "Open map of attribute ID -> value, using server's attribute schema"
+          },
+          "dialogue": {
+            "type": "unknown",
+            "description": "Dialogue tree structure — server-defined format"
+          },
+          "tags": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}
