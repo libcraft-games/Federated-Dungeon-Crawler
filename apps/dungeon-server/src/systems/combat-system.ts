@@ -20,11 +20,15 @@ import type { ServerMessage } from "@realms/protocol";
 import {
   resolvePlayerAttack,
   resolveNpcAttack,
+  resolveSpellAttack,
+  resolveSpellSelf,
   formatAttackResult,
+  formatSpellResult,
   calculateXpReward,
   attemptFlee,
   xpToNextLevel,
 } from "@realms/common";
+import type { SpellDef } from "@realms/lexicons";
 import { encodeMessage } from "@realms/protocol";
 
 export interface CombatContext {
@@ -260,6 +264,193 @@ export class CombatSystem {
     if (session.isDead && session.inCombat) {
       const npc = this.ctx.world.npcManager.getInstance(session.combatTarget!);
       if (npc) this.handlePlayerDeath(session, npc);
+    }
+  }
+
+  /** Player casts a spell (in or out of combat) */
+  castSpell(session: CharacterSession, spellName: string, targetName?: string): void {
+    const { world, broadcast } = this.ctx;
+    const system = world.gameSystem;
+
+    // Find the spell
+    const lower = spellName.toLowerCase();
+    const spellEntry = Object.entries(system.spells).find(
+      ([id, def]) => id.toLowerCase() === lower || def.name.toLowerCase() === lower
+    );
+    if (!spellEntry) {
+      this.sendCombat(session, `Unknown spell: ${spellName}. Type 'spells' to see your spell list.`);
+      return;
+    }
+    const [spellId, spell] = spellEntry;
+
+    // Check if class knows this spell
+    const classDef = system.classes[session.state.class];
+    if (!classDef?.spells?.includes(spellId)) {
+      this.sendCombat(session, `Your class cannot cast ${spell.name}.`);
+      return;
+    }
+
+    // Check level requirement
+    if (spell.levelRequired && session.state.level < spell.levelRequired) {
+      this.sendCombat(session, `You need level ${spell.levelRequired} to cast ${spell.name}.`);
+      return;
+    }
+
+    // Check MP
+    if (session.state.currentMp < spell.mpCost) {
+      this.sendCombat(session, `Not enough mana. ${spell.name} costs ${spell.mpCost} MP (you have ${session.state.currentMp}).`);
+      return;
+    }
+
+    // Route by effect type
+    if (spell.target === "self") {
+      this.castSelfSpell(session, spell);
+    } else if (spell.target === "enemy") {
+      this.castAttackSpell(session, spell, targetName);
+    } else {
+      this.sendCombat(session, `You can't cast ${spell.name} right now.`);
+    }
+  }
+
+  private castSelfSpell(session: CharacterSession, spell: SpellDef): void {
+    // Spend MP
+    session.state.currentMp -= spell.mpCost;
+
+    const result = resolveSpellSelf(spell, session.state.attributes);
+    const lines: string[] = [];
+
+    if (spell.effect === "heal") {
+      const oldHp = session.state.currentHp;
+      session.heal(result.amount);
+      const healed = session.state.currentHp - oldHp;
+      lines.push(formatSpellResult(
+        session.name, session.name, result,
+        session.state.currentHp, session.state.maxHp
+      ));
+      lines.push(`  (${spell.mpCost} MP spent, ${session.state.currentMp}/${session.state.maxMp} remaining)`);
+    } else if (spell.effect === "buff") {
+      // Simple buff: +magnitude to str for 5 ticks
+      lines.push(`${session.name} casts ${spell.name}! A surge of power flows through you.`);
+      lines.push(`  +${result.amount} Strength for a short time. (${spell.mpCost} MP spent)`);
+      session.state.activeEffects.push({
+        id: `spell:${spell.name.toLowerCase().replace(/\s+/g, "-")}`,
+        name: spell.name,
+        type: "buff",
+        attribute: "str",
+        magnitude: result.amount,
+        remainingTicks: 5,
+      });
+      // Apply immediately
+      session.state.attributes.str = (session.state.attributes.str ?? 10) + result.amount;
+    }
+
+    // NPC retaliates if in combat
+    if (session.inCombat) {
+      const npc = this.ctx.world.npcManager.getInstance(session.combatTarget!);
+      if (npc && npc.state !== "dead") {
+        const retaliationLines = this.npcRetaliate(session, npc);
+        lines.push("", ...retaliationLines);
+      }
+    }
+
+    this.sendCombat(session, lines.join("\n"));
+    this.sendCharacterUpdate(session);
+
+    if (session.isDead && session.inCombat) {
+      const npc = this.ctx.world.npcManager.getInstance(session.combatTarget!);
+      if (npc) this.handlePlayerDeath(session, npc);
+    }
+  }
+
+  private castAttackSpell(session: CharacterSession, spell: SpellDef, targetName?: string): void {
+    const { world, broadcast } = this.ctx;
+    const room = world.getRoom(session.currentRoom);
+    if (!room) return;
+
+    if (room.isSafe()) {
+      this.sendCombat(session, "This is a safe zone. Combat is not allowed here.");
+      return;
+    }
+
+    // Determine target
+    let npc: NpcInstance | undefined;
+    if (targetName) {
+      npc = world.npcManager.findInRoom(room.id, targetName);
+      if (!npc) {
+        this.sendCombat(session, `You don't see '${targetName}' here to target.`);
+        return;
+      }
+    } else if (session.combatTarget) {
+      npc = world.npcManager.getInstance(session.combatTarget);
+      if (!npc || npc.state === "dead") {
+        session.combatTarget = null;
+        this.sendCombat(session, "Your target is no longer here.");
+        this.sendCombatEnd(session, "victory");
+        return;
+      }
+    } else {
+      this.sendCombat(session, `Cast ${spell.name} at whom? Specify a target.`);
+      return;
+    }
+
+    // Start combat if not already in it
+    const combatStarting = !session.inCombat;
+    if (combatStarting) {
+      session.combatTarget = npc.instanceId;
+      npc.state = "combat";
+      session.send(encodeMessage({ type: "combat_start", target: npc.name }));
+      broadcast(
+        room.id,
+        { type: "narrative", text: `${session.name} engages ${npc.name} in combat!`, style: "combat" },
+        session.sessionId
+      );
+    } else if (session.combatTarget !== npc.instanceId) {
+      session.combatTarget = npc.instanceId;
+      npc.state = "combat";
+    }
+
+    session.isDefending = false;
+
+    // Spend MP
+    session.state.currentMp -= spell.mpCost;
+
+    // Resolve spell attack
+    const result = resolveSpellAttack(
+      spell,
+      session.state.attributes,
+      npc.attributes,
+      npc.level
+    );
+
+    if (result.success) {
+      world.npcManager.damageNpc(npc.instanceId, result.amount);
+    }
+
+    const lines: string[] = [];
+    lines.push(formatSpellResult(
+      session.name, npc.name, result, npc.currentHp, npc.maxHp
+    ));
+    lines.push(`  (${spell.mpCost} MP spent, ${session.state.currentMp}/${session.state.maxMp} remaining)`);
+
+    // Check if NPC died
+    if (npc.currentHp <= 0) {
+      const deathLines = this.handleNpcDeath(session, npc);
+      lines.push(...deathLines);
+      this.sendCombat(session, lines.join("\n"));
+      broadcast(room.id, { type: "narrative", text: lines.join("\n"), style: "combat" }, session.sessionId);
+      return;
+    }
+
+    // NPC retaliates
+    const retaliationLines = this.npcRetaliate(session, npc);
+    lines.push("", ...retaliationLines);
+
+    this.sendCombat(session, lines.join("\n"));
+    broadcast(room.id, { type: "narrative", text: lines.join("\n"), style: "combat" }, session.sessionId);
+    this.sendCharacterUpdate(session);
+
+    if (session.isDead) {
+      this.handlePlayerDeath(session, npc);
     }
   }
 

@@ -1,4 +1,4 @@
-import type { Attributes, ItemProperties, ItemTypeDef, EquipSlotDef } from "@realms/lexicons";
+import type { Attributes, ItemProperties, ItemTypeDef, EquipSlotDef, SpellDef } from "@realms/lexicons";
 import type { ItemInstance } from "../types/item.js";
 
 /** Subset of GameSystem needed for equipment resolution */
@@ -271,6 +271,142 @@ export function attemptFlee(playerDex: number, npcLevel: number): boolean {
   const dexMod = attrMod(playerDex);
   const target = 10 + npcLevel;
   return roll + dexMod >= target;
+}
+
+// ── Spell Resolution ──
+
+export interface SpellResult {
+  success: boolean;
+  critical: boolean;
+  roll: number;
+  spellBonus: number;
+  totalRoll: number;
+  defense: number;
+  amount: number;
+  spellName: string;
+  effect: SpellDef["effect"];
+}
+
+/**
+ * Parse dice notation like "2d6" into {count, sides}.
+ * Returns null for invalid notation.
+ */
+function parseDice(notation: string): { count: number; sides: number } | null {
+  const match = notation.match(/^(\d+)d(\d+)$/);
+  if (!match) return null;
+  return { count: parseInt(match[1]), sides: parseInt(match[2]) };
+}
+
+/**
+ * Resolve an offensive spell cast against a target.
+ * Attack spells: d20 + attribute mod vs target AC. Damage = power + dice + attribute mod.
+ */
+export function resolveSpellAttack(
+  spell: SpellDef,
+  casterAttrs: Attributes,
+  targetAttrs: Attributes | undefined,
+  targetLevel: number
+): SpellResult {
+  const roll = rollD20();
+  const critical = roll === 20;
+
+  const castMod = attrMod(getAttr(casterAttrs, spell.attribute));
+  const spellBonus = castMod;
+  const totalRoll = roll + spellBonus;
+
+  // Target defense: 10 + dex modifier (same as melee)
+  const targetDexMod = attrMod(getAttr(targetAttrs, "dex"));
+  const defense = 10 + targetDexMod;
+
+  const success = critical || totalRoll >= defense;
+
+  let amount = 0;
+  if (success) {
+    amount = spell.power + castMod;
+    if (spell.dice) {
+      const dice = parseDice(spell.dice);
+      if (dice) amount += rollDice(dice.count, dice.sides);
+    }
+    amount = Math.max(1, amount);
+    if (critical) amount *= 2;
+  }
+
+  return {
+    success,
+    critical,
+    roll,
+    spellBonus,
+    totalRoll,
+    defense,
+    amount,
+    spellName: spell.name,
+    effect: spell.effect,
+  };
+}
+
+/**
+ * Resolve a self-targeted spell (heal, buff). Always succeeds.
+ * Amount = power + dice + attribute mod.
+ */
+export function resolveSpellSelf(
+  spell: SpellDef,
+  casterAttrs: Attributes
+): SpellResult {
+  const castMod = attrMod(getAttr(casterAttrs, spell.attribute));
+
+  let amount = spell.power + castMod;
+  if (spell.dice) {
+    const dice = parseDice(spell.dice);
+    if (dice) amount += rollDice(dice.count, dice.sides);
+  }
+  amount = Math.max(1, amount);
+
+  return {
+    success: true,
+    critical: false,
+    roll: 0,
+    spellBonus: castMod,
+    totalRoll: 0,
+    defense: 0,
+    amount,
+    spellName: spell.name,
+    effect: spell.effect,
+  };
+}
+
+export function formatSpellResult(
+  casterName: string,
+  targetName: string,
+  result: SpellResult,
+  targetHp: number,
+  targetMaxHp: number
+): string {
+  const lines: string[] = [];
+
+  if (result.effect === "heal") {
+    lines.push(`${casterName} casts ${result.spellName}!`);
+    lines.push(`  Restored ${result.amount} HP. ${targetName} HP: ${targetHp}/${targetMaxHp}`);
+    return lines.join("\n");
+  }
+
+  // Attack spells
+  if (result.critical) {
+    lines.push(`${casterName} casts ${result.spellName} — CRITICAL SURGE!`);
+  } else if (result.success) {
+    lines.push(`${casterName} casts ${result.spellName} at ${targetName}.`);
+  } else {
+    lines.push(`${casterName} casts ${result.spellName} at ${targetName}, but it fizzles!`);
+  }
+
+  lines.push(
+    `  Roll: ${result.roll} + ${result.spellBonus} = ${result.totalRoll} vs AC ${result.defense} — ${result.success ? "Hit!" : "Miss!"}`
+  );
+
+  if (result.success) {
+    lines.push(`  ${result.amount} damage dealt. ${targetName} HP: ${targetHp}/${targetMaxHp}`);
+  }
+
+  return lines.join("\n");
 }
 
 // ── Combat Narrative Formatting ──
