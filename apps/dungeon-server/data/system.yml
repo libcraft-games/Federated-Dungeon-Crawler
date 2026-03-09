@@ -44,6 +44,7 @@ classes:
     name: Mage
     description: A wielder of arcane magic, powerful but fragile.
     attributeBonuses: { int: 4, wis: 2 }
+    spells: [fireball, ice-shard, arcane-bolt, lesser-heal]
     tags: [caster, ranged]
   rogue:
     name: Rogue
@@ -54,11 +55,13 @@ classes:
     name: Cleric
     description: A divine healer and protector, equally adept in combat.
     attributeBonuses: { wis: 4, con: 2 }
+    spells: [heal, smite, bless, lesser-heal]
     tags: [caster, healer]
   ranger:
     name: Ranger
     description: A versatile wilderness survivor, skilled with bow and blade.
     attributeBonuses: { dex: 2, wis: 2, con: 2 }
+    spells: [lesser-heal]
     tags: [ranged, melee]
 
 races:
@@ -137,6 +140,84 @@ itemTypes:
     stackable: true
   key:
     name: Key
+
+spells:
+  fireball:
+    name: Fireball
+    description: Hurls a ball of fire at the target, dealing heavy damage.
+    mpCost: 8
+    attribute: int
+    effect: damage
+    power: 4
+    dice: 2d6
+    target: enemy
+    levelRequired: 1
+    tags: [fire, arcane]
+  ice-shard:
+    name: Ice Shard
+    description: Launches a shard of ice that pierces the target.
+    mpCost: 5
+    attribute: int
+    effect: damage
+    power: 2
+    dice: 1d8
+    target: enemy
+    levelRequired: 1
+    tags: [ice, arcane]
+  arcane-bolt:
+    name: Arcane Bolt
+    description: A quick bolt of pure arcane energy. Low cost, reliable damage.
+    mpCost: 3
+    attribute: int
+    effect: damage
+    power: 3
+    dice: 1d4
+    target: enemy
+    levelRequired: 1
+    tags: [arcane]
+  smite:
+    name: Smite
+    description: Channels divine wrath to strike an enemy.
+    mpCost: 6
+    attribute: wis
+    effect: damage
+    power: 3
+    dice: 2d4
+    target: enemy
+    levelRequired: 1
+    tags: [divine]
+  heal:
+    name: Heal
+    description: A powerful prayer of restoration.
+    mpCost: 8
+    attribute: wis
+    effect: heal
+    power: 6
+    dice: 2d6
+    target: self
+    levelRequired: 1
+    tags: [divine, healing]
+  lesser-heal:
+    name: Lesser Heal
+    description: A minor healing prayer. Available to multiple classes.
+    mpCost: 4
+    attribute: wis
+    effect: heal
+    power: 3
+    dice: 1d6
+    target: self
+    levelRequired: 1
+    tags: [divine, healing]
+  bless:
+    name: Bless
+    description: A divine blessing that temporarily strengthens the caster.
+    mpCost: 5
+    attribute: wis
+    effect: buff
+    power: 2
+    target: self
+    levelRequired: 2
+    tags: [divine, buff]
 
 formulas:
   maxHp:
