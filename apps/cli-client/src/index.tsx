@@ -21,8 +21,14 @@ const host = flags.host ?? "localhost";
 const tls = "tls" in flags || "ssl" in flags || host !== "localhost";
 const port = parseInt(flags.port ?? (tls ? "443" : "3333"), 10);
 const name = flags.name ?? positional[0] ?? `Adventurer_${Math.floor(Math.random() * 9999)}`;
-const classId = flags.class ?? "warrior";
-const raceId = flags.race ?? "human";
+
+// Only skip character creation if class was explicitly provided
+const classExplicit = "class" in flags;
+const raceExplicit = "race" in flags;
+const skipCreate = classExplicit;
+
+const classId = flags.class;
+const raceId = flags.race;
 
 const protocol = tls ? "wss" : "ws";
 const defaultPort = tls ? 443 : 80;
@@ -37,5 +43,6 @@ render(
     name={name}
     classId={classId}
     raceId={raceId}
+    skipCreate={skipCreate}
   />
 );
