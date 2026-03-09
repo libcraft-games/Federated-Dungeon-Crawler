@@ -8,6 +8,8 @@ COPY packages/common/package.json packages/common/
 COPY packages/atproto/package.json packages/atproto/
 COPY packages/protocol/package.json packages/protocol/
 COPY apps/dungeon-server/package.json apps/dungeon-server/
+COPY apps/cli-client/package.json apps/cli-client/
+COPY apps/web-client/package.json apps/web-client/
 
 RUN bun install --frozen-lockfile
 
