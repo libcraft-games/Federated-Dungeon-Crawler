@@ -28,7 +28,7 @@ export function handleCommand(cmd: ParsedCommand, ctx: CommandContext): void {
   // Block most actions during combat (except combat commands, look, inventory, equipment, stats)
   if (session.inCombat) {
     const allowedInCombat = new Set([
-      "attack", "kill", "defend", "flee", "retreat", "use",
+      "attack", "kill", "defend", "flee", "retreat", "use", "cast", "spells",
       "look", "inventory", "equipment", "stats", "help", "",
     ]);
     if (!allowedInCombat.has(cmd.verb)) {
@@ -73,6 +73,8 @@ export function handleCommand(cmd: ParsedCommand, ctx: CommandContext): void {
     case "flee":
     case "retreat":
     case "use":
+    case "cast":
+    case "spells":
       handleCombat(cmd, ctx);
       break;
 
