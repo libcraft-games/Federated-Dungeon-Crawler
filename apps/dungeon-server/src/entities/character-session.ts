@@ -176,6 +176,42 @@ export class CharacterSession {
     this.state.maxAp = derived.maxAp ?? this.state.maxAp;
   }
 
+  /** Process active effect ticks. Returns names of expired effects. */
+  tickEffects(): string[] {
+    const expired: string[] = [];
+    const remaining = [];
+
+    for (const effect of this.state.activeEffects) {
+      effect.remainingTicks--;
+      if (effect.remainingTicks <= 0) {
+        // Undo attribute modification
+        if (effect.attribute) {
+          const current = this.state.attributes[effect.attribute] ?? 10;
+          if (effect.type === "buff") {
+            this.state.attributes[effect.attribute] = current - effect.magnitude;
+          } else {
+            this.state.attributes[effect.attribute] = current + effect.magnitude;
+          }
+        }
+        expired.push(effect.name);
+      } else {
+        remaining.push(effect);
+      }
+    }
+
+    this.state.activeEffects = remaining;
+
+    // Recalculate derived stats if anything expired (HP/MP caps may change)
+    if (expired.length > 0) {
+      this.recalculateDerived();
+      // Clamp current values
+      this.state.currentHp = Math.min(this.state.currentHp, this.state.maxHp);
+      this.state.currentMp = Math.min(this.state.currentMp, this.state.maxMp);
+    }
+
+    return expired;
+  }
+
   /** Respawn at a room with 1 HP */
   respawn(spawnRoom: string): void {
     this.state.currentRoom = spawnRoom;
