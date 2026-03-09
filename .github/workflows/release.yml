@@ -143,7 +143,7 @@ jobs:
         run: |
           mkdir release
 
-          # macOS ARM64
+          # macOS ARM64 (Unsigned)
           cp artifacts/federated-realms-macos-arm64/federated-realms release/federated-realms-macos-arm64
           chmod 755 release/federated-realms-macos-arm64
 
@@ -187,6 +187,7 @@ jobs:
 
             ```bash
             # macOS / Linux
+            # On MacOS, you will need to run `xattr -d com.apple.quarantine federated-realms-macos-arm64` depending on your chip as it is not signed.
             chmod +x federated-realms-*
             ./federated-realms-macos-arm64 --host your-server.com --port 3000 --name YourName
 
