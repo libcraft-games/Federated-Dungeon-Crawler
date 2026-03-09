@@ -6,7 +6,7 @@ import { parseCommand } from "@realms/common";
 import { encodeMessage, decodeClientMessage, type ServerMessage } from "@realms/protocol";
 import { handleCommand, sendRoomState, sendNarrative, type CommandContext } from "./commands/index.js";
 import type { CharacterProfile } from "@realms/lexicons";
-import { buildAttributes, computeDerivedStats } from "@realms/common";
+import { buildAttributes, computeDerivedStats, xpToNextLevel } from "@realms/common";
 import { BlueskyBridge } from "./bluesky/bridge.js";
 import { CombatSystem } from "./systems/combat-system.js";
 
@@ -71,6 +71,33 @@ setInterval(() => {
         text: `${npc.name} appears.`,
         style: "info",
       });
+    }
+  }
+
+  // Process buff/debuff ticks for all players
+  for (const session of sessions.getAllSessions()) {
+    if (session.state.activeEffects.length === 0) continue;
+
+    const expired = session.tickEffects();
+    if (expired.length > 0) {
+      const names = expired.join(", ");
+      session.send(encodeMessage({
+        type: "narrative",
+        text: `Effect${expired.length > 1 ? "s" : ""} worn off: ${names}`,
+        style: "info",
+      }));
+      // Send updated stats
+      const s = session.state;
+      session.send(encodeMessage({
+        type: "character_update",
+        hp: s.currentHp,
+        maxHp: s.maxHp,
+        mp: s.currentMp,
+        maxMp: s.maxMp,
+        level: s.level,
+        xp: s.experience,
+        xpToNext: xpToNextLevel(s.level, s.experience),
+      }));
     }
   }
 }, TICK_INTERVAL_MS);
