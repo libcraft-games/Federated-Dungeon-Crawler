@@ -142,6 +142,20 @@ definitions:
       speed: fast
     tags: [melee, one-handed, dagger]
 
+  - id: ye-flask
+    name: Ye Flask
+    type: key
+    description: >
+      A mysterious flask sits here, gleaming tantalizingly. It seems to be
+      welded to the bar by some ancient and powerful magic. Many have tried
+      to take it. All have failed.
+    weight: 0
+    value: 0
+    rarity: legendary
+    properties:
+      untakeable: true
+    tags: [ye, flask, easter-egg]
+
   - id: old-key
     name: Old Iron Key
     type: key
@@ -166,6 +180,8 @@ spawns:
     items:
       - id: bread-loaf
         quantity: 3
+      - id: ye-flask
+        quantity: 1
 
   - room: blacksmith
     items:

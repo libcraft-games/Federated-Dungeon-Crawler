@@ -50,6 +50,13 @@ function handleTake(cmd: ParsedCommand, ctx: CommandContext): void {
   const room = world.getRoom(session.currentRoom);
   if (!room) return;
 
+  // Check for untakeable items before removing
+  const groundItem = room.findGroundItem(itemName);
+  if (groundItem?.properties?.untakeable) {
+    sendNarrative(session, `You can't get ye ${groundItem.name.toLowerCase()}. It is firmly anchored to this plane of existence.`, "info");
+    return;
+  }
+
   const item = room.removeGroundItem(itemName);
   if (!item) {
     sendNarrative(session, `You don't see '${itemName}' here.`, "error");
