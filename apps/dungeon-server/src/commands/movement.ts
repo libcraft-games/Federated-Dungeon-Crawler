@@ -70,6 +70,16 @@ export function handleMovement(cmd: ParsedCommand, ctx: CommandContext): void {
   // Send room state to the moving player
   sendRoomState(session, ctx);
 
+  // Auto-aggro: hostile NPCs in the room attack the player
+  if (!targetRoom.isSafe()) {
+    const hostiles = world.npcManager.getAllInRoom(targetRoom.id)
+      .filter((npc) => npc.behavior === "hostile" && npc.state === "idle");
+    if (hostiles.length > 0) {
+      const aggressor = hostiles[0];
+      ctx.combat.npcAggro(session, aggressor);
+    }
+  }
+
   // Post movement to Bluesky
   ctx.bluesky.post({
     type: "movement",

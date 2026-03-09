@@ -44,6 +44,38 @@ export class CombatSystem {
     this.ctx = ctx;
   }
 
+  /** Hostile NPC initiates combat with a player on room entry */
+  npcAggro(session: CharacterSession, npc: NpcInstance): void {
+    if (session.inCombat) return; // already fighting something
+
+    const { broadcast } = this.ctx;
+
+    session.combatTarget = npc.instanceId;
+    npc.state = "combat";
+    session.isDefending = false;
+
+    session.send(encodeMessage({ type: "combat_start", target: npc.name }));
+
+    const lines: string[] = [];
+    lines.push(`${npc.name} attacks you!`);
+
+    // NPC gets a free opening attack
+    const retaliationLines = this.npcRetaliate(session, npc);
+    lines.push(...retaliationLines);
+
+    this.sendCombat(session, lines.join("\n"));
+    broadcast(
+      session.currentRoom,
+      { type: "narrative", text: `${npc.name} attacks ${session.name}!`, style: "combat" },
+      session.sessionId
+    );
+    this.sendCharacterUpdate(session);
+
+    if (session.isDead) {
+      this.handlePlayerDeath(session, npc);
+    }
+  }
+
   /** Player attacks an NPC */
   attack(session: CharacterSession, targetName?: string): void {
     const { world, broadcast } = this.ctx;
