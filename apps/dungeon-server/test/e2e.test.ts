@@ -571,25 +571,30 @@ describe("equipment", () => {
 // ─── Combat ─────────────────────────────────────────────────
 
 describe("combat", () => {
-  test("attack a hostile NPC and engage in combat", async () => {
-    const client = new TestClient("Fighter");
+  test("hostile NPCs auto-aggro on room entry", async () => {
+    const client = new TestClient("AggroTest");
     await client.connect(port, { classId: "warrior", raceId: "orc" });
     await client.waitFor("room_state");
 
-    // Navigate to deep forest (has a wolf)
+    // Navigate to forest path (wolf auto-aggros on entry)
     await client.commandAndWaitRoom("s"); // gate
     await client.commandAndWaitRoom("s"); // crossroads
     await client.commandAndWaitRoom("e"); // forest edge
-    await client.commandAndWaitRoom("e"); // forest path
-    await client.commandAndWaitRoom("e"); // deep forest
-    client.clearMessages();
+    await client.commandAndWaitRoom("e"); // forest path — wolf auto-aggros
 
-    // Attack wolf — output includes both player attack and NPC retaliation
-    const text = await client.commandAndWait("attack wolf");
-    expect(text).toContain("Grey Wolf");
-    expect(text).toContain("Roll:");
+    // Wait for auto-aggro messages to arrive
+    await client.tick(200);
+
+    // Verify combat started automatically
+    const combatStarts = client.getMessagesOfType("combat_start");
+    expect(combatStarts.length).toBeGreaterThan(0);
+    expect(combatStarts[0].target).toContain("Wolf");
+
+    // NPC free attack narrative should include "attacks you"
+    const narratives = client.getMessagesOfType("narrative");
+    expect(narratives.some((n) => n.text.includes("attacks you"))).toBe(true);
+
     // Should be in combat (can't move, can defend)
-
     client.clearMessages();
     const moveText = await client.commandAndWait("w");
     expect(moveText).toContain("can't move while in combat");
@@ -606,15 +611,14 @@ describe("combat", () => {
     await client.connect(port, { classId: "rogue", raceId: "elf" });
     await client.waitFor("room_state");
 
-    // Navigate to forest path (has a wolf)
+    // Navigate to forest path (wolf auto-aggros on entry)
     await client.commandAndWaitRoom("s");
     await client.commandAndWaitRoom("s");
     await client.commandAndWaitRoom("e");
-    await client.commandAndWaitRoom("e");
-    client.clearMessages();
+    await client.commandAndWaitRoom("e"); // auto-aggro starts combat
 
-    // Attack to start combat
-    await client.commandAndWait("attack wolf");
+    // Wait for auto-aggro to settle
+    await client.tick(200);
 
     // Try fleeing — with high dex (16) should usually succeed
     // Accept either escape or getting killed as valid outcomes
@@ -639,14 +643,24 @@ describe("combat", () => {
 
   test("safe rooms prevent combat", async () => {
     const client = new TestClient("SafeZone");
-    await client.connect(port);
+    await client.connect(port, { classId: "rogue", raceId: "elf" });
     await client.waitFor("room_state");
 
-    // Mushroom grove is a safe zone with an NPC
+    // Navigate toward mushroom grove (safe zone) — must pass through forest path
     await client.commandAndWaitRoom("s"); // gate
     await client.commandAndWaitRoom("s"); // crossroads
     await client.commandAndWaitRoom("e"); // forest edge
-    await client.commandAndWaitRoom("e"); // forest path
+    await client.commandAndWaitRoom("e"); // forest path (wolf auto-aggro)
+
+    // Flee from auto-aggro'd wolf before continuing
+    await client.tick(200);
+    for (let i = 0; i < 20; i++) {
+      client.clearMessages();
+      const fleeText = await client.commandAndWait("flee");
+      if (fleeText.includes("escape") || fleeText.includes("not in combat")) break;
+      if (fleeText.includes("defeated")) break;
+    }
+
     await client.commandAndWaitRoom("n"); // mushroom grove (safe)
     client.clearMessages();
 
@@ -665,20 +679,17 @@ describe("combat", () => {
     await client.commandAndWait("take bread");
     await client.waitFor("inventory_update");
 
-    // Go to spider hollow
+    // Navigate to forest path (wolf auto-aggros — starts combat)
     await client.commandAndWaitRoom("s"); // town square
     await client.commandAndWaitRoom("s"); // gate
     await client.commandAndWaitRoom("s"); // crossroads
     await client.commandAndWaitRoom("e"); // forest edge
-    await client.commandAndWaitRoom("e"); // forest path
-    await client.commandAndWaitRoom("e"); // deep forest
-    await client.commandAndWaitRoom("e"); // spider hollow
-    client.clearMessages();
+    await client.commandAndWaitRoom("e"); // forest path — auto-aggro
 
-    // Start combat
-    await client.commandAndWait("attack spider");
+    // Wait for auto-aggro to settle
+    await client.tick(200);
 
-    // Use bread to heal
+    // Use bread to heal (should work during auto-aggro combat)
     client.clearMessages();
     const text = await client.commandAndWait("use bread");
     expect(text).toContain("Loaf of Bread");
@@ -694,15 +705,15 @@ describe("combat", () => {
       await client.connect(port, { classId: "warrior", raceId: "orc" });
       await client.waitFor("room_state");
 
-      // Navigate to deep forest to fight wolf
+      // Navigate to forest path — wolf auto-aggros on entry
       await client.commandAndWaitRoom("s"); // gate
       await client.commandAndWaitRoom("s"); // crossroads
       await client.commandAndWaitRoom("e"); // forest edge
-      await client.commandAndWaitRoom("e"); // forest path
-      await client.commandAndWaitRoom("e"); // deep forest
+      await client.commandAndWaitRoom("e"); // forest path — auto-aggro
+      await client.tick(200);
       client.clearMessages();
 
-      // Fight wolf until it dies or we die
+      // Fight wolf until it dies or we die (combat already started via auto-aggro)
       for (let i = 0; i < 30; i++) {
         const text = await client.commandAndWait("attack wolf");
         if (text.includes("slain")) {
@@ -825,9 +836,17 @@ describe("full adventure walkthrough", () => {
     expect(text).toContain("Gnarled Staff");
     await hero.waitFor("inventory_update");
 
-    // 14. Push deeper into the forest
+    // 14. Push deeper into the forest (wolf may or may not be here — previous tests may have killed it)
     room = await hero.commandAndWaitRoom("e"); // forest path
-    expect(room.room.npcs.some((n) => n.name.includes("Wolf"))).toBe(true);
+
+    // Flee from auto-aggro'd wolf if present
+    await hero.tick(200);
+    for (let i = 0; i < 20; i++) {
+      hero.clearMessages();
+      const fleeText = await hero.commandAndWait("flee");
+      if (fleeText.includes("escape") || fleeText.includes("not in combat")) break;
+      if (fleeText.includes("defeated")) break;
+    }
 
     // 15. Visit the mushroom grove
     room = await hero.commandAndWaitRoom("n"); // mushroom grove
@@ -915,24 +934,31 @@ describe("spells", () => {
     await mage.connect(port, { classId: "mage", raceId: "elf" });
     await mage.waitFor("room_state");
 
-    // Navigate to forest-path: s (town-gate) → s (crossroads) → e (forest-edge) → e (forest-path has a wolf)
-    mage.command("s");
-    await mage.waitFor("room_state");
-    mage.command("s");
-    await mage.waitFor("room_state");
-    mage.command("e");
-    await mage.waitFor("room_state");
-    mage.command("e");
-    await mage.waitFor("room_state");
+    // Navigate to deep forest — wolf auto-aggros on entry
+    // (forest-path wolf may have been killed by earlier tests)
+    await mage.commandAndWaitRoom("s"); // gate
+    await mage.commandAndWaitRoom("s"); // crossroads
+    await mage.commandAndWaitRoom("e"); // forest edge
+    await mage.commandAndWaitRoom("e"); // forest path (may or may not have wolf)
 
+    // Flee if auto-aggro'd at forest-path
+    await mage.tick(200);
+    for (let i = 0; i < 20; i++) {
+      mage.clearMessages();
+      const fleeText = await mage.commandAndWait("flee");
+      if (fleeText.includes("escape") || fleeText.includes("not in combat")) break;
+      if (fleeText.includes("defeated")) break;
+    }
+
+    // Continue to deep forest (wolf here auto-aggros)
+    await mage.commandAndWaitRoom("e"); // deep forest
+    await mage.tick(200);
+
+    // Cast fireball on the wolf (already in combat via auto-aggro)
     mage.clearMessages();
     const text = await mage.commandAndWait("cast fireball wolf");
     expect(text).toContain("casts Fireball");
     expect(text).toContain("MP spent");
-
-    // Should have started combat
-    const combatStarts = mage.getMessagesOfType("combat_start");
-    expect(combatStarts.length).toBeGreaterThan(0);
 
     mage.disconnect();
   });
