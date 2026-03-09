@@ -320,19 +320,27 @@ describe("NPCs", () => {
 
   test("hostile NPC refuses dialogue", async () => {
     const client = new TestClient("HostileTalk");
-    await client.connect(port);
+    await client.connect(port, { classId: "rogue", raceId: "elf" });
     await client.waitFor("room_state");
 
-    // Navigate to spider hollow
+    // Navigate to forest path (wolf auto-aggros on entry)
     await client.commandAndWaitRoom("s");     // gate
     await client.commandAndWaitRoom("s");     // crossroads
     await client.commandAndWaitRoom("e");     // forest edge
-    await client.commandAndWaitRoom("e");     // forest path
-    await client.commandAndWaitRoom("e");     // deep forest
-    await client.commandAndWaitRoom("e");     // spider hollow
+    await client.commandAndWaitRoom("e");     // forest path — auto-aggro
+
+    // Flee from the auto-aggro'd wolf before trying to talk
+    await client.tick(200);
+    for (let i = 0; i < 20; i++) {
+      client.clearMessages();
+      const fleeText = await client.commandAndWait("flee");
+      if (fleeText.includes("escape") || fleeText.includes("not in combat")) break;
+      if (fleeText.includes("defeated")) break;
+    }
     client.clearMessages();
 
-    const text = await client.commandAndWait("talk spider");
+    // Now try to talk to the hostile wolf — should refuse
+    const text = await client.commandAndWait("talk wolf");
     expect(text).toContain("doesn't seem interested");
     client.disconnect();
   });
