@@ -26,6 +26,8 @@ export type ServerMessage =
       maxHp: number;
       mp: number;
       maxMp: number;
+      ap: number;
+      maxAp: number;
       level: number;
       xp: number;
       xpToNext: number;

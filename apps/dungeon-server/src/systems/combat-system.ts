@@ -27,6 +27,7 @@ import {
   calculateXpReward,
   attemptFlee,
   xpToNextLevel,
+  AP_COST,
 } from "@realms/common";
 import type { SpellDef } from "@realms/lexicons";
 import { encodeMessage } from "@realms/protocol";
@@ -53,6 +54,7 @@ export class CombatSystem {
     session.combatTarget = npc.instanceId;
     npc.state = "combat";
     session.isDefending = false;
+    session.refreshAp();
 
     session.send(encodeMessage({ type: "combat_start", target: npc.name }));
 
@@ -114,15 +116,26 @@ export class CombatSystem {
     if (combatStarting) {
       session.combatTarget = npc.instanceId;
       npc.state = "combat";
+      session.refreshAp();
       session.send(encodeMessage({ type: "combat_start", target: npc.name }));
       broadcast(
         room.id,
         { type: "narrative", text: `${session.name} engages ${npc.name} in combat!`, style: "combat" },
         session.sessionId
       );
-    } else if (session.combatTarget !== npc.instanceId) {
-      session.combatTarget = npc.instanceId;
-      npc.state = "combat";
+    } else {
+      // Refresh AP at the start of each round
+      session.refreshAp();
+      if (session.combatTarget !== npc.instanceId) {
+        session.combatTarget = npc.instanceId;
+        npc.state = "combat";
+      }
+    }
+
+    // Check AP
+    if (!session.spendAp(AP_COST.attack)) {
+      this.sendCombat(session, `Not enough AP to attack. Need ${AP_COST.attack}, have ${session.state.currentAp}.`);
+      return;
     }
 
     session.isDefending = false;
@@ -185,6 +198,13 @@ export class CombatSystem {
       return;
     }
 
+    // Refresh AP at start of round, then spend
+    session.refreshAp();
+    if (!session.spendAp(AP_COST.defend)) {
+      this.sendCombat(session, `Not enough AP to defend. Need ${AP_COST.defend}, have ${session.state.currentAp}.`);
+      return;
+    }
+
     session.isDefending = true;
     const lines: string[] = [];
     lines.push("You raise your guard, bracing for the next attack. (+4 AC)");
@@ -205,6 +225,13 @@ export class CombatSystem {
   flee(session: CharacterSession): void {
     if (!session.inCombat) {
       this.sendCombat(session, "You're not in combat. Just walk away.");
+      return;
+    }
+
+    // Refresh AP at start of round, then spend
+    session.refreshAp();
+    if (!session.spendAp(AP_COST.flee)) {
+      this.sendCombat(session, `Not enough AP to flee. Need ${AP_COST.flee}, have ${session.state.currentAp}.`);
       return;
     }
 
@@ -257,6 +284,15 @@ export class CombatSystem {
     if (!def || def.type !== "consumable") {
       this.sendCombat(session, `You can't use ${item.name}.`);
       return;
+    }
+
+    // AP check in combat
+    if (session.inCombat) {
+      session.refreshAp();
+      if (!session.spendAp(AP_COST.useItem)) {
+        this.sendCombat(session, `Not enough AP to use an item. Need ${AP_COST.useItem}, have ${session.state.currentAp}.`);
+        return;
+      }
     }
 
     const props = def.properties ?? {};
@@ -332,6 +368,16 @@ export class CombatSystem {
     if (session.state.currentMp < spell.mpCost) {
       this.sendCombat(session, `Not enough mana. ${spell.name} costs ${spell.mpCost} MP (you have ${session.state.currentMp}).`);
       return;
+    }
+
+    // Check AP in combat
+    const apCost = spell.apCost ?? AP_COST.castDefault;
+    if (session.inCombat) {
+      session.refreshAp();
+      if (!session.spendAp(apCost)) {
+        this.sendCombat(session, `Not enough AP to cast ${spell.name}. Need ${apCost}, have ${session.state.currentAp}.`);
+        return;
+      }
     }
 
     // Route by effect type
@@ -647,6 +693,8 @@ export class CombatSystem {
       maxHp: s.maxHp,
       mp: s.currentMp,
       maxMp: s.maxMp,
+      ap: s.currentAp,
+      maxAp: s.maxAp,
       level: s.level,
       xp: s.experience,
       xpToNext: xpToNextLevel(s.level, s.experience),

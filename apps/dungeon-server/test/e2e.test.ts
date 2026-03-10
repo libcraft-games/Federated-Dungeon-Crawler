@@ -1019,7 +1019,76 @@ describe("spells", () => {
     const text = await hero.commandAndWait("help");
     expect(text).toContain("cast");
     expect(text).toContain("spells");
+    expect(text).toContain("AP");
 
     hero.disconnect();
+  });
+
+  test("spell list shows AP costs", async () => {
+    const mage = new TestClient("APSpellCheck");
+    await mage.connect(port, { classId: "mage", raceId: "elf" });
+    await mage.waitFor("room_state");
+
+    const text = await mage.commandAndWait("spells");
+    expect(text).toContain("AP");
+    // Fireball costs 4 AP
+    expect(text).toContain("4 AP");
+
+    mage.disconnect();
+  });
+});
+
+// ── AP System ──
+describe("action points", () => {
+  test("character_update includes AP fields", async () => {
+    const client = new TestClient("APCheck");
+    await client.connect(port, { classId: "mage", raceId: "elf" });
+    await client.waitFor("room_state");
+
+    // Cast a self-heal to trigger character_update
+    client.clearMessages();
+    client.command("cast lesser heal");
+    await client.waitFor("narrative");
+    const update = await client.waitFor("character_update");
+    expect(update.ap).toBeDefined();
+    expect(update.maxAp).toBeDefined();
+    expect(update.maxAp).toBeGreaterThanOrEqual(2);
+
+    client.disconnect();
+  });
+
+  test("AP refreshes each combat round", async () => {
+    const client = new TestClient("APRefresh");
+    await client.connect(port, { classId: "warrior", raceId: "orc" });
+    await client.waitFor("room_state");
+
+    // Navigate to hostile room (wolf auto-aggros)
+    await client.commandAndWaitRoom("s"); // gate
+    await client.commandAndWaitRoom("s"); // crossroads
+    await client.commandAndWaitRoom("e"); // forest edge
+    await client.commandAndWaitRoom("e"); // forest path — auto-aggro
+    await client.tick(200);
+
+    // Attack multiple rounds — each should succeed (AP refreshes each round)
+    for (let i = 0; i < 3; i++) {
+      client.clearMessages();
+      const text = await client.commandAndWait("attack wolf");
+      // Should either hit, miss, or kill — never "not enough AP"
+      expect(text).not.toContain("Not enough AP");
+      if (text.includes("slain") || text.includes("defeated") || text.includes("don't see")) break;
+    }
+
+    client.disconnect();
+  });
+
+  test("stats shows AP values", async () => {
+    const client = new TestClient("APStats");
+    await client.connect(port);
+    await client.waitFor("room_state");
+
+    const text = await client.commandAndWait("stats");
+    expect(text).toContain("AP:");
+
+    client.disconnect();
   });
 });

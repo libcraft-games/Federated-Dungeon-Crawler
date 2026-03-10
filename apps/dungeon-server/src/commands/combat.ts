@@ -1,4 +1,4 @@
-import type { ParsedCommand } from "@realms/common";
+import { type ParsedCommand, AP_COST } from "@realms/common";
 import type { CommandContext } from "./index.js";
 import { sendNarrative } from "./index.js";
 
@@ -104,9 +104,10 @@ function showSpells(session: import("../entities/character-session.js").Characte
     const levelReq = spell.levelRequired && spell.levelRequired > session.state.level
       ? ` [Requires level ${spell.levelRequired}]`
       : "";
-    lines.push(`  ${spell.name} — ${spell.mpCost} MP — ${spell.description}${levelReq}`);
+    const apCost = spell.apCost ?? AP_COST.castDefault;
+    lines.push(`  ${spell.name} — ${spell.mpCost} MP, ${apCost} AP — ${spell.description}${levelReq}`);
   }
   lines.push("");
-  lines.push(`Mana: ${session.state.currentMp}/${session.state.maxMp}`);
+  lines.push(`Mana: ${session.state.currentMp}/${session.state.maxMp}  AP: ${session.state.currentAp}/${session.state.maxAp}`);
   sendNarrative(session, lines.join("\n"), "info");
 }

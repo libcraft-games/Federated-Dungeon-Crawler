@@ -123,6 +123,18 @@ export class CharacterSession {
     return this.state.equipment[slot];
   }
 
+  // ── Action Points ──
+
+  refreshAp(): void {
+    this.state.currentAp = this.state.maxAp;
+  }
+
+  spendAp(amount: number): boolean {
+    if (this.state.currentAp < amount) return false;
+    this.state.currentAp -= amount;
+    return true;
+  }
+
   // ── Combat ──
 
   takeDamage(amount: number): void {

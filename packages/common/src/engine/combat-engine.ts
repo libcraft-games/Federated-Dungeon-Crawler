@@ -7,6 +7,16 @@ export interface EquipmentConfig {
   itemTypes: Record<string, ItemTypeDef>;
 }
 
+// ── Action Point Costs ──
+
+export const AP_COST = {
+  attack: 2,
+  defend: 1,
+  flee: 3,
+  useItem: 2,
+  castDefault: 2,
+} as const;
+
 // ── Dice ──
 
 export function rollD20(): number {

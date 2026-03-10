@@ -94,6 +94,8 @@ setInterval(() => {
         maxHp: s.maxHp,
         mp: s.currentMp,
         maxMp: s.maxMp,
+        ap: s.currentAp,
+        maxAp: s.maxAp,
         level: s.level,
         xp: s.experience,
         xpToNext: xpToNextLevel(s.level, s.experience),

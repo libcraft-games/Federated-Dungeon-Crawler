@@ -58,6 +58,8 @@ export interface SpellDef {
   name: string;
   description: string;
   mpCost: number;
+  /** Action point cost (defaults to 2 if not specified) */
+  apCost?: number;
   levelRequired?: number;
   /** Attribute used for spell power scaling (e.g. "int", "wis") */
   attribute: string;
