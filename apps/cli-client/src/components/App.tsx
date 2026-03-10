@@ -1,11 +1,14 @@
-import React, { useCallback, useMemo, useState, useEffect } from "react";
-import { Box, Text, useApp } from "ink";
+import React, { useCallback, useState, useEffect, useMemo } from "react";
+import { Box, Text, useApp, useStdout, useInput } from "ink";
 import { WsClient } from "../connection/ws-client.js";
 import { useGameState } from "../hooks/use-game-state.js";
 import { StatusBar } from "./StatusBar.js";
-import { RoomView } from "./RoomView.js";
+import { RoomPanel } from "./RoomPanel.js";
+import { CombatPanel, getCombatPanelHeight } from "./CombatPanel.js";
 import { NarrativeView } from "./NarrativeView.js";
 import { InputBar } from "./InputBar.js";
+import { HintBar } from "./HintBar.js";
+import { InfoPanel, INFO_PANEL_HEIGHT } from "./InfoPanel.js";
 import { CharacterCreate } from "./CharacterCreate.js";
 
 interface SystemData {
@@ -44,12 +47,11 @@ export function App({ host, port, tls, name, classId, raceId, skipCreate }: Prop
 
     fetch(url)
       .then((res) => res.json())
-      .then((data: SystemData) => {
-        setSystem(data);
+      .then((data) => {
+        setSystem(data as SystemData);
         setPhase("create");
       })
       .catch(() => {
-        // If we can't fetch system, fall back to defaults
         setPhase("play");
       });
   }, [phase, host, port, tls]);
@@ -91,7 +93,6 @@ export function App({ host, port, tls, name, classId, raceId, skipCreate }: Prop
     );
   }
 
-  // Play phase
   if (!client) {
     return (
       <Box paddingX={1}>
@@ -103,13 +104,43 @@ export function App({ host, port, tls, name, classId, raceId, skipCreate }: Prop
   return <GameView client={client} name={name} exit={exit} />;
 }
 
+// Layout height budget:
+//   StatusBar:    3 rows (border + content + border)
+//   RoomPanel:    7 rows (border + title + 3 desc + info + border)
+//   CombatPanel:  variable (border + header + enemies + art/desc + border)
+//   Narrative:    remaining (flex)
+//   InputBar:     3 rows (border + content + border)
+//   HintBar:      1 row
+//   InfoPanel:    10 rows when open (border + 8 content + border)
+
+const ROOM_DESC_LINES = 3;
+const ROOM_PANEL_HEIGHT = 7; // border + title + 3 desc + info + border
+const CHROME_ROWS = 7; // status(3) + input(3) + hints(1)
+
 function GameView({ client, name, exit }: { client: WsClient; name: string; exit: () => void }) {
+  const { stdout } = useStdout();
   const state = useGameState(client);
   const [connecting, setConnecting] = useState(true);
+  const [rows, setRows] = useState(stdout.rows ?? 24);
+  const [infoPanelOpen, setInfoPanelOpen] = useState(false);
 
   useEffect(() => {
     if (state.connected) setConnecting(false);
   }, [state.connected]);
+
+  // Track terminal resize
+  useEffect(() => {
+    const onResize = () => setRows(stdout.rows ?? 24);
+    stdout.on("resize", onResize);
+    return () => { stdout.off("resize", onResize); };
+  }, [stdout]);
+
+  // Tab toggles info panel
+  useInput((_input, key) => {
+    if (key.tab) {
+      setInfoPanelOpen((prev) => !prev);
+    }
+  });
 
   const handleCommand = useCallback(
     (input: string) => {
@@ -123,19 +154,43 @@ function GameView({ client, name, exit }: { client: WsClient; name: string; exit
     [client, exit]
   );
 
-  return (
-    <Box flexDirection="column" height="100%">
-      <StatusBar state={state} playerName={name} connecting={connecting} />
+  const inCombat = state.combat?.active ?? false;
+  const cols = stdout.columns ?? 80;
 
-      {state.room && (
-        <RoomView room={state.room} playerName={name} />
+  // Calculate the height of the context panel (room or combat)
+  const contextPanelHeight = useMemo(() => {
+    if (inCombat && state.combat) {
+      const hasArt = state.combat.combatants.some((c) =>
+        c.id === state.combat!.targetId && c.art && c.art.length > 0
+      );
+      return getCombatPanelHeight(state.combat.combatants.length, hasArt);
+    }
+    return ROOM_PANEL_HEIGHT;
+  }, [inCombat, state.combat]);
+
+  const fixedRows = CHROME_ROWS + contextPanelHeight + (infoPanelOpen ? INFO_PANEL_HEIGHT : 0);
+  const narrativeHeight = Math.max(rows - fixedRows, 3);
+
+  return (
+    <Box flexDirection="column" height={rows}>
+      {infoPanelOpen && (
+        <InfoPanel state={state} playerName={name} width={cols} />
       )}
 
+      <StatusBar state={state} playerName={name} connecting={connecting} />
+
+      {inCombat && state.combat ? (
+        <CombatPanel combat={state.combat} width={cols} />
+      ) : state.room ? (
+        <RoomPanel room={state.room} playerName={name} maxDescLines={ROOM_DESC_LINES} />
+      ) : null}
+
       <Box flexGrow={1} flexDirection="column" overflow="hidden">
-        <NarrativeView lines={state.narrative} />
+        <NarrativeView lines={state.narrative} height={narrativeHeight} />
       </Box>
 
       <InputBar onSubmit={handleCommand} />
+      <HintBar infoPanelOpen={infoPanelOpen} />
     </Box>
   );
 }

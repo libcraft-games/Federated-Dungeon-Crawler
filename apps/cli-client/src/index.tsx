@@ -33,7 +33,9 @@ const raceId = flags.race;
 const protocol = tls ? "wss" : "ws";
 const defaultPort = tls ? 443 : 80;
 const portDisplay = port === defaultPort ? "" : `:${port}`;
-console.log(`Federated Realms - Connecting to ${protocol}://${host}${portDisplay} as ${name}...\n`);
+
+// Clear terminal for fullscreen layout
+process.stdout.write("\x1b[2J\x1b[H");
 
 render(
   <App
