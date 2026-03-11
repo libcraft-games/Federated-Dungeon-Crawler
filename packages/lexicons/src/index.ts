@@ -211,6 +211,8 @@ export interface NpcDefinition {
   level?: number;
   attributes?: Attributes;
   dialogue?: Record<string, DialogueNode>;
+  /** Optional ASCII art lines displayed during combat */
+  art?: string[];
   tags?: string[];
 }
 

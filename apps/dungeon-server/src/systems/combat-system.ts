@@ -3,8 +3,9 @@
  *
  * Handles the full combat lifecycle:
  * - Starting encounters (player attacks or NPC aggros)
- * - Resolving player actions (attack, defend, flee, use item)
- * - NPC retaliation after each player action
+ * - Multi-NPC combat: all hostile NPCs in a room fight together
+ * - Resolving player actions (attack, defend, flee, use item, cast)
+ * - NPC retaliation: ALL combat NPCs attack after each player action
  * - Death handling (player respawn, NPC loot/XP/respawn)
  *
  * Each player action produces a batched narrative (all events in one message)
@@ -30,7 +31,7 @@ import {
   AP_COST,
 } from "@realms/common";
 import type { SpellDef } from "@realms/lexicons";
-import { encodeMessage } from "@realms/protocol";
+import { encodeMessage, type CombatantInfo } from "@realms/protocol";
 
 export interface CombatContext {
   world: WorldManager;
@@ -45,6 +46,88 @@ export class CombatSystem {
     this.ctx = ctx;
   }
 
+  // ── Combat Helpers ──
+
+  /** Get all NPCs in combat state in the player's room */
+  private getCombatNpcs(session: CharacterSession): NpcInstance[] {
+    return this.ctx.world.npcManager.getAllInRoom(session.currentRoom)
+      .filter((npc) => npc.state === "combat");
+  }
+
+  /** Set all idle hostile NPCs in the room to combat state */
+  private engageAllHostiles(session: CharacterSession): void {
+    const hostiles = this.ctx.world.npcManager.getAllInRoom(session.currentRoom)
+      .filter((npc) => npc.behavior === "hostile" && npc.state === "idle");
+    for (const npc of hostiles) {
+      npc.state = "combat";
+    }
+  }
+
+  /** All combat NPCs in the room retaliate against the player. Returns narrative lines. */
+  private allNpcsRetaliate(session: CharacterSession): string[] {
+    const combatNpcs = this.getCombatNpcs(session);
+    if (combatNpcs.length === 0) return [];
+
+    // Apply defend bonus before all attacks
+    const originalDex = session.state.attributes.dex ?? 10;
+    if (session.isDefending) {
+      session.state.attributes.dex = originalDex + 8; // +4 AC = +8 dex
+    }
+
+    const allLines: string[] = [];
+    for (const npc of combatNpcs) {
+      const npcAttack = resolveNpcAttack(
+        npc.attributes,
+        npc.level,
+        npc.name,
+        session.state.attributes,
+        session.state.equipment
+      );
+
+      if (npcAttack.hit) {
+        session.takeDamage(npcAttack.damage);
+      }
+
+      const narrative = formatAttackResult(
+        npc.name, session.name, npcAttack,
+        session.state.currentHp, session.state.maxHp
+      );
+
+      if (allLines.length > 0) allLines.push("");
+      allLines.push(...narrative.split("\n"));
+
+      if (session.isDead) break; // stop if player dies mid-round
+    }
+
+    // Restore dex and clear defend
+    if (session.isDefending) {
+      session.state.attributes.dex = originalDex;
+      session.isDefending = false;
+    }
+
+    return allLines;
+  }
+
+  /** Find the next alive combat NPC to auto-target after current target dies */
+  private findNextTarget(session: CharacterSession): NpcInstance | undefined {
+    return this.getCombatNpcs(session).find((npc) => npc.currentHp > 0);
+  }
+
+  /** Reset all combat NPCs in a room back to idle */
+  private resetAllCombatNpcs(session: CharacterSession): void {
+    for (const npc of this.getCombatNpcs(session)) {
+      npc.state = "idle";
+    }
+  }
+
+  /** Public: reset all combat NPCs and clear player combat state (e.g. on disconnect) */
+  disengageAll(session: CharacterSession): void {
+    this.resetAllCombatNpcs(session);
+    session.combatTarget = null;
+  }
+
+  // ── Public Combat Actions ──
+
   /** Hostile NPC initiates combat with a player on room entry */
   npcAggro(session: CharacterSession, npc: NpcInstance): void {
     if (session.inCombat) return; // already fighting something
@@ -56,22 +139,36 @@ export class CombatSystem {
     session.isDefending = false;
     session.refreshAp();
 
-    session.send(encodeMessage({ type: "combat_start", target: npc.name }));
+    // Engage ALL hostile NPCs in the room
+    this.engageAllHostiles(session);
+
+    session.send(encodeMessage({
+      type: "combat_start",
+      target: npc.name,
+      combatants: this.buildCombatantInfo(session),
+    }));
 
     const lines: string[] = [];
-    lines.push(`${npc.name} attacks you!`);
+    const combatNpcs = this.getCombatNpcs(session);
+    if (combatNpcs.length > 1) {
+      const names = combatNpcs.map((n) => n.name).join(" and ");
+      lines.push(`${names} attack you!`);
+    } else {
+      lines.push(`${npc.name} attacks you!`);
+    }
 
-    // NPC gets a free opening attack
-    const retaliationLines = this.npcRetaliate(session, npc);
+    // All combat NPCs get a free opening attack
+    const retaliationLines = this.allNpcsRetaliate(session);
     lines.push(...retaliationLines);
 
     this.sendCombat(session, lines.join("\n"));
     broadcast(
       session.currentRoom,
-      { type: "narrative", text: `${npc.name} attacks ${session.name}!`, style: "combat" },
+      { type: "narrative", text: `${combatNpcs.map((n) => n.name).join(" and ")} attacks ${session.name}!`, style: "combat" },
       session.sessionId
     );
     this.sendCharacterUpdate(session);
+    this.sendCombatUpdate(session);
 
     if (session.isDead) {
       this.handlePlayerDeath(session, npc);
@@ -101,10 +198,15 @@ export class CombatSystem {
     } else if (session.combatTarget) {
       npc = world.npcManager.getInstance(session.combatTarget);
       if (!npc || npc.state === "dead") {
-        session.combatTarget = null;
-        this.sendCombat(session, "Your target is no longer here. Combat ended.");
-        this.sendCombatEnd(session, "victory");
-        return;
+        // Try to find another combat NPC
+        npc = this.findNextTarget(session);
+        if (!npc) {
+          session.combatTarget = null;
+          this.sendCombat(session, "Your target is no longer here. Combat ended.");
+          this.sendCombatEnd(session, "victory");
+          return;
+        }
+        session.combatTarget = npc.instanceId;
       }
     } else {
       this.sendCombat(session, "Attack what? Specify a target.");
@@ -117,7 +219,13 @@ export class CombatSystem {
       session.combatTarget = npc.instanceId;
       npc.state = "combat";
       session.refreshAp();
-      session.send(encodeMessage({ type: "combat_start", target: npc.name }));
+      // Engage all hostile NPCs in the room
+      this.engageAllHostiles(session);
+      session.send(encodeMessage({
+        type: "combat_start",
+        target: npc.name,
+        combatants: this.buildCombatantInfo(session),
+      }));
       broadcast(
         room.id,
         { type: "narrative", text: `${session.name} engages ${npc.name} in combat!`, style: "combat" },
@@ -163,23 +271,40 @@ export class CombatSystem {
     if (npc.currentHp <= 0) {
       const deathLines = this.handleNpcDeath(session, npc);
       lines.push(...deathLines);
+
+      // If combat continues (other NPCs remain), all remaining NPCs retaliate
+      if (session.inCombat) {
+        const retaliationLines = this.allNpcsRetaliate(session);
+        if (retaliationLines.length > 0) {
+          lines.push("", ...retaliationLines);
+        }
+      }
+
       this.sendCombat(session, lines.join("\n"));
       broadcast(room.id, { type: "narrative", text: lines.join("\n"), style: "combat" }, session.sessionId);
+      this.sendCombatUpdate(session);
+
+      if (session.isDead) {
+        const killer = this.getCombatNpcs(session)[0] ?? npc;
+        this.handlePlayerDeath(session, killer);
+      }
       return;
     }
 
-    // NPC retaliates
-    const retaliationLines = this.npcRetaliate(session, npc);
+    // All combat NPCs retaliate
+    const retaliationLines = this.allNpcsRetaliate(session);
     lines.push("", ...retaliationLines);
 
     // Send combined narrative
     this.sendCombat(session, lines.join("\n"));
     broadcast(room.id, { type: "narrative", text: lines.join("\n"), style: "combat" }, session.sessionId);
     this.sendCharacterUpdate(session);
+    this.sendCombatUpdate(session);
 
     // Check if player died
     if (session.isDead) {
-      this.handlePlayerDeath(session, npc);
+      const killer = this.getCombatNpcs(session)[0] ?? npc;
+      this.handlePlayerDeath(session, killer);
     }
   }
 
@@ -190,12 +315,17 @@ export class CombatSystem {
       return;
     }
 
-    const npc = this.ctx.world.npcManager.getInstance(session.combatTarget!);
-    if (!npc || npc.state === "dead") {
-      session.combatTarget = null;
-      this.sendCombat(session, "Your target is gone. Combat ended.");
-      this.sendCombatEnd(session, "victory");
-      return;
+    // Check current target is alive
+    const currentNpc = this.ctx.world.npcManager.getInstance(session.combatTarget!);
+    if (!currentNpc || currentNpc.state === "dead") {
+      const next = this.findNextTarget(session);
+      if (!next) {
+        session.combatTarget = null;
+        this.sendCombat(session, "Your target is gone. Combat ended.");
+        this.sendCombatEnd(session, "victory");
+        return;
+      }
+      session.combatTarget = next.instanceId;
     }
 
     // Refresh AP at start of round, then spend
@@ -209,15 +339,17 @@ export class CombatSystem {
     const lines: string[] = [];
     lines.push("You raise your guard, bracing for the next attack. (+4 AC)");
 
-    // NPC still attacks
-    const retaliationLines = this.npcRetaliate(session, npc);
+    // All combat NPCs attack
+    const retaliationLines = this.allNpcsRetaliate(session);
     lines.push("", ...retaliationLines);
 
     this.sendCombat(session, lines.join("\n"));
     this.sendCharacterUpdate(session);
+    this.sendCombatUpdate(session);
 
     if (session.isDead) {
-      this.handlePlayerDeath(session, npc);
+      const killer = this.getCombatNpcs(session)[0] ?? currentNpc!;
+      this.handlePlayerDeath(session, killer);
     }
   }
 
@@ -236,11 +368,12 @@ export class CombatSystem {
     }
 
     const { world, broadcast } = this.ctx;
-    const npc = world.npcManager.getInstance(session.combatTarget!);
-    const npcLevel = npc?.level ?? 1;
     const dex = session.state.attributes.dex ?? 10;
 
-    const escaped = attemptFlee(dex, npcLevel);
+    // Flee DC is based on the highest-level combatant
+    const combatNpcs = this.getCombatNpcs(session);
+    const maxLevel = Math.max(...combatNpcs.map((n) => n.level), 1);
+    const escaped = attemptFlee(dex, maxLevel);
 
     if (escaped) {
       this.sendCombat(session, "You disengage and escape from combat!");
@@ -250,7 +383,8 @@ export class CombatSystem {
         session.sessionId
       );
 
-      if (npc) npc.state = "idle";
+      // All NPCs return to idle
+      this.resetAllCombatNpcs(session);
       session.combatTarget = null;
       session.isDefending = false;
       this.sendCombatEnd(session, "flee");
@@ -258,16 +392,19 @@ export class CombatSystem {
       const lines: string[] = [];
       lines.push("You try to flee but can't get away!");
 
-      if (npc) {
-        const retaliationLines = this.npcRetaliate(session, npc);
+      // All combat NPCs retaliate on failed flee
+      const retaliationLines = this.allNpcsRetaliate(session);
+      if (retaliationLines.length > 0) {
         lines.push("", ...retaliationLines);
       }
 
       this.sendCombat(session, lines.join("\n"));
       this.sendCharacterUpdate(session);
+      this.sendCombatUpdate(session);
 
-      if (session.isDead && npc) {
-        this.handlePlayerDeath(session, npc);
+      if (session.isDead) {
+        const killer = combatNpcs[0] ?? this.ctx.world.npcManager.getInstance(session.combatTarget!)!;
+        this.handlePlayerDeath(session, killer);
       }
     }
   }
@@ -316,11 +453,10 @@ export class CombatSystem {
       session.removeItem(itemName, 1);
     }
 
-    // If in combat, NPC retaliates after item use
+    // If in combat, all NPCs retaliate after item use
     if (session.inCombat) {
-      const npc = this.ctx.world.npcManager.getInstance(session.combatTarget!);
-      if (npc && npc.state !== "dead") {
-        const retaliationLines = this.npcRetaliate(session, npc);
+      const retaliationLines = this.allNpcsRetaliate(session);
+      if (retaliationLines.length > 0) {
         lines.push("", ...retaliationLines);
       }
     }
@@ -328,10 +464,12 @@ export class CombatSystem {
     this.sendCombat(session, lines.join("\n"));
     this.sendCharacterUpdate(session);
     this.sendInventoryUpdate(session);
+    if (session.inCombat) this.sendCombatUpdate(session);
 
     if (session.isDead && session.inCombat) {
-      const npc = this.ctx.world.npcManager.getInstance(session.combatTarget!);
-      if (npc) this.handlePlayerDeath(session, npc);
+      const killer = this.getCombatNpcs(session)[0]
+        ?? this.ctx.world.npcManager.getInstance(session.combatTarget!)!;
+      this.handlePlayerDeath(session, killer);
     }
   }
 
@@ -422,21 +560,22 @@ export class CombatSystem {
       session.state.attributes.str = (session.state.attributes.str ?? 10) + result.amount;
     }
 
-    // NPC retaliates if in combat
+    // All combat NPCs retaliate if in combat
     if (session.inCombat) {
-      const npc = this.ctx.world.npcManager.getInstance(session.combatTarget!);
-      if (npc && npc.state !== "dead") {
-        const retaliationLines = this.npcRetaliate(session, npc);
+      const retaliationLines = this.allNpcsRetaliate(session);
+      if (retaliationLines.length > 0) {
         lines.push("", ...retaliationLines);
       }
     }
 
     this.sendCombat(session, lines.join("\n"));
     this.sendCharacterUpdate(session);
+    if (session.inCombat) this.sendCombatUpdate(session);
 
     if (session.isDead && session.inCombat) {
-      const npc = this.ctx.world.npcManager.getInstance(session.combatTarget!);
-      if (npc) this.handlePlayerDeath(session, npc);
+      const killer = this.getCombatNpcs(session)[0]
+        ?? this.ctx.world.npcManager.getInstance(session.combatTarget!)!;
+      this.handlePlayerDeath(session, killer);
     }
   }
 
@@ -461,10 +600,14 @@ export class CombatSystem {
     } else if (session.combatTarget) {
       npc = world.npcManager.getInstance(session.combatTarget);
       if (!npc || npc.state === "dead") {
-        session.combatTarget = null;
-        this.sendCombat(session, "Your target is no longer here.");
-        this.sendCombatEnd(session, "victory");
-        return;
+        npc = this.findNextTarget(session);
+        if (!npc) {
+          session.combatTarget = null;
+          this.sendCombat(session, "Your target is no longer here.");
+          this.sendCombatEnd(session, "victory");
+          return;
+        }
+        session.combatTarget = npc.instanceId;
       }
     } else {
       this.sendCombat(session, `Cast ${spell.name} at whom? Specify a target.`);
@@ -476,7 +619,12 @@ export class CombatSystem {
     if (combatStarting) {
       session.combatTarget = npc.instanceId;
       npc.state = "combat";
-      session.send(encodeMessage({ type: "combat_start", target: npc.name }));
+      this.engageAllHostiles(session);
+      session.send(encodeMessage({
+        type: "combat_start",
+        target: npc.name,
+        combatants: this.buildCombatantInfo(session),
+      }));
       broadcast(
         room.id,
         { type: "narrative", text: `${session.name} engages ${npc.name} in combat!`, style: "combat" },
@@ -514,61 +662,44 @@ export class CombatSystem {
     if (npc.currentHp <= 0) {
       const deathLines = this.handleNpcDeath(session, npc);
       lines.push(...deathLines);
+
+      // Remaining NPCs still retaliate
+      if (session.inCombat) {
+        const retaliationLines = this.allNpcsRetaliate(session);
+        if (retaliationLines.length > 0) {
+          lines.push("", ...retaliationLines);
+        }
+      }
+
       this.sendCombat(session, lines.join("\n"));
       broadcast(room.id, { type: "narrative", text: lines.join("\n"), style: "combat" }, session.sessionId);
+      this.sendCombatUpdate(session);
+
+      if (session.isDead) {
+        const killer = this.getCombatNpcs(session)[0] ?? npc;
+        this.handlePlayerDeath(session, killer);
+      }
       return;
     }
 
-    // NPC retaliates
-    const retaliationLines = this.npcRetaliate(session, npc);
+    // All combat NPCs retaliate
+    const retaliationLines = this.allNpcsRetaliate(session);
     lines.push("", ...retaliationLines);
 
     this.sendCombat(session, lines.join("\n"));
     broadcast(room.id, { type: "narrative", text: lines.join("\n"), style: "combat" }, session.sessionId);
     this.sendCharacterUpdate(session);
+    this.sendCombatUpdate(session);
 
     if (session.isDead) {
-      this.handlePlayerDeath(session, npc);
+      const killer = this.getCombatNpcs(session)[0] ?? npc;
+      this.handlePlayerDeath(session, killer);
     }
   }
 
   // ── Internal ──
 
-  /** NPC attacks the player. Returns narrative lines (does NOT send them). */
-  private npcRetaliate(session: CharacterSession, npc: NpcInstance): string[] {
-    // Apply defending bonus
-    const originalDex = session.state.attributes.dex ?? 10;
-    if (session.isDefending) {
-      session.state.attributes.dex = originalDex + 8; // +4 AC = +8 dex
-    }
-
-    const npcAttack = resolveNpcAttack(
-      npc.attributes,
-      npc.level,
-      npc.name,
-      session.state.attributes,
-      session.state.equipment
-    );
-
-    // Restore dex
-    if (session.isDefending) {
-      session.state.attributes.dex = originalDex;
-      session.isDefending = false;
-    }
-
-    if (npcAttack.hit) {
-      session.takeDamage(npcAttack.damage);
-    }
-
-    const narrative = formatAttackResult(
-      npc.name, session.name, npcAttack,
-      session.state.currentHp, session.state.maxHp
-    );
-
-    return narrative.split("\n");
-  }
-
-  /** Handle NPC death. Returns narrative lines. */
+  /** Handle NPC death. Returns narrative lines. May or may not end combat. */
   private handleNpcDeath(session: CharacterSession, npc: NpcInstance): string[] {
     const { world } = this.ctx;
     const room = world.getRoom(session.currentRoom);
@@ -611,11 +742,20 @@ export class CombatSystem {
       world.npcManager.killNpc(npc.instanceId, room);
     }
 
-    // End combat
-    session.combatTarget = null;
-    session.isDefending = false;
-    this.sendCombatEnd(session, "victory");
-    this.sendCharacterUpdate(session);
+    // Check if other NPCs are still fighting
+    const remaining = this.getCombatNpcs(session);
+    if (remaining.length > 0) {
+      // Auto-switch target to next hostile
+      session.combatTarget = remaining[0].instanceId;
+      lines.push(`You turn to face ${remaining[0].name}.`);
+      this.sendCharacterUpdate(session);
+    } else {
+      // All hostiles dead — end combat
+      session.combatTarget = null;
+      session.isDefending = false;
+      this.sendCombatEnd(session, "victory");
+      this.sendCharacterUpdate(session);
+    }
 
     return lines;
   }
@@ -641,8 +781,8 @@ export class CombatSystem {
       });
     }
 
-    // NPC returns to idle
-    npc.state = "idle";
+    // All NPCs return to idle
+    this.resetAllCombatNpcs(session);
 
     // Respawn
     const spawnRoom = world.getDefaultSpawnRoom();
@@ -703,5 +843,34 @@ export class CombatSystem {
 
   private sendInventoryUpdate(session: CharacterSession): void {
     session.send(encodeMessage({ type: "inventory_update", inventory: session.inventory }));
+  }
+
+  /** Build CombatantInfo array for all active combat NPCs */
+  private buildCombatantInfo(session: CharacterSession): CombatantInfo[] {
+    const combatNpcs = this.getCombatNpcs(session);
+    const npcMgr = this.ctx.world.npcManager;
+    return combatNpcs.map((npc) => {
+      const def = npcMgr.getDefinition(npc.definitionId);
+      return {
+        id: npc.instanceId,
+        name: npc.name,
+        level: npc.level,
+        hp: npc.currentHp,
+        maxHp: npc.maxHp,
+        description: def?.description,
+        art: def?.art,
+      };
+    });
+  }
+
+  /** Send combat_update with current combatant state */
+  private sendCombatUpdate(session: CharacterSession): void {
+    const combatants = this.buildCombatantInfo(session);
+    if (combatants.length === 0) return;
+    session.send(encodeMessage({
+      type: "combat_update",
+      combatants,
+      targetId: session.combatTarget ?? combatants[0].id,
+    }));
   }
 }
