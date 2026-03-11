@@ -180,6 +180,8 @@ spawns:
     items:
       - id: bread-loaf
         quantity: 3
+      - id: health-potion
+        quantity: 3
       - id: ye-flask
         quantity: 1
 
