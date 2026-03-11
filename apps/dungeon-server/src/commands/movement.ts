@@ -2,7 +2,7 @@ import type { ParsedCommand } from "@realms/common";
 import { resolveDirection } from "@realms/common";
 import { encodeMessage } from "@realms/protocol";
 import type { CommandContext } from "./index.js";
-import { sendNarrative, sendRoomState } from "./index.js";
+import { sendNarrative, sendRoomState, sendMapUpdate } from "./index.js";
 
 export function handleMovement(cmd: ParsedCommand, ctx: CommandContext): void {
   const { session, world, sessions, broadcast } = ctx;
@@ -54,6 +54,7 @@ export function handleMovement(cmd: ParsedCommand, ctx: CommandContext): void {
 
   // Move to new room
   session.currentRoom = targetRoom.id;
+  session.visitedRooms.add(targetRoom.id);
   targetRoom.addPlayer(session.sessionId, session.name);
 
   // Notify new room
@@ -67,8 +68,9 @@ export function handleMovement(cmd: ParsedCommand, ctx: CommandContext): void {
     session.sessionId
   );
 
-  // Send room state to the moving player
+  // Send room state and map update to the moving player
   sendRoomState(session, ctx);
+  sendMapUpdate(session, ctx);
 
   // Auto-aggro: hostile NPCs in the room attack the player
   if (!targetRoom.isSafe()) {

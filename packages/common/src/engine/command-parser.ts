@@ -27,6 +27,7 @@ const ALIASES: Record<string, string> = {
   "c": "cast",
   "wear": "equip",
   "wield": "equip",
+  "m": "map",
   "?": "help",
   "quit": "disconnect",
   "exit": "disconnect",
@@ -92,7 +93,7 @@ export function getCommandHelp(): string[] {
     "Spells:   cast <spell> [target], spells   Items in combat: use <item> (2 AP)",
     "NPCs:     talk <npc> [topic], look <npc>",
     "Social:   say <message>, shout <message>, whisper <player> <message>",
-    "Info:     who, stats, help/?",
+    "Info:     who, stats, map/m, help/?",
     "System:   disconnect/quit",
   ];
 }

@@ -16,6 +16,10 @@ export class CharacterSession {
   // Combat state
   combatTarget: string | null = null;
   isDefending: boolean = false;
+
+  // Exploration
+  readonly visitedRooms = new Set<string>();
+
   private formulas: Record<string, FormulaDef>;
 
   constructor(sessionId: string, characterDid: string, profile: CharacterProfile, spawnRoom: string, formulas: Record<string, FormulaDef> = {}) {
@@ -23,6 +27,7 @@ export class CharacterSession {
     this.characterDid = characterDid;
     this.state = profileToState(profile, spawnRoom, formulas);
     this.formulas = formulas;
+    this.visitedRooms.add(spawnRoom);
   }
 
   get currentRoom(): string {
