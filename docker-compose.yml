@@ -2,9 +2,9 @@ services:
   dungeon-server:
     build: .
     ports:
-      - "${PORT:-3000}:3000"
+      - "${PORT:-3000}:${PORT:-3000}"
     environment:
-      - PORT=3000
+      - PORT=${PORT:-3000}
       - HOST=0.0.0.0
       - SERVER_NAME=${SERVER_NAME:-Federated Realms}
       - SERVER_DESCRIPTION=${SERVER_DESCRIPTION:-A mysterious dungeon awaits...}

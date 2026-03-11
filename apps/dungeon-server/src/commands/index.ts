@@ -10,6 +10,7 @@ import { handleSocial } from "./social.js";
 import { handleInventory } from "./inventory.js";
 import { handleCombat } from "./combat.js";
 import { handleEquipment } from "./equipment.js";
+import { handleMap, generateMapData } from "./map.js";
 import { encodeMessage, type ServerMessage } from "@realms/protocol";
 import { getCommandHelp, xpToNextLevel } from "@realms/common";
 
@@ -28,8 +29,8 @@ export function handleCommand(cmd: ParsedCommand, ctx: CommandContext): void {
   // Block most actions during combat (except combat commands, look, inventory, equipment, stats)
   if (session.inCombat) {
     const allowedInCombat = new Set([
-      "attack", "kill", "defend", "flee", "retreat", "use",
-      "look", "inventory", "equipment", "stats", "help", "",
+      "attack", "kill", "defend", "flee", "retreat", "use", "cast", "spells",
+      "look", "inventory", "equipment", "stats", "help", "map", "",
     ]);
     if (!allowedInCombat.has(cmd.verb)) {
       if (cmd.verb === "go") {
@@ -73,6 +74,8 @@ export function handleCommand(cmd: ParsedCommand, ctx: CommandContext): void {
     case "flee":
     case "retreat":
     case "use":
+    case "cast":
+    case "spells":
       handleCombat(cmd, ctx);
       break;
 
@@ -83,6 +86,10 @@ export function handleCommand(cmd: ParsedCommand, ctx: CommandContext): void {
     case "remove":
     case "equipment":
       handleEquipment(cmd, ctx);
+      break;
+
+    case "map":
+      handleMap(ctx);
       break;
 
     case "who":
@@ -155,4 +162,17 @@ export function sendRoomState(session: CharacterSession, ctx: CommandContext): v
     return;
   }
   session.send(encodeMessage({ type: "room_state", room: room.toState() }));
+}
+
+export function sendMapUpdate(session: CharacterSession, ctx: CommandContext): void {
+  const data = generateMapData(session, ctx.world);
+  if (data) {
+    session.send(encodeMessage({
+      type: "map_update",
+      grid: data.grid,
+      cursorRow: data.cursorRow,
+      cursorCol: data.cursorCol,
+      legend: data.legend,
+    }));
+  }
 }

@@ -4,9 +4,9 @@ import { SessionManager } from "./server/session-manager.js";
 import { type SessionData } from "./entities/character-session.js";
 import { parseCommand } from "@realms/common";
 import { encodeMessage, decodeClientMessage, type ServerMessage } from "@realms/protocol";
-import { handleCommand, sendRoomState, sendNarrative, type CommandContext } from "./commands/index.js";
+import { handleCommand, sendRoomState, sendMapUpdate, sendNarrative, type CommandContext } from "./commands/index.js";
 import type { CharacterProfile } from "@realms/lexicons";
-import { buildAttributes, computeDerivedStats } from "@realms/common";
+import { buildAttributes, computeDerivedStats, xpToNextLevel } from "@realms/common";
 import { BlueskyBridge } from "./bluesky/bridge.js";
 import { CombatSystem } from "./systems/combat-system.js";
 
@@ -44,6 +44,7 @@ function createDevProfile(name: string, classId: string = "warrior", raceId: str
   const attributes = buildAttributes(system, classId, raceId);
   const derived = computeDerivedStats(system.formulas, 1, attributes);
 
+
   return {
     name,
     class: classId,
@@ -71,6 +72,35 @@ setInterval(() => {
         text: `${npc.name} appears.`,
         style: "info",
       });
+    }
+  }
+
+  // Process buff/debuff ticks for all players
+  for (const session of sessions.getAllSessions()) {
+    if (session.state.activeEffects.length === 0) continue;
+
+    const expired = session.tickEffects();
+    if (expired.length > 0) {
+      const names = expired.join(", ");
+      session.send(encodeMessage({
+        type: "narrative",
+        text: `Effect${expired.length > 1 ? "s" : ""} worn off: ${names}`,
+        style: "info",
+      }));
+      // Send updated stats
+      const s = session.state;
+      session.send(encodeMessage({
+        type: "character_update",
+        hp: s.currentHp,
+        maxHp: s.maxHp,
+        mp: s.currentMp,
+        maxMp: s.maxMp,
+        ap: s.currentAp,
+        maxAp: s.maxAp,
+        level: s.level,
+        xp: s.experience,
+        xpToNext: xpToNextLevel(s.level, s.experience),
+      }));
     }
   }
 }, TICK_INTERVAL_MS);
@@ -183,9 +213,31 @@ const server = Bun.serve<SessionData>({
         text: `${session.name} has entered the realm.`,
       });
 
-      // Send initial room state
+      // Send initial character stats + inventory
+      const s = session.state;
+      session.send(encodeMessage({
+        type: "character_update",
+        hp: s.currentHp,
+        maxHp: s.maxHp,
+        mp: s.currentMp,
+        maxMp: s.maxMp,
+        ap: s.currentAp,
+        maxAp: s.maxAp,
+        level: s.level,
+        xp: s.experience,
+        xpToNext: xpToNextLevel(s.level, s.experience),
+      }));
+      session.send(encodeMessage({
+        type: "inventory_update",
+        inventory: s.inventory,
+      }));
+
+      // Send initial room state and map
       const ctx = makeContext(session.sessionId);
-      if (ctx) sendRoomState(session, ctx);
+      if (ctx) {
+        sendRoomState(session, ctx);
+        sendMapUpdate(session, ctx);
+      }
     },
 
     message(ws: import("bun").ServerWebSocket<SessionData>, message: string | Buffer) {
@@ -232,11 +284,9 @@ const server = Bun.serve<SessionData>({
 
       console.log(`Player disconnected: ${session.name}`);
 
-      // End combat if in combat
+      // End combat if in combat — reset ALL combat NPCs, not just the target
       if (session.inCombat) {
-        const npc = world.npcManager.getInstance(session.combatTarget!);
-        if (npc) npc.state = "idle";
-        session.combatTarget = null;
+        combat.disengageAll(session);
       }
 
       // Remove from room

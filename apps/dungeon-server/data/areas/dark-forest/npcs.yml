@@ -16,6 +16,12 @@ definitions:
       int: 2
       wis: 6
       cha: 2
+    art:
+      - "     //\\\\     "
+      - "    //  \\\\    "
+      - "   _\\\\()//_   "
+      - "  / //  \\\\ \\  "
+      - "  | |\\__/| |  "
     loot:
       - itemId: spider-silk
         chance: 60
@@ -35,6 +41,13 @@ definitions:
       predator or prey.
     behavior: hostile
     level: 2
+    art:
+      - "   / \\   / \\   "
+      - "  /   \\_/   \\  "
+      - " |  o     o  |   "
+      - "  \\_  \\_/  _/ "
+      - "   \\       /    "
+      - "    \\__U__/     "
     attributes:
       str: 12
       dex: 14

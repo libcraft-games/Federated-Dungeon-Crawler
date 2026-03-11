@@ -16,6 +16,10 @@ export class CharacterSession {
   // Combat state
   combatTarget: string | null = null;
   isDefending: boolean = false;
+
+  // Exploration
+  readonly visitedRooms = new Set<string>();
+
   private formulas: Record<string, FormulaDef>;
 
   constructor(sessionId: string, characterDid: string, profile: CharacterProfile, spawnRoom: string, formulas: Record<string, FormulaDef> = {}) {
@@ -23,6 +27,7 @@ export class CharacterSession {
     this.characterDid = characterDid;
     this.state = profileToState(profile, spawnRoom, formulas);
     this.formulas = formulas;
+    this.visitedRooms.add(spawnRoom);
   }
 
   get currentRoom(): string {
@@ -123,6 +128,18 @@ export class CharacterSession {
     return this.state.equipment[slot];
   }
 
+  // ── Action Points ──
+
+  refreshAp(): void {
+    this.state.currentAp = this.state.maxAp;
+  }
+
+  spendAp(amount: number): boolean {
+    if (this.state.currentAp < amount) return false;
+    this.state.currentAp -= amount;
+    return true;
+  }
+
   // ── Combat ──
 
   takeDamage(amount: number): void {
@@ -174,6 +191,42 @@ export class CharacterSession {
     this.state.maxHp = derived.maxHp ?? this.state.maxHp;
     this.state.maxMp = derived.maxMp ?? this.state.maxMp;
     this.state.maxAp = derived.maxAp ?? this.state.maxAp;
+  }
+
+  /** Process active effect ticks. Returns names of expired effects. */
+  tickEffects(): string[] {
+    const expired: string[] = [];
+    const remaining = [];
+
+    for (const effect of this.state.activeEffects) {
+      effect.remainingTicks--;
+      if (effect.remainingTicks <= 0) {
+        // Undo attribute modification
+        if (effect.attribute) {
+          const current = this.state.attributes[effect.attribute] ?? 10;
+          if (effect.type === "buff") {
+            this.state.attributes[effect.attribute] = current - effect.magnitude;
+          } else {
+            this.state.attributes[effect.attribute] = current + effect.magnitude;
+          }
+        }
+        expired.push(effect.name);
+      } else {
+        remaining.push(effect);
+      }
+    }
+
+    this.state.activeEffects = remaining;
+
+    // Recalculate derived stats if anything expired (HP/MP caps may change)
+    if (expired.length > 0) {
+      this.recalculateDerived();
+      // Clamp current values
+      this.state.currentHp = Math.min(this.state.currentHp, this.state.maxHp);
+      this.state.currentMp = Math.min(this.state.currentMp, this.state.maxMp);
+    }
+
+    return expired;
   }
 
   /** Respawn at a room with 1 HP */

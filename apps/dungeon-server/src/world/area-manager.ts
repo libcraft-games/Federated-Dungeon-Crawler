@@ -61,6 +61,7 @@ interface NpcDef {
   level?: number;
   attributes?: Record<string, number>;
   dialogue?: Record<string, { text: string; responses?: Array<{ text: string; next?: string }> }>;
+  art?: string[];
   loot?: LootEntry[];
   tags?: string[];
 }
@@ -210,6 +211,7 @@ export class AreaManager {
           level: def.level,
           attributes: def.attributes,
           dialogue: def.dialogue as NpcDefinition["dialogue"],
+          art: def.art,
           tags: def.tags,
         };
         this.npcManager.registerDefinition(defId, npcDef, def.loot);

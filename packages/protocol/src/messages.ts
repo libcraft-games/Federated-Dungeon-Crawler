@@ -1,5 +1,17 @@
 import type { RoomState, EntityBrief, ItemBrief, ItemInstance } from "@realms/common";
 
+// ── Shared combat types ──
+
+export interface CombatantInfo {
+  id: string;
+  name: string;
+  level: number;
+  hp: number;
+  maxHp: number;
+  description?: string;
+  art?: string[];
+}
+
 // Client -> Server messages
 export type ClientMessage =
   | { type: "command"; id: string; command: string; args: string[] }
@@ -26,13 +38,17 @@ export type ServerMessage =
       maxHp: number;
       mp: number;
       maxMp: number;
+      ap: number;
+      maxAp: number;
       level: number;
       xp: number;
       xpToNext: number;
     }
-  | { type: "combat_start"; target: string }
+  | { type: "combat_start"; target: string; combatants: CombatantInfo[] }
+  | { type: "combat_update"; combatants: CombatantInfo[]; targetId: string }
   | { type: "combat_end"; reason: "victory" | "flee" | "death" }
-  | { type: "level_up"; level: number; message: string };
+  | { type: "level_up"; level: number; message: string }
+  | { type: "map_update"; grid: string[]; cursorRow: number; cursorCol: number; legend: string[] };
 
 export function encodeMessage(msg: ClientMessage | ServerMessage): string {
   return JSON.stringify(msg);
