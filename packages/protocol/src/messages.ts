@@ -32,6 +32,7 @@ export type ServerMessage =
   | { type: "pong"; serverTime: number }
   | { type: "welcome"; sessionId: string; serverName: string }
   | { type: "inventory_update"; inventory: ItemInstance[] }
+  | { type: "equipment_update"; equipment: Record<string, ItemInstance> }
   | {
       type: "character_update";
       hp: number;
@@ -40,6 +41,7 @@ export type ServerMessage =
       maxMp: number;
       ap: number;
       maxAp: number;
+      gold: number;
       level: number;
       xp: number;
       xpToNext: number;

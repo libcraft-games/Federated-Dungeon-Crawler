@@ -3,6 +3,8 @@ import type { ServerMessage, CombatantInfo } from "@realms/protocol";
 import type { RoomState, ItemInstance } from "@realms/common";
 import type { WsClient } from "../connection/ws-client.js";
 
+export type EquipmentMap = Record<string, ItemInstance>;
+
 export interface NarrativeLine {
   text: string;
   style: "info" | "error" | "combat" | "system" | "chat" | "room";
@@ -16,6 +18,7 @@ export interface CharacterStats {
   maxMp: number;
   ap: number;
   maxAp: number;
+  gold: number;
   level: number;
   xp: number;
   xpToNext: number;
@@ -47,6 +50,7 @@ export interface GameState {
   map: MapState | null;
   combat: CombatState | null;
   inventory: ItemInstance[];
+  equipment: EquipmentMap;
   narrative: NarrativeLine[];
 }
 
@@ -62,6 +66,7 @@ export function useGameState(client: WsClient) {
     map: null,
     combat: null,
     inventory: [],
+    equipment: {},
     narrative: [],
   });
 
@@ -142,6 +147,7 @@ export function useGameState(client: WsClient) {
               maxMp: msg.maxMp,
               ap: msg.ap,
               maxAp: msg.maxAp,
+              gold: msg.gold,
               level: msg.level,
               xp: msg.xp,
               xpToNext: msg.xpToNext,
@@ -183,6 +189,10 @@ export function useGameState(client: WsClient) {
 
         case "inventory_update":
           setState((prev) => ({ ...prev, inventory: msg.inventory }));
+          break;
+
+        case "equipment_update":
+          setState((prev) => ({ ...prev, equipment: msg.equipment }));
           break;
 
         case "error":
