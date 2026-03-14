@@ -47,6 +47,7 @@ export function StatusBar({ state, playerName, connecting }: Props) {
             <StatGauge label="HP" current={stats.hp} max={stats.maxHp} color={stats.hp <= stats.maxHp * 0.25 ? "red" : stats.hp <= stats.maxHp * 0.5 ? "yellow" : "green"} />
             <StatGauge label="MP" current={stats.mp} max={stats.maxMp} color="blue" />
             <StatGauge label="AP" current={stats.ap} max={stats.maxAp} color="magenta" />
+            <Text><Text color="gray">G </Text><Text color="yellow" bold>{stats.gold}</Text></Text>
           </>
         )}
         <Text color="gray">{serverName ?? ""}</Text>

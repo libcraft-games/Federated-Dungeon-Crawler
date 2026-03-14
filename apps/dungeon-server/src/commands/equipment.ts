@@ -171,4 +171,7 @@ function sendUpdates(ctx: CommandContext): void {
   ctx.session.send(
     encodeMessage({ type: "inventory_update", inventory: ctx.session.inventory })
   );
+  ctx.session.send(
+    encodeMessage({ type: "equipment_update", equipment: ctx.session.equipment })
+  );
 }

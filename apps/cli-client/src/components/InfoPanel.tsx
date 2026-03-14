@@ -1,6 +1,6 @@
 import React from "react";
 import { Box, Text } from "ink";
-import type { GameState, MapState } from "../hooks/use-game-state.js";
+import type { GameState, MapState, EquipmentMap } from "../hooks/use-game-state.js";
 
 interface Props {
   state: GameState;
@@ -9,6 +9,15 @@ interface Props {
 }
 
 const CONTENT_ROWS = 8;
+
+const SLOT_LABELS: Record<string, string> = {
+  mainHand: "Weap",
+  offHand: "Off",
+  head: "Head",
+  body: "Body",
+  feet: "Feet",
+  ring: "Ring",
+};
 
 function Bar({ current, max, color, width = 16 }: { current: number; max: number; color: string; width?: number }) {
   const ratio = max > 0 ? Math.min(current / max, 1) : 0;
@@ -74,13 +83,14 @@ function viewportMap(map: MapState, viewWidth: number, viewHeight: number): stri
 }
 
 export function InfoPanel({ state, playerName, width }: Props) {
-  const { stats, inventory, map } = state;
+  const { stats, inventory, equipment, map } = state;
 
   // Column widths (accounting for borders + padding + dividers)
   const innerWidth = Math.max(width - 6, 30); // subtract borders + padding
-  const statsWidth = Math.floor(innerWidth * 0.3);
-  const invWidth = Math.floor(innerWidth * 0.25);
-  const mapWidth = innerWidth - statsWidth - invWidth - 6; // subtract divider padding
+  const statsWidth = Math.floor(innerWidth * 0.25);
+  const gearWidth = Math.floor(innerWidth * 0.2);
+  const invWidth = Math.floor(innerWidth * 0.2);
+  const mapWidth = innerWidth - statsWidth - gearWidth - invWidth - 9; // subtract divider padding (3 dividers)
 
   return (
     <Box
@@ -142,6 +152,23 @@ export function InfoPanel({ state, playerName, width }: Props) {
         )}
         {inventory.length > CONTENT_ROWS - 1 && (
           <Text dimColor> +{inventory.length - (CONTENT_ROWS - 1)} more</Text>
+        )}
+      </Box>
+
+      <Divider />
+
+      {/* Gear: Equipment slots */}
+      <Box flexDirection="column" width={gearWidth}>
+        <Text bold color="magenta">Gear</Text>
+        {Object.keys(equipment).length > 0 ? (
+          Object.entries(equipment).slice(0, CONTENT_ROWS - 1).map(([slot, item]) => (
+            <Text key={slot} color="white">
+              <Text color="gray">{(SLOT_LABELS[slot] ?? slot).padEnd(4)} </Text>
+              <Text>{item.name}</Text>
+            </Text>
+          ))
+        ) : (
+          <Text dimColor> None</Text>
         )}
       </Box>
 
