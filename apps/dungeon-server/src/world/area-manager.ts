@@ -1,10 +1,11 @@
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
-import type { RoomRecord, AreaRecord, ItemDefinition, NpcDefinition, NpcBehavior, DialogueNode, DialogueResponse } from "@realms/lexicons";
+import type { RoomRecord, AreaRecord, ItemDefinition, NpcDefinition, NpcBehavior, DialogueNode, DialogueResponse, QuestDefinition } from "@realms/lexicons";
 import { Room } from "./room.js";
 import { createItemInstance, type ItemRegistry } from "@realms/common";
 import { NpcManager, type LootEntry } from "../entities/npc-manager.js";
+import { QuestManager } from "../systems/quest-manager.js";
 
 interface AreaManifest {
   id: string;
@@ -78,14 +79,47 @@ interface NpcsFile {
   spawns?: NpcSpawn[];
 }
 
+interface QuestObjectiveDef {
+  type: string;
+  description: string;
+  target?: string;
+  count?: number;
+}
+
+interface QuestRewardsDef {
+  xp?: number;
+  gold?: number;
+  items?: string[];
+}
+
+interface QuestDef {
+  id: string;
+  name: string;
+  description: string;
+  level?: number;
+  giver?: string;
+  turnIn?: string;
+  prerequisites?: string[];
+  objectives: QuestObjectiveDef[];
+  rewards?: QuestRewardsDef;
+  repeatable?: boolean;
+  tags?: string[];
+}
+
+interface QuestsFile {
+  quests: QuestDef[];
+}
+
 export class AreaManager {
   private rooms = new Map<string, Room>();
   private areas = new Map<string, AreaManifest>();
   private itemDefinitions: ItemRegistry = new Map();
   private npcManager: NpcManager;
+  private questManager: QuestManager;
 
-  constructor(npcManager: NpcManager) {
+  constructor(npcManager: NpcManager, questManager: QuestManager) {
     this.npcManager = npcManager;
+    this.questManager = questManager;
   }
 
   async loadFromDirectory(basePath: string): Promise<void> {
@@ -238,6 +272,44 @@ export class AreaManager {
       }
 
       console.log(`  NPCs: ${npcCount} definitions loaded`);
+    }
+
+    // Load quests
+    const questsFile = Bun.file(join(areaPath, "quests.yml"));
+    if (await questsFile.exists()) {
+      const questsText = await questsFile.text();
+      const questsData: QuestsFile = parseYaml(questsText);
+      let questCount = 0;
+
+      for (const q of questsData.quests) {
+        const questId = `${areaId}:${q.id}`;
+        const prefixId = (id: string) => (id.includes(":") ? id : `${areaId}:${id}`);
+
+        this.questManager.registerDefinition(questId, {
+          name: q.name,
+          description: q.description,
+          level: q.level,
+          giver: q.giver ? prefixId(q.giver) : undefined,
+          turnIn: q.turnIn ? prefixId(q.turnIn) : undefined,
+          prerequisites: q.prerequisites?.map(prefixId),
+          objectives: q.objectives.map(o => ({
+            type: o.type as any,
+            description: o.description,
+            target: o.target ? prefixId(o.target) : undefined,
+            count: o.count,
+          })),
+          rewards: q.rewards ? {
+            xp: q.rewards.xp,
+            gold: q.rewards.gold,
+            items: q.rewards.items?.map(prefixId),
+          } : undefined,
+          repeatable: q.repeatable,
+          tags: q.tags,
+        });
+        questCount++;
+      }
+
+      console.log(`  Quests: ${questCount} definitions loaded`);
     }
 
     console.log(`Loaded area: ${manifest.title} (${this.getRoomCountForArea(areaId)} rooms)`);

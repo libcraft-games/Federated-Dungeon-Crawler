@@ -4,17 +4,20 @@ import { Room } from "./room.js";
 import type { GameSystem } from "@realms/common";
 import type { ServerConfig } from "../config.js";
 import { NpcManager } from "../entities/npc-manager.js";
+import { QuestManager } from "../systems/quest-manager.js";
 
 export class WorldManager {
   readonly areaManager: AreaManager;
   readonly npcManager: NpcManager;
+  readonly questManager: QuestManager;
   gameSystem!: GameSystem;
   private config: ServerConfig;
 
   constructor(config: ServerConfig) {
     this.config = config;
     this.npcManager = new NpcManager();
-    this.areaManager = new AreaManager(this.npcManager);
+    this.questManager = new QuestManager();
+    this.areaManager = new AreaManager(this.npcManager, this.questManager);
   }
 
   async initialize(): Promise<void> {

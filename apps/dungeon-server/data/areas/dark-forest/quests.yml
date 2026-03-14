@@ -1,0 +1,20 @@
+quests:
+  - id: dreamcap-search
+    name: "Old Morel's Request"
+    description: "The hermit gatherer Old Morel is searching for rare Dreamcap Mushrooms — deep purple with silver spots. He promised a trade to anyone who brings him some."
+    level: 1
+    giver: dark-forest:hermit-gatherer
+    turnIn: dark-forest:hermit-gatherer
+    objectives:
+      - type: collect
+        description: "Collect Dreamcap Mushrooms"
+        target: dark-forest:dreamcap-mushroom
+        count: 2
+      - type: talk
+        description: "Deliver the mushrooms to Old Morel"
+        target: dark-forest:hermit-gatherer
+    rewards:
+      xp: 100
+      gold: 20
+      items:
+        - dark-forest:antidote

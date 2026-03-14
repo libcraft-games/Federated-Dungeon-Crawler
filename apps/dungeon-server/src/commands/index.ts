@@ -12,6 +12,7 @@ import { handleCombat } from "./combat.js";
 import { handleEquipment } from "./equipment.js";
 import { handleMerchant } from "./merchant.js";
 import { handleMap, generateMapData } from "./map.js";
+import { handleQuest, handleQuestList, handleAcceptQuest, handleAbandonQuest, handleTurnIn } from "./quest.js";
 import { encodeMessage, type ServerMessage } from "@realms/protocol";
 import { getCommandHelp, xpToNextLevel } from "@realms/common";
 
@@ -32,6 +33,7 @@ export function handleCommand(cmd: ParsedCommand, ctx: CommandContext): void {
     const allowedInCombat = new Set([
       "attack", "kill", "defend", "flee", "retreat", "use", "cast", "spells",
       "look", "inventory", "equipment", "stats", "help", "map", "",
+      "quest", "quests", "log",
     ]);
     if (!allowedInCombat.has(cmd.verb)) {
       if (cmd.verb === "go") {
@@ -97,6 +99,28 @@ export function handleCommand(cmd: ParsedCommand, ctx: CommandContext): void {
 
     case "map":
       handleMap(ctx);
+      break;
+
+    case "quests":
+      handleQuestList(cmd, ctx);
+      break;
+
+    case "quest":
+    case "log":
+      handleQuest(cmd, ctx);
+      break;
+
+    case "accept":
+      handleAcceptQuest(cmd, ctx);
+      break;
+
+    case "abandon":
+      handleAbandonQuest(cmd, ctx);
+      break;
+
+    case "turnin":
+    case "turn":
+      handleTurnIn(cmd, ctx);
       break;
 
     case "who":

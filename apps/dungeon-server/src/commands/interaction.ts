@@ -2,6 +2,7 @@ import type { ParsedCommand } from "@realms/common";
 import type { NpcDefinition, DialogueNode } from "@realms/lexicons";
 import type { CommandContext } from "./index.js";
 import { sendNarrative, sendRoomState } from "./index.js";
+import { encodeMessage } from "@realms/protocol";
 
 export function handleLook(cmd: ParsedCommand, ctx: CommandContext): void {
   const { session, world } = ctx;
@@ -130,6 +131,13 @@ export function handleTalk(cmd: ParsedCommand, ctx: CommandContext): void {
       const hint = r.next ? ` (talk ${target.toLowerCase()} ${r.next})` : "";
       lines.push(`  ${i + 1}. ${r.text}${hint}`);
     }
+  }
+
+  // Quest talk tracking
+  const talkUpdates = ctx.world.questManager.recordTalk(session.characterDid, npc.definitionId);
+  for (const questId of talkUpdates) {
+    const payload = ctx.world.questManager.buildUpdatePayload(session.characterDid, questId);
+    if (payload) session.send(encodeMessage(payload));
   }
 
   sendNarrative(session, lines.join("\n"), "chat");

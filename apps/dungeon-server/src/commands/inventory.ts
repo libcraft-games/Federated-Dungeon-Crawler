@@ -65,6 +65,13 @@ function handleTake(cmd: ParsedCommand, ctx: CommandContext): void {
 
   session.addItem(item);
 
+  // Quest collect tracking
+  const collectUpdates = ctx.world.questManager.recordCollect(session.characterDid, item.definitionId, item.quantity);
+  for (const questId of collectUpdates) {
+    const payload = ctx.world.questManager.buildUpdatePayload(session.characterDid, questId);
+    if (payload) session.send(encodeMessage(payload));
+  }
+
   const qty = item.quantity > 1 ? ` (x${item.quantity})` : "";
   sendNarrative(session, `You pick up ${item.name}${qty}.`, "info");
 
