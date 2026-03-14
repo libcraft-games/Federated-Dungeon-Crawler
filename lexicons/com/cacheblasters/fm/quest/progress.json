@@ -14,24 +14,26 @@
           "serverId": { "type": "string", "description": "DID of the server that issued this quest" },
           "status": {
             "type": "string",
-            "description": "Quest status: active, completed, failed"
+            "description": "Quest status",
+            "knownValues": ["active", "completed", "failed"]
           },
           "objectives": {
             "type": "array",
             "description": "Progress for each objective, parallel to quest definition objectives",
-            "items": {
-              "type": "object",
-              "required": ["current", "required", "done"],
-              "properties": {
-                "current": { "type": "integer" },
-                "required": { "type": "integer" },
-                "done": { "type": "boolean" }
-              }
-            }
+            "items": { "type": "ref", "ref": "#objectiveProgress" }
           },
           "acceptedAt": { "type": "string", "format": "datetime" },
           "completedAt": { "type": "string", "format": "datetime" }
         }
+      }
+    },
+    "objectiveProgress": {
+      "type": "object",
+      "required": ["current", "required", "done"],
+      "properties": {
+        "current": { "type": "integer" },
+        "required": { "type": "integer" },
+        "done": { "type": "boolean" }
       }
     }
   }

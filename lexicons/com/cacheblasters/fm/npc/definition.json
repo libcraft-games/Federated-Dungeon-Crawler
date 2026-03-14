@@ -14,7 +14,8 @@
           "description": { "type": "string", "maxLength": 4096 },
           "behavior": {
             "type": "string",
-            "description": "NPC behavior archetype: hostile, merchant, questgiver, wanderer, static"
+            "description": "NPC behavior archetype",
+            "knownValues": ["hostile", "merchant", "questgiver", "wanderer", "static"]
           },
           "level": { "type": "integer", "minimum": 1 },
           "attributes": {
@@ -24,6 +25,16 @@
           "dialogue": {
             "type": "unknown",
             "description": "Dialogue tree structure — server-defined format"
+          },
+          "art": {
+            "type": "array",
+            "description": "ASCII art lines displayed during combat",
+            "items": { "type": "string" }
+          },
+          "shop": {
+            "type": "array",
+            "description": "Item definition IDs this merchant sells (merchant NPCs only)",
+            "items": { "type": "string" }
           },
           "tags": {
             "type": "array",
