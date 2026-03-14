@@ -13,7 +13,7 @@
           "name": { "type": "string", "maxLength": 128 },
           "type": { "type": "string", "description": "Item type ID referencing server's system.itemType definition" },
           "description": { "type": "string", "maxLength": 4096 },
-          "weight": { "type": "number" },
+          "weight": { "type": "integer" },
           "value": { "type": "integer" },
           "rarity": { "type": "string" },
           "levelRequired": { "type": "integer", "minimum": 1 },
