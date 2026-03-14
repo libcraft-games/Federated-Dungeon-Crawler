@@ -178,37 +178,10 @@ spawns:
 
   - room: tavern
     items:
-      - id: bread-loaf
-        quantity: 3
-      - id: health-potion
-        quantity: 3
       - id: ye-flask
-        quantity: 1
-
-  - room: blacksmith
-    items:
-      - id: rusty-sword
-        quantity: 2
-      - id: wooden-shield
-        quantity: 1
-      - id: leather-cap
-        quantity: 1
-
-  - room: curiosity-shop
-    items:
-      - id: health-potion
-        quantity: 2
-      - id: mana-potion
-        quantity: 1
-      - id: copper-ring
         quantity: 1
 
   - room: courtyard
     items:
       - id: old-key
-        quantity: 1
-
-  - room: alley
-    items:
-      - id: iron-dagger
         quantity: 1
