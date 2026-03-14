@@ -749,6 +749,13 @@ export class CombatSystem {
       world.npcManager.killNpc(npc.instanceId, room);
     }
 
+    // Quest kill tracking
+    const killUpdates = this.ctx.world.questManager.recordKill(session.characterDid, npc.definitionId);
+    for (const questId of killUpdates) {
+      const payload = this.ctx.world.questManager.buildUpdatePayload(session.characterDid, questId);
+      if (payload) session.send(encodeMessage(payload));
+    }
+
     // Check if other NPCs are still fighting
     const remaining = this.getCombatNpcs(session);
     if (remaining.length > 0) {
