@@ -238,6 +238,10 @@ const server = Bun.serve<SessionData>({
         equipment: s.equipment,
       }));
 
+      // Send quest log
+      const questLog = world.questManager.buildLogPayload(session.characterDid);
+      session.send(encodeMessage(questLog));
+
       // Send initial room state and map
       const ctx = makeContext(session.sessionId);
       if (ctx) {

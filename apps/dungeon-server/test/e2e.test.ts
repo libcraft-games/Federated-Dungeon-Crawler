@@ -1490,3 +1490,85 @@ describe("merchant and gold", () => {
     client.disconnect();
   });
 });
+
+// ─── Quests ──────────────────────────────────────────────────
+
+describe("quests", () => {
+  test("quest_log sent on connect", async () => {
+    const client = new TestClient("QuestLogTest");
+    await client.connect(port);
+    const questLog = await client.waitFor("quest_log");
+    expect(questLog.quests).toBeDefined();
+    expect(Array.isArray(questLog.quests)).toBe(true);
+    client.disconnect();
+  });
+
+  test("quests shows no active quests initially", async () => {
+    const client = new TestClient("QuestEmptyTest");
+    await client.connect(port);
+    await client.waitFor("quest_log");
+    const text = await client.commandAndWait("log");
+    expect(text).toMatch(/no active quests/i);
+    client.disconnect();
+  });
+
+  test("accept wolf trouble from Grimjaw", async () => {
+    const client = new TestClient("QuestAcceptTest");
+    await client.connect(port);
+    await client.waitFor("quest_log");
+
+    // Navigate east to Grimjaw's blacksmith
+    await client.commandAndWaitRoom("e");
+
+    const questUpdatePromise = client.waitFor("quest_update");
+    await client.commandAndWait("accept wolf trouble");
+    const update = await questUpdatePromise;
+
+    expect(update.questName).toBe("Wolf Trouble");
+    expect(update.status).toBe("active");
+    expect(update.objectives[0].description).toContain("grey wolves");
+    client.disconnect();
+  });
+
+  test("quest log shows accepted quest", async () => {
+    const client = new TestClient("QuestLogShowTest");
+    await client.connect(port);
+    await client.waitFor("quest_log");
+
+    await client.commandAndWaitRoom("e");
+    await client.commandAndWait("accept wolf trouble");
+
+    const logText = await client.commandAndWait("log");
+    expect(logText).toContain("Wolf Trouble");
+    expect(logText).toContain("Kill grey wolves");
+    client.disconnect();
+  });
+
+  test("abandon quest removes it from log", async () => {
+    const client = new TestClient("QuestAbandonTest");
+    await client.connect(port);
+    await client.waitFor("quest_log");
+
+    await client.commandAndWaitRoom("e");
+    await client.commandAndWait("accept wolf trouble");
+
+    const afterAccept = await client.commandAndWait("log");
+    expect(afterAccept).toContain("Wolf Trouble");
+
+    await client.commandAndWait("abandon wolf trouble");
+    const afterAbandon = await client.commandAndWait("log");
+    expect(afterAbandon).toMatch(/no active quests/i);
+    client.disconnect();
+  });
+
+  test("quests command near Grimjaw shows available quest", async () => {
+    const client = new TestClient("QuestListNpcTest");
+    await client.connect(port);
+    await client.waitFor("quest_log");
+
+    await client.commandAndWaitRoom("e");
+    const text = await client.commandAndWait("quests");
+    expect(text).toMatch(/wolf trouble/i);
+    client.disconnect();
+  });
+});

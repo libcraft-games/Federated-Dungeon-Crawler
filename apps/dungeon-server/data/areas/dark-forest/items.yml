@@ -96,6 +96,21 @@ definitions:
       effect: cure_poison
     tags: [potion, antidote]
 
+  - id: dreamcap-mushroom
+    name: Dreamcap Mushroom
+    type: material
+    description: >
+      A rare mushroom with a deep purple cap dusted with silver spots. It glows faintly
+      in the dark and smells of sweet earth. Old Morel would pay handsomely for these.
+    weight: 0
+    value: 25
+    rarity: rare
+    stackable: true
+    maxStack: 10
+    properties:
+      craftingMaterial: true
+    tags: [mushroom, rare, crafting]
+
 spawns:
   - room: forest-edge
     items:
@@ -125,3 +140,13 @@ spawns:
     items:
       - id: antidote
         quantity: 2
+
+  - room: mushroom-grove
+    items:
+      - id: dreamcap-mushroom
+        quantity: 2
+
+  - room: deep-forest
+    items:
+      - id: dreamcap-mushroom
+        quantity: 1
