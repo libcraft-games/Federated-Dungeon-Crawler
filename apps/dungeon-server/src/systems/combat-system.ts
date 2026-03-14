@@ -719,6 +719,13 @@ export class CombatSystem {
       }
     }
 
+    // Award gold
+    const goldDrop = world.npcManager.generateGoldDrop(npc.definitionId);
+    if (goldDrop > 0) {
+      session.addGold(goldDrop);
+      lines.push(`You loot ${goldDrop} gold.`);
+    }
+
     // Award XP
     const xp = calculateXpReward(npc.level, session.state.level);
     const newLevel = session.addXp(xp);
@@ -835,6 +842,7 @@ export class CombatSystem {
       maxMp: s.maxMp,
       ap: s.currentAp,
       maxAp: s.maxAp,
+      gold: s.gold,
       level: s.level,
       xp: s.experience,
       xpToNext: xpToNextLevel(s.level, s.experience),

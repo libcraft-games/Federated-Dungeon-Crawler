@@ -213,6 +213,8 @@ export interface NpcDefinition {
   dialogue?: Record<string, DialogueNode>;
   /** Optional ASCII art lines displayed during combat */
   art?: string[];
+  /** Shop inventory for merchant NPCs (item definition IDs) */
+  shop?: string[];
   tags?: string[];
 }
 

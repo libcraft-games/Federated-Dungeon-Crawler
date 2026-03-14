@@ -19,6 +19,7 @@ export interface CharacterState extends CharacterProfile {
   maxMp: number;
   currentAp: number;
   maxAp: number;
+  gold: number;
   currentRoom: string;
   activeEffects: ActiveEffect[];
   inventory: ItemInstance[];
@@ -159,6 +160,7 @@ export function profileToState(
     maxMp: derived.maxMp ?? 0,
     currentAp: derived.maxAp ?? 4,
     maxAp: derived.maxAp ?? 4,
+    gold: 10, // starting gold
     currentRoom,
     activeEffects: [],
     inventory: [],

@@ -22,6 +22,9 @@ definitions:
       - "   _\\\\()//_   "
       - "  / //  \\\\ \\  "
       - "  | |\\__/| |  "
+    gold:
+      min: 1
+      max: 4
     loot:
       - itemId: spider-silk
         chance: 60
@@ -55,6 +58,9 @@ definitions:
       int: 3
       wis: 12
       cha: 4
+    gold:
+      min: 2
+      max: 6
     loot:
       - itemId: forest-cloak
         chance: 15

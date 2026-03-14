@@ -17,20 +17,36 @@ interface RespawnEntry {
   respawnAt: number; // timestamp
 }
 
+export interface GoldDrop {
+  min: number;
+  max: number;
+}
+
 export class NpcManager {
   private definitions = new Map<string, NpcDefinition>();
   private lootTables = new Map<string, LootEntry[]>();
+  private goldDrops = new Map<string, GoldDrop>();
   private instances = new Map<string, NpcInstance>();
   private respawnQueue: RespawnEntry[] = [];
 
   /** Default respawn time in ms (30 seconds for MVP) */
   static RESPAWN_TIME_MS = 30_000;
 
-  registerDefinition(id: string, def: NpcDefinition, loot?: LootEntry[]): void {
+  registerDefinition(id: string, def: NpcDefinition, loot?: LootEntry[], gold?: GoldDrop): void {
     this.definitions.set(id, def);
     if (loot && loot.length > 0) {
       this.lootTables.set(id, loot);
     }
+    if (gold) {
+      this.goldDrops.set(id, gold);
+    }
+  }
+
+  /** Generate gold drop for a killed NPC */
+  generateGoldDrop(definitionId: string): number {
+    const drop = this.goldDrops.get(definitionId);
+    if (!drop) return 0;
+    return Math.floor(Math.random() * (drop.max - drop.min + 1)) + drop.min;
   }
 
   getDefinition(id: string): NpcDefinition | undefined {

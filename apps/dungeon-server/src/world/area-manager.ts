@@ -62,6 +62,8 @@ interface NpcDef {
   attributes?: Record<string, number>;
   dialogue?: Record<string, { text: string; responses?: Array<{ text: string; next?: string }> }>;
   art?: string[];
+  shop?: string[];
+  gold?: { min: number; max: number };
   loot?: LootEntry[];
   tags?: string[];
 }
@@ -212,9 +214,10 @@ export class AreaManager {
           attributes: def.attributes,
           dialogue: def.dialogue as NpcDefinition["dialogue"],
           art: def.art,
+          shop: def.shop?.map((id) => (id.includes(":") ? id : `${areaId}:${id}`)),
           tags: def.tags,
         };
-        this.npcManager.registerDefinition(defId, npcDef, def.loot);
+        this.npcManager.registerDefinition(defId, npcDef, def.loot, def.gold);
         npcCount++;
       }
 
