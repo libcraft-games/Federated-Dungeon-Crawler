@@ -190,7 +190,7 @@ function GameView({ client, name, exit }: { client: WsClient; name: string; exit
       </Box>
 
       <InputBar onSubmit={handleCommand} />
-      <HintBar infoPanelOpen={infoPanelOpen} />
+      <HintBar infoPanelOpen={infoPanelOpen} quests={state.quests} />
     </Box>
   );
 }

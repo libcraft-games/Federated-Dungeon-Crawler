@@ -24,6 +24,20 @@ export interface CharacterStats {
   xpToNext: number;
 }
 
+export interface QuestObjectiveEntry {
+  description: string;
+  current: number;
+  required: number;
+  done: boolean;
+}
+
+export interface QuestEntry {
+  questId: string;
+  questName: string;
+  status: "active" | "completed" | "failed";
+  objectives: QuestObjectiveEntry[];
+}
+
 export interface MapState {
   /** Raw grid rows */
   grid: string[];
@@ -52,6 +66,7 @@ export interface GameState {
   inventory: ItemInstance[];
   equipment: EquipmentMap;
   narrative: NarrativeLine[];
+  quests: QuestEntry[];
 }
 
 const MAX_NARRATIVE = 500;
@@ -68,6 +83,7 @@ export function useGameState(client: WsClient) {
     inventory: [],
     equipment: {},
     narrative: [],
+    quests: [],
   });
 
   const addNarrative = useCallback((text: string, style: NarrativeLine["style"] = "info") => {
@@ -202,6 +218,45 @@ export function useGameState(client: WsClient) {
           } else {
             addNarrative(`[${msg.code}] ${msg.message}`, "error");
           }
+          break;
+
+        case "quest_update": {
+          const entry: QuestEntry = {
+            questId: msg.questId,
+            questName: msg.questName,
+            status: msg.status,
+            objectives: msg.objectives,
+          };
+          setState((prev) => ({
+            ...prev,
+            quests: [
+              ...prev.quests.filter(q => q.questId !== msg.questId),
+              entry,
+            ].filter(q => q.status === "active"),
+          }));
+          if (msg.status === "completed") {
+            addNarrative(`\u2605 Quest complete: ${msg.questName}!`, "system");
+          } else {
+            const lastDone = [...msg.objectives].reverse().find((o) => o.done);
+            if (lastDone) {
+              addNarrative(`\u2713 Objective: ${lastDone.description}`, "system");
+            }
+          }
+          break;
+        }
+
+        case "quest_log":
+          setState((prev) => ({
+            ...prev,
+            quests: msg.quests
+              .filter(q => q.status === "active")
+              .map(q => ({
+                questId: q.questId,
+                questName: q.questName,
+                status: q.status,
+                objectives: q.objectives,
+              })),
+          }));
           break;
 
         case "pong":

@@ -50,7 +50,24 @@ export type ServerMessage =
   | { type: "combat_update"; combatants: CombatantInfo[]; targetId: string }
   | { type: "combat_end"; reason: "victory" | "flee" | "death" }
   | { type: "level_up"; level: number; message: string }
-  | { type: "map_update"; grid: string[]; cursorRow: number; cursorCol: number; legend: string[] };
+  | { type: "map_update"; grid: string[]; cursorRow: number; cursorCol: number; legend: string[] }
+  | {
+      type: "quest_update";
+      questId: string;
+      questName: string;
+      status: "active" | "completed" | "failed";
+      objectives: { description: string; current: number; required: number; done: boolean }[];
+      rewards?: { xp?: number; gold?: number; items?: string[] };
+    }
+  | {
+      type: "quest_log";
+      quests: Array<{
+        questId: string;
+        questName: string;
+        status: "active" | "completed" | "failed";
+        objectives: { description: string; current: number; required: number; done: boolean }[];
+      }>;
+    };
 
 export function encodeMessage(msg: ClientMessage | ServerMessage): string {
   return JSON.stringify(msg);
