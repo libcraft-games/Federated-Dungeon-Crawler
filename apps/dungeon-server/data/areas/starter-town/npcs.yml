@@ -10,6 +10,9 @@ definitions:
       these doors and has a story for each.
     behavior: merchant
     level: 5
+    shop:
+      - bread-loaf
+      - health-potion
     dialogue:
       greeting:
         text: >
@@ -65,6 +68,11 @@ definitions:
       with appraising eyes.
     behavior: merchant
     level: 8
+    shop:
+      - rusty-sword
+      - wooden-shield
+      - leather-cap
+      - iron-dagger
     dialogue:
       greeting:
         text: >
@@ -116,6 +124,10 @@ definitions:
       watching you.
     behavior: merchant
     level: 10
+    shop:
+      - health-potion
+      - mana-potion
+      - copper-ring
     dialogue:
       greeting:
         text: >

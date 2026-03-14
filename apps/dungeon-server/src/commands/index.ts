@@ -10,6 +10,7 @@ import { handleSocial } from "./social.js";
 import { handleInventory } from "./inventory.js";
 import { handleCombat } from "./combat.js";
 import { handleEquipment } from "./equipment.js";
+import { handleMerchant } from "./merchant.js";
 import { handleMap, generateMapData } from "./map.js";
 import { encodeMessage, type ServerMessage } from "@realms/protocol";
 import { getCommandHelp, xpToNextLevel } from "@realms/common";
@@ -88,6 +89,12 @@ export function handleCommand(cmd: ParsedCommand, ctx: CommandContext): void {
       handleEquipment(cmd, ctx);
       break;
 
+    case "shop":
+    case "buy":
+    case "sell":
+      handleMerchant(cmd, ctx);
+      break;
+
     case "map":
       handleMap(ctx);
       break;
@@ -135,7 +142,7 @@ function handleStats(ctx: CommandContext): void {
 
   const lines = [`${s.name} - Level ${s.level} ${s.race} ${s.class}`];
   lines.push(`HP: ${s.currentHp}/${s.maxHp}  MP: ${s.currentMp}/${s.maxMp}  AP: ${s.currentAp}/${s.maxAp}`);
-  lines.push(`XP: ${s.experience}  (${xpToNextLevel(s.level, s.experience)} to next level)`);
+  lines.push(`Gold: ${s.gold}  XP: ${s.experience}  (${xpToNextLevel(s.level, s.experience)} to next level)`);
   lines.push("");
   lines.push("Attributes:");
   for (const [id, value] of Object.entries(s.attributes)) {

@@ -97,6 +97,7 @@ setInterval(() => {
         maxMp: s.maxMp,
         ap: s.currentAp,
         maxAp: s.maxAp,
+        gold: s.gold,
         level: s.level,
         xp: s.experience,
         xpToNext: xpToNextLevel(s.level, s.experience),
@@ -223,6 +224,7 @@ const server = Bun.serve<SessionData>({
         maxMp: s.maxMp,
         ap: s.currentAp,
         maxAp: s.maxAp,
+        gold: s.gold,
         level: s.level,
         xp: s.experience,
         xpToNext: xpToNextLevel(s.level, s.experience),
@@ -230,6 +232,10 @@ const server = Bun.serve<SessionData>({
       session.send(encodeMessage({
         type: "inventory_update",
         inventory: s.inventory,
+      }));
+      session.send(encodeMessage({
+        type: "equipment_update",
+        equipment: s.equipment,
       }));
 
       // Send initial room state and map

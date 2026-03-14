@@ -128,6 +128,22 @@ export class CharacterSession {
     return this.state.equipment[slot];
   }
 
+  // ── Gold ──
+
+  get gold(): number {
+    return this.state.gold;
+  }
+
+  addGold(amount: number): void {
+    this.state.gold += amount;
+  }
+
+  spendGold(amount: number): boolean {
+    if (this.state.gold < amount) return false;
+    this.state.gold -= amount;
+    return true;
+  }
+
   // ── Action Points ──
 
   refreshAp(): void {
