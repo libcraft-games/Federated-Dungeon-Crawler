@@ -23,7 +23,8 @@
             "type": "array",
             "items": { "type": "string" },
             "description": "Which equipment slot IDs this type can go in"
-          }
+          },
+          "defaultSlot": { "type": "string", "description": "Default slot ID if not specified on the item" }
         }
       }
     },

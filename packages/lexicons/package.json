@@ -6,7 +6,14 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {
-    "build": "tsc",
+    "generate": "lex build --lexicons ../../lexicons --out src/lexicons --indexFile --importExt .js --clear",
+    "build": "bun run generate && tsc",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@atproto/lex": "^0.0.20"
+  },
+  "devDependencies": {
+    "@atproto/lex-cli": "^0.9.9"
   }
 }

@@ -23,38 +23,41 @@
           "objectives": {
             "type": "array",
             "description": "Ordered list of objectives to complete",
-            "items": {
-              "type": "object",
-              "required": ["type", "description"],
-              "properties": {
-                "type": {
-                  "type": "string",
-                  "description": "Objective type: kill, collect, talk, visit, deliver"
-                },
-                "description": { "type": "string", "maxLength": 256 },
-                "target": { "type": "string", "description": "Target ID (NPC def ID, item def ID, or room ID)" },
-                "count": { "type": "integer", "minimum": 1, "description": "How many (default 1)" }
-              }
-            }
+            "items": { "type": "ref", "ref": "#objective" }
           },
-          "rewards": {
-            "type": "object",
-            "description": "Rewards granted on completion",
-            "properties": {
-              "xp": { "type": "integer" },
-              "gold": { "type": "integer" },
-              "items": {
-                "type": "array",
-                "description": "Item definition IDs granted as rewards",
-                "items": { "type": "string" }
-              }
-            }
-          },
+          "rewards": { "type": "ref", "ref": "#rewards" },
           "repeatable": { "type": "boolean", "description": "Whether this quest can be accepted again after completion" },
           "tags": {
             "type": "array",
             "items": { "type": "string" }
           }
+        }
+      }
+    },
+    "objective": {
+      "type": "object",
+      "required": ["type", "description"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Objective type",
+          "knownValues": ["kill", "collect", "talk", "visit", "deliver"]
+        },
+        "description": { "type": "string", "maxLength": 256 },
+        "target": { "type": "string", "description": "Target ID (NPC def ID, item def ID, or room ID)" },
+        "count": { "type": "integer", "minimum": 1, "description": "How many (default 1)" }
+      }
+    },
+    "rewards": {
+      "type": "object",
+      "description": "Rewards granted on quest completion",
+      "properties": {
+        "xp": { "type": "integer" },
+        "gold": { "type": "integer" },
+        "items": {
+          "type": "array",
+          "description": "Item definition IDs granted as rewards",
+          "items": { "type": "string" }
         }
       }
     }

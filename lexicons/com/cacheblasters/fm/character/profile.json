@@ -8,7 +8,7 @@
       "description": "A player's character profile in Federated Realms. Attributes are an open map — each server defines what attributes it uses via system.attribute records.",
       "record": {
         "type": "object",
-        "required": ["name", "class", "race", "level", "attributes", "createdAt"],
+        "required": ["name", "class", "race", "level", "experience", "attributes", "createdAt"],
         "properties": {
           "name": { "type": "string", "maxLength": 64 },
           "class": {
