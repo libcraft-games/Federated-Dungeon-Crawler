@@ -36,6 +36,14 @@ export function handleMovement(cmd: ParsedCommand, ctx: CommandContext): void {
     return;
   }
 
+  // Portal exit — hand off to federation portal handler
+  if (exit.portal && ctx.portalHandler) {
+    ctx.portalHandler.traverse(session, exit, (text, style) => {
+      sendNarrative(session, text, (style as "info" | "error" | "system") ?? "info");
+    });
+    return;
+  }
+
   const targetRoom = world.getRoom(exit.target);
   if (!targetRoom) {
     sendNarrative(session, "That exit leads somewhere that doesn't exist yet.", "error");
