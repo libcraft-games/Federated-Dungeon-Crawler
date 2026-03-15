@@ -1,8 +1,16 @@
 import React, { useState } from "react";
 import { Box, Text, useInput } from "ink";
-import { loadProfile, type SavedProfile } from "../connection/saved-profile.js";
+import { loadProfile } from "../connection/saved-profile.js";
 
-type SetupPhase = "menu" | "signin" | "signup-pds" | "signup-handle" | "signup-email" | "signup-password" | "signup-creating";
+type SetupPhase =
+  | "menu"
+  | "signin"
+  | "signup-server"
+  | "signup-connecting"
+  | "signup-handle"
+  | "signup-email"
+  | "signup-password"
+  | "signup-creating";
 
 interface Props {
   onComplete: (result: AccountResult) => void;
@@ -13,6 +21,9 @@ export interface AccountResult {
   handle: string;
   did?: string;
   pdsUrl?: string;
+  /** If set, skip ServerSelect — the server is already known */
+  serverUrl?: string;
+  serverInfo?: { name: string; description: string; players: number; rooms: number };
 }
 
 const DEV_MODE = process.env.DEV_MODE === "true";
@@ -27,7 +38,9 @@ export function AccountSetup({ onComplete }: Props) {
   const [error, setError] = useState("");
 
   // Signup state
-  const [signupPds, setSignupPds] = useState("");
+  const [signupServerUrl, setSignupServerUrl] = useState("");
+  const [pdsHostname, setPdsHostname] = useState("");
+  const [serverInfo, setServerInfo] = useState<AccountResult["serverInfo"]>(undefined);
   const [signupHandle, setSignupHandle] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
 
@@ -61,26 +74,24 @@ export function AccountSetup({ onComplete }: Props) {
           setPhase("signin");
           setInputValue("");
         } else if (selected.value === "signup") {
-          setPhase("signup-pds");
+          setPhase("signup-server");
           setInputValue("");
         } else if (selected.value === "dev") {
-          // Dev mode: skip auth, just ask for name
-          // Use a simple prompt — go straight to server select with dev flag
           onComplete({ mode: "dev", handle: `Adventurer_${Math.floor(Math.random() * 9999)}` });
         }
       }
       return;
     }
 
-    if (phase === "signup-creating") return;
+    if (phase === "signup-creating" || phase === "signup-connecting") return;
 
     // Text input phases — Esc goes back
     if (key.escape) {
-      if (phase === "signin" || phase === "signup-pds") {
+      if (phase === "signin" || phase === "signup-server") {
         setPhase("menu");
       } else if (phase === "signup-handle") {
-        setPhase("signup-pds");
-        setInputValue(signupPds);
+        setPhase("signup-server");
+        setInputValue(signupServerUrl);
       } else if (phase === "signup-email") {
         setPhase("signup-handle");
         setInputValue(signupHandle);
@@ -101,10 +112,8 @@ export function AccountSetup({ onComplete }: Props) {
         return;
       }
 
-      if (phase === "signup-pds") {
-        setSignupPds(trimmed);
-        setInputValue("");
-        setPhase("signup-handle");
+      if (phase === "signup-server") {
+        connectToServer(trimmed);
         return;
       }
 
@@ -138,30 +147,58 @@ export function AccountSetup({ onComplete }: Props) {
     }
   });
 
+  async function connectToServer(address: string) {
+    setPhase("signup-connecting");
+    setError("");
+
+    let baseUrl = address;
+    if (!baseUrl.startsWith("http")) {
+      baseUrl = baseUrl.includes("localhost") || baseUrl.match(/:\d+$/)
+        ? `http://${baseUrl}`
+        : `https://${baseUrl}`;
+    }
+    baseUrl = baseUrl.replace(/\/+$/, "");
+
+    try {
+      const res = await fetch(`${baseUrl}/info`);
+      if (!res.ok) throw new Error(`Server returned ${res.status}`);
+      const info = await res.json() as {
+        name: string;
+        description: string;
+        players: number;
+        rooms: number;
+        pdsHostname?: string;
+      };
+
+      setSignupServerUrl(baseUrl);
+      setServerInfo({ name: info.name, description: info.description, players: info.players, rooms: info.rooms });
+      setPdsHostname(info.pdsHostname ?? "");
+      setInputValue("");
+      setPhase("signup-handle");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not connect to server");
+      setPhase("signup-server");
+    }
+  }
+
   async function createAccount(password: string) {
     setPhase("signup-creating");
     setError("");
 
-    let pdsBaseUrl = signupPds;
-    if (!pdsBaseUrl.startsWith("http")) {
-      pdsBaseUrl = `https://${pdsBaseUrl}`;
-    }
-    pdsBaseUrl = pdsBaseUrl.replace(/\/+$/, "");
-
     try {
-      const res = await fetch(`${pdsBaseUrl}/xrpc/com.atproto.server.createAccount`, {
+      const res = await fetch(`${signupServerUrl}/auth/create-account`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          handle: signupHandle.includes(".") ? signupHandle : `${signupHandle}.${new URL(pdsBaseUrl).hostname}`,
+          handle: signupHandle,
           email: signupEmail,
           password,
         }),
       });
 
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({})) as { message?: string };
-        throw new Error(errData.message ?? `Account creation failed (${res.status})`);
+        const errData = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(errData.error ?? `Account creation failed (${res.status})`);
       }
 
       const data = await res.json() as { did: string; handle: string };
@@ -170,7 +207,8 @@ export function AccountSetup({ onComplete }: Props) {
         mode: "oauth",
         handle: data.handle,
         did: data.did,
-        pdsUrl: pdsBaseUrl,
+        serverUrl: signupServerUrl,
+        serverInfo,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Account creation failed");
@@ -231,13 +269,13 @@ export function AccountSetup({ onComplete }: Props) {
     );
   }
 
-  if (phase === "signup-pds") {
+  if (phase === "signup-server") {
     return (
       <Box flexDirection="column" paddingX={2} paddingY={1}>
         <Text color="cyan" bold>Create Account</Text>
         <Box height={1} />
 
-        <Text>Enter the server's PDS address:</Text>
+        <Text>Enter the game server address:</Text>
         <Box height={1} />
 
         <Box>
@@ -248,10 +286,7 @@ export function AccountSetup({ onComplete }: Props) {
 
         <Box height={1} />
         <Text color="gray" dimColor>
-          This is the address of the server you want to create an account on.
-        </Text>
-        <Text color="gray" dimColor>
-          e.g. pds.my-realm.com or localhost:2583
+          e.g. realms.example.com or localhost:3000
         </Text>
         {error ? <Text color="red">{error}</Text> : null}
         <Box height={1} />
@@ -260,16 +295,21 @@ export function AccountSetup({ onComplete }: Props) {
     );
   }
 
-  if (phase === "signup-handle") {
-    const hostname = (() => {
-      try { return new URL(signupPds.startsWith("http") ? signupPds : `https://${signupPds}`).hostname; }
-      catch { return signupPds; }
-    })();
-
+  if (phase === "signup-connecting") {
     return (
       <Box flexDirection="column" paddingX={2} paddingY={1}>
         <Text color="cyan" bold>Create Account</Text>
-        <Text color="gray" dimColor>PDS: {signupPds}</Text>
+        <Box height={1} />
+        <Text color="yellow">Connecting to server...</Text>
+      </Box>
+    );
+  }
+
+  if (phase === "signup-handle") {
+    return (
+      <Box flexDirection="column" paddingX={2} paddingY={1}>
+        <Text color="cyan" bold>Create Account</Text>
+        <Text color="gray" dimColor>Server: {serverInfo?.name ?? signupServerUrl}</Text>
         <Box height={1} />
 
         <Text>Choose a handle:</Text>
@@ -281,8 +321,8 @@ export function AccountSetup({ onComplete }: Props) {
           <Text color="gray">{"█"}</Text>
         </Box>
 
-        {inputValue && !inputValue.includes(".") ? (
-          <Text color="gray" dimColor>  → {inputValue}.{hostname}</Text>
+        {inputValue && !inputValue.includes(".") && pdsHostname ? (
+          <Text color="gray" dimColor>  {inputValue}.{pdsHostname}</Text>
         ) : null}
 
         <Box height={1} />
@@ -295,7 +335,7 @@ export function AccountSetup({ onComplete }: Props) {
     return (
       <Box flexDirection="column" paddingX={2} paddingY={1}>
         <Text color="cyan" bold>Create Account</Text>
-        <Text color="gray" dimColor>PDS: {signupPds} | Handle: {signupHandle}</Text>
+        <Text color="gray" dimColor>Server: {serverInfo?.name ?? signupServerUrl} | Handle: {signupHandle}</Text>
         <Box height={1} />
 
         <Text>Enter your email address:</Text>
@@ -314,11 +354,11 @@ export function AccountSetup({ onComplete }: Props) {
   }
 
   if (phase === "signup-password") {
-    const masked = "•".repeat(inputValue.length);
+    const masked = "\u2022".repeat(inputValue.length);
     return (
       <Box flexDirection="column" paddingX={2} paddingY={1}>
         <Text color="cyan" bold>Create Account</Text>
-        <Text color="gray" dimColor>PDS: {signupPds} | Handle: {signupHandle}</Text>
+        <Text color="gray" dimColor>Server: {serverInfo?.name ?? signupServerUrl} | Handle: {signupHandle}</Text>
         <Box height={1} />
 
         <Text>Choose a password:</Text>

@@ -302,6 +302,44 @@ const server = Bun.serve<SessionData>({
       }
     }
 
+    // ── Account creation (proxied to co-located PDS) ──
+
+    if (url.pathname === "/auth/create-account" && req.method === "POST") {
+      try {
+        const body = await req.json() as { handle: string; email: string; password: string };
+        if (!body.handle || !body.email || !body.password) {
+          return Response.json({ error: "handle, email, and password are required" }, { status: 400 });
+        }
+
+        // Resolve handle: if no dot, append the PDS hostname
+        const handle = body.handle.includes(".")
+          ? body.handle
+          : `${body.handle}.${config.atproto.pdsHostname}`;
+
+        const pdsRes = await fetch(`${config.atproto.pdsUrl}/xrpc/com.atproto.server.createAccount`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ handle, email: body.email, password: body.password }),
+        });
+
+        if (!pdsRes.ok) {
+          const errData = await pdsRes.json().catch(() => ({})) as { message?: string };
+          return Response.json(
+            { error: errData.message ?? `Account creation failed (${pdsRes.status})` },
+            { status: pdsRes.status },
+          );
+        }
+
+        const data = await pdsRes.json() as { did: string; handle: string };
+        return Response.json({ did: data.did, handle: data.handle });
+      } catch (err) {
+        return Response.json(
+          { error: err instanceof Error ? err.message : "Account creation failed" },
+          { status: 500 },
+        );
+      }
+    }
+
     // ── Info routes ──
 
     // Health check
@@ -322,6 +360,7 @@ const server = Bun.serve<SessionData>({
         players: sessions.getOnlineCount(),
         rooms: world.areaManager.getAllRooms().size,
         serverDid: serverIdentity.did || undefined,
+        pdsHostname: config.atproto.pdsHostname,
       });
     }
 
