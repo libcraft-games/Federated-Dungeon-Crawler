@@ -3,6 +3,7 @@ import type { Subprocess } from "bun";
 import { TestClient, startServer, stopServer } from "./helpers.ts";
 import { ServerIdentity } from "../src/atproto/server-identity.ts";
 import { AttestationTracker } from "../src/atproto/attestation-tracker.ts";
+import { PortalHandler } from "../src/federation/portal-handler.ts";
 
 // ── Server in dev mode (AT Proto endpoints still respond) ──
 
@@ -463,5 +464,39 @@ describe("attestation tracker", () => {
     expect(attestations[0].claims.level).toBe(2);
     expect(attestations[1].claims.questsCompleted).toEqual(["quest-1"]);
     expect(attestations[1].claims.gold).toBe(50);
+  });
+});
+
+// ─── Portal Target Parsing ──────────────────────────────────
+
+describe("portal target parsing", () => {
+  const handler = new PortalHandler(
+    { did: "did:plc:local" } as any,
+    {} as any,
+    { trustPolicy: "trust-all", trustedServers: [], maxAcceptedLevel: 50 },
+  );
+
+  test("parses did:plc portal target", () => {
+    const result = handler.parsePortalTarget("did:plc:abc123xyz:arrival-hall");
+    expect(result).not.toBeNull();
+    expect(result!.serverDid).toBe("did:plc:abc123xyz");
+    expect(result!.roomId).toBe("arrival-hall");
+  });
+
+  test("parses did:web portal target", () => {
+    const result = handler.parsePortalTarget("did:web:example.com:spawn-room");
+    expect(result).not.toBeNull();
+    expect(result!.serverDid).toBe("did:web:example.com");
+    expect(result!.roomId).toBe("spawn-room");
+  });
+
+  test("returns null for non-DID target", () => {
+    const result = handler.parsePortalTarget("starter-town:town-square");
+    expect(result).toBeNull();
+  });
+
+  test("identifies portal exits", () => {
+    expect(handler.isPortalExit({ direction: "north", target: "did:plc:x:room", portal: true })).toBe(true);
+    expect(handler.isPortalExit({ direction: "north", target: "room-id" })).toBe(false);
   });
 });
