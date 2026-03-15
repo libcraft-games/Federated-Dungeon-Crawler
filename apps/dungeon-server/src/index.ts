@@ -37,6 +37,7 @@ if (!DEV_MODE && config.atproto.serverPassword) {
   try {
     await serverIdentity.initialize(config.atproto, config.name, config.description);
     await oauthClient.initialize(config.atproto);
+    sessions.setServerIdentity(serverIdentity);
   } catch (err) {
     console.warn("   AT Proto initialization failed:", err instanceof Error ? err.message : err);
     console.warn("   Running without AT Proto auth (set DEV_MODE=true to suppress)");
@@ -568,6 +569,24 @@ const server = Bun.serve<SessionData>({
         playerName: session.name,
         playerDid: session.characterDid,
         text: `${session.name} has left the realm.`,
+      });
+
+      // Finalize attestations and store in character profile extensions
+      session.attestations.finalize().then((attestations) => {
+        if (attestations.length > 0) {
+          const s = session.state;
+          const serverExt = (s.extensions?.[serverIdentity.did] as { attestations?: unknown[] } | undefined) ?? {};
+          const existing = serverExt.attestations ?? [];
+          s.extensions = {
+            ...(s.extensions ?? {}),
+            [serverIdentity.did]: {
+              ...serverExt,
+              attestations: [...existing, ...attestations],
+            },
+          };
+        }
+      }).catch((err) => {
+        console.warn(`Failed to finalize attestations for ${session.name}:`, err instanceof Error ? err.message : err);
       });
 
       transferHandler.pendingAdaptations.delete(session.sessionId);
