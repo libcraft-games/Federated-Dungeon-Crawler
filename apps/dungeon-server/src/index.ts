@@ -9,14 +9,39 @@ import type { CharacterProfile } from "@realms/lexicons";
 import { buildAttributes, computeDerivedStats, xpToNextLevel } from "@realms/common";
 import { BlueskyBridge } from "./bluesky/bridge.js";
 import { CombatSystem } from "./systems/combat-system.js";
+import { ServerIdentity } from "./atproto/server-identity.js";
+import { GameOAuthClient } from "./atproto/oauth.js";
+import { PdsClient } from "./atproto/pds-client.js";
+import { PortalHandler } from "./federation/portal-handler.js";
+import { TransferHandler } from "./federation/transfer-handler.js";
 
 const config = loadConfig();
 const world = new WorldManager(config);
 const sessions = new SessionManager();
 const bluesky = new BlueskyBridge(config.bluesky);
+const serverIdentity = new ServerIdentity();
+const oauthClient = new GameOAuthClient();
+const pdsClient = new PdsClient(serverIdentity);
+
+const DEV_MODE = process.env.DEV_MODE === "true";
+const portalHandler = new PortalHandler(serverIdentity, pdsClient, config.federation);
+const transferHandler = new TransferHandler(
+  serverIdentity, sessions, world, config.federation, config.atproto, config.name,
+);
 
 await world.initialize();
 await bluesky.initialize();
+
+// Initialize AT Proto services (skip in dev mode or if PDS is not configured)
+if (!DEV_MODE && config.atproto.serverPassword) {
+  try {
+    await serverIdentity.initialize(config.atproto, config.name, config.description);
+    await oauthClient.initialize(config.atproto);
+  } catch (err) {
+    console.warn("   AT Proto initialization failed:", err instanceof Error ? err.message : err);
+    console.warn("   Running without AT Proto auth (set DEV_MODE=true to suppress)");
+  }
+}
 
 function broadcast(roomId: string, msg: ServerMessage, excludeSessionId?: string): void {
   const room = world.getRoom(roomId);
@@ -35,11 +60,10 @@ const combat = new CombatSystem({ world, sessions, broadcast });
 function makeContext(sessionId: string): CommandContext | null {
   const session = sessions.getSession(sessionId);
   if (!session) return null;
-  return { session, world, sessions, broadcast, bluesky, combat };
+  return { session, world, sessions, broadcast, bluesky, combat, portalHandler };
 }
 
-// Dev mode: create a quick character profile for testing without AT Proto auth
-function createDevProfile(name: string, classId: string = "warrior", raceId: string = "human"): CharacterProfile {
+function buildCharacterProfile(name: string, classId: string = "warrior", raceId: string = "human"): CharacterProfile {
   const system = world.gameSystem;
   const attributes = buildAttributes(system, classId, raceId);
   const derived = computeDerivedStats(system.formulas, 1, attributes);
@@ -113,12 +137,11 @@ const server = Bun.serve<SessionData>({
   async fetch(req, server) {
     const url = new URL(req.url);
 
-    // WebSocket upgrade
+    // ── WebSocket upgrade ──
     if (url.pathname === "/ws") {
       const sessionId = url.searchParams.get("session");
 
       if (sessionId && sessions.getSession(sessionId)) {
-        // Existing session - attach WebSocket
         const upgraded = server.upgrade(req, { data: { sessionId } });
         if (!upgraded) {
           return new Response("WebSocket upgrade failed", { status: 500 });
@@ -126,20 +149,160 @@ const server = Bun.serve<SessionData>({
         return undefined;
       }
 
-      // Dev mode: create session on connect with query params
-      const name = url.searchParams.get("name") ?? `Adventurer_${Math.floor(Math.random() * 9999)}`;
-      const classId = url.searchParams.get("class") ?? "warrior";
-      const raceId = url.searchParams.get("race") ?? "human";
+      if (DEV_MODE) {
+        // Dev mode: create session on connect with query params
+        const name = url.searchParams.get("name") ?? `Adventurer_${Math.floor(Math.random() * 9999)}`;
+        const classId = url.searchParams.get("class") ?? "warrior";
+        const raceId = url.searchParams.get("race") ?? "human";
 
-      const profile = createDevProfile(name, classId, raceId);
-      const session = sessions.createSession(`dev:${name}`, profile, world.getDefaultSpawnRoom(), world.gameSystem.formulas);
+        const profile = buildCharacterProfile(name, classId, raceId);
+        const session = sessions.createSession(`dev:${name}`, profile, world.getDefaultSpawnRoom(), world.gameSystem.formulas);
 
-      const upgraded = server.upgrade(req, { data: { sessionId: session.sessionId } });
-      if (!upgraded) {
-        return new Response("WebSocket upgrade failed", { status: 500 });
+        const upgraded = server.upgrade(req, { data: { sessionId: session.sessionId } });
+        if (!upgraded) {
+          return new Response("WebSocket upgrade failed", { status: 500 });
+        }
+        return undefined;
       }
-      return undefined;
+
+      return new Response("Invalid session. Authenticate via /xrpc/com.cacheblasters.fm.action.connect first.", { status: 401 });
     }
+
+    // ── OAuth routes ──
+
+    // OAuth client metadata (served for AT Proto client discovery)
+    if (url.pathname === "/oauth/client-metadata.json") {
+      return Response.json(oauthClient.getClientMetadata(config.atproto.publicUrl));
+    }
+
+    // Start OAuth flow
+    if (url.pathname === "/auth/login" && req.method === "GET") {
+      const handle = url.searchParams.get("handle");
+      if (!handle) {
+        return Response.json({ error: "handle parameter required" }, { status: 400 });
+      }
+      try {
+        const authUrl = await oauthClient.authorize(handle);
+        return Response.json({ url: authUrl.toString() });
+      } catch (err) {
+        return Response.json({ error: err instanceof Error ? err.message : "OAuth failed" }, { status: 500 });
+      }
+    }
+
+    // OAuth callback
+    if (url.pathname === "/oauth/callback") {
+      try {
+        const { session: oauthSession, agent } = await oauthClient.callback(url.searchParams);
+        const did = oauthSession.did;
+
+        // Check if player has a character on this server
+        const existingProfile = await pdsClient.loadCharacter(agent, did);
+        if (existingProfile) {
+          // Returning player — create game session
+          const gameSession = sessions.createSession(did, existingProfile, world.getDefaultSpawnRoom(), world.gameSystem.formulas);
+          return Response.json({
+            sessionId: gameSession.sessionId,
+            websocketUrl: `${config.atproto.publicUrl.replace(/^http/, "ws")}/ws?session=${gameSession.sessionId}`,
+            spawnRoom: gameSession.currentRoom,
+            characterState: gameSession.state,
+          });
+        }
+
+        // New player — needs character creation
+        return Response.json({
+          needsCharacter: true,
+          did,
+          gameSystem: world.gameSystem,
+        });
+      } catch (err) {
+        return Response.json({ error: err instanceof Error ? err.message : "Callback failed" }, { status: 500 });
+      }
+    }
+
+    // ── XRPC endpoints ──
+
+    // Connect: authenticate and load or prompt character creation
+    if (url.pathname === "/xrpc/com.cacheblasters.fm.action.connect" && req.method === "POST") {
+      try {
+        const body = await req.json() as { did: string };
+        if (!body.did) {
+          return Response.json({ error: "did is required" }, { status: 400 });
+        }
+
+        // Try to restore OAuth session and load character
+        const agent = await oauthClient.restore(body.did);
+        if (!agent) {
+          return Response.json({ error: "No valid session. Please authenticate first." }, { status: 401 });
+        }
+
+        const profile = await pdsClient.loadCharacter(agent, body.did);
+        if (profile) {
+          const gameSession = sessions.createSession(body.did, profile, world.getDefaultSpawnRoom(), world.gameSystem.formulas);
+          return Response.json({
+            sessionId: gameSession.sessionId,
+            websocketUrl: `${config.atproto.publicUrl.replace(/^http/, "ws")}/ws?session=${gameSession.sessionId}`,
+            spawnRoom: gameSession.currentRoom,
+            characterState: gameSession.state,
+          });
+        }
+
+        // New player
+        return Response.json({
+          needsCharacter: true,
+          gameSystem: world.gameSystem,
+        });
+      } catch (err) {
+        return Response.json({ error: err instanceof Error ? err.message : "Connect failed" }, { status: 500 });
+      }
+    }
+
+    // Create character: build a new character and write to PDS
+    if (url.pathname === "/xrpc/com.cacheblasters.fm.action.createCharacter" && req.method === "POST") {
+      try {
+        const body = await req.json() as { did: string; name: string; classId: string; raceId: string };
+        if (!body.did || !body.name || !body.classId || !body.raceId) {
+          return Response.json({ error: "did, name, classId, and raceId are required" }, { status: 400 });
+        }
+
+        const agent = await oauthClient.restore(body.did);
+        if (!agent) {
+          return Response.json({ error: "No valid session. Please authenticate first." }, { status: 401 });
+        }
+
+        // Build character profile using this server's game system
+        const profile = buildCharacterProfile(body.name, body.classId, body.raceId);
+
+        // Write to player's PDS
+        await pdsClient.saveCharacter(agent, body.did, profile);
+
+        // Create game session
+        const gameSession = sessions.createSession(body.did, profile, world.getDefaultSpawnRoom(), world.gameSystem.formulas);
+        return Response.json({
+          sessionId: gameSession.sessionId,
+          websocketUrl: `${config.atproto.publicUrl.replace(/^http/, "ws")}/ws?session=${gameSession.sessionId}`,
+          spawnRoom: gameSession.currentRoom,
+          characterState: gameSession.state,
+        });
+      } catch (err) {
+        return Response.json({ error: err instanceof Error ? err.message : "Character creation failed" }, { status: 500 });
+      }
+    }
+
+    // Federation: receive character transfer from another server
+    if (url.pathname === "/xrpc/com.cacheblasters.fm.federation.transfer" && req.method === "POST") {
+      try {
+        const body = await req.json() as { token: string; character: Record<string, unknown>; attestations?: unknown[] };
+        if (!body.token || !body.character) {
+          return Response.json({ error: "token and character are required" }, { status: 400 });
+        }
+        const result = await transferHandler.handleTransfer(body);
+        return Response.json(result);
+      } catch (err) {
+        return Response.json({ error: err instanceof Error ? err.message : "Transfer failed" }, { status: 500 });
+      }
+    }
+
+    // ── Info routes ──
 
     // Health check
     if (url.pathname === "/health") {
@@ -147,6 +310,7 @@ const server = Bun.serve<SessionData>({
         status: "ok",
         server: config.name,
         players: sessions.getOnlineCount(),
+        serverDid: serverIdentity.did || undefined,
       });
     }
 
@@ -157,10 +321,11 @@ const server = Bun.serve<SessionData>({
         description: config.description,
         players: sessions.getOnlineCount(),
         rooms: world.areaManager.getAllRooms().size,
+        serverDid: serverIdentity.did || undefined,
       });
     }
 
-    // Game system schema (what attributes, classes, races this server uses)
+    // Game system schema
     if (url.pathname === "/system") {
       return Response.json(world.gameSystem);
     }
@@ -248,6 +413,19 @@ const server = Bun.serve<SessionData>({
         sendRoomState(session, ctx);
         sendMapUpdate(session, ctx);
       }
+
+      // Check for pending portal adaptation (foreign class/race)
+      const adaptation = transferHandler.buildAdaptationMessage(session.sessionId);
+      if (adaptation) {
+        const parts: string[] = [];
+        if (adaptation.class) parts.push(`class "${adaptation.class.original}"`);
+        if (adaptation.race) parts.push(`race "${adaptation.race.original}"`);
+        session.send(encodeMessage({
+          type: "adaptation_required",
+          adaptation,
+          message: `This realm doesn't recognize your ${parts.join(" or ")}. Please choose a local equivalent.`,
+        }));
+      }
     },
 
     message(ws: import("bun").ServerWebSocket<SessionData>, message: string | Buffer) {
@@ -278,6 +456,37 @@ const server = Bun.serve<SessionData>({
           const verb = clientMsg.channel === "shout" ? "shout" : "say";
           const parsed = parseCommand(`${verb} ${clientMsg.message}`);
           handleCommand(parsed, ctx);
+          break;
+        }
+
+        case "adaptation_response": {
+          const applied = transferHandler.applyAdaptation(
+            ws.data.sessionId,
+            clientMsg.classId,
+            clientMsg.raceId,
+          );
+          if (applied) {
+            // Resend character state with updated class/race/stats
+            const s = ctx.session.state;
+            ctx.session.send(encodeMessage({
+              type: "character_update",
+              hp: s.currentHp,
+              maxHp: s.maxHp,
+              mp: s.currentMp,
+              maxMp: s.maxMp,
+              ap: s.currentAp,
+              maxAp: s.maxAp,
+              gold: s.gold,
+              level: s.level,
+              xp: s.experience,
+              xpToNext: xpToNextLevel(s.level, s.experience),
+            }));
+            sendNarrative(
+              ctx.session,
+              `Your form shifts to match this realm. You are now a ${s.race} ${s.class}.`,
+              "system",
+            );
+          }
           break;
         }
 
@@ -322,6 +531,7 @@ const server = Bun.serve<SessionData>({
         text: `${session.name} has left the realm.`,
       });
 
+      transferHandler.pendingAdaptations.delete(session.sessionId);
       sessions.removeSession(session.sessionId);
     },
   },
@@ -330,4 +540,11 @@ const server = Bun.serve<SessionData>({
 console.log(`\n⚔️  ${config.name}`);
 console.log(`   Listening on ${server.hostname}:${server.port}`);
 console.log(`   WebSocket: ws://${server.hostname}:${server.port}/ws`);
-console.log(`   Health: http://${server.hostname}:${server.port}/health\n`);
+console.log(`   Health: http://${server.hostname}:${server.port}/health`);
+if (DEV_MODE) {
+  console.log(`   Mode: DEV (no auth required)`);
+} else if (serverIdentity.did) {
+  console.log(`   Server DID: ${serverIdentity.did}`);
+  console.log(`   OAuth: ${config.atproto.publicUrl}/oauth/client-metadata.json`);
+}
+console.log();

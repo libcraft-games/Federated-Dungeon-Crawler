@@ -42,8 +42,12 @@ class MemoryStore<V> {
  * - Getting authenticated agents for PDS access
  */
 export class GameOAuthClient {
-  private client!: NodeOAuthClient;
-  private config!: AtProtoConfig;
+  private client: NodeOAuthClient | null = null;
+  private config: AtProtoConfig | null = null;
+
+  get initialized(): boolean {
+    return this.client !== null;
+  }
 
   async initialize(config: AtProtoConfig): Promise<void> {
     this.config = config;
@@ -76,6 +80,7 @@ export class GameOAuthClient {
    * Returns the authorization URL to redirect the user to.
    */
   async authorize(handle: string): Promise<URL> {
+    if (!this.client) throw new Error("OAuth not initialized");
     return this.client.authorize(handle, {
       scope: "atproto transition:generic",
     });
@@ -89,6 +94,7 @@ export class GameOAuthClient {
     session: { did: string };
     agent: Agent;
   }> {
+    if (!this.client) throw new Error("OAuth not initialized");
     const { session } = await this.client.callback(params);
     const agent = new Agent(session);
     return {
@@ -102,6 +108,7 @@ export class GameOAuthClient {
    * Returns null if no session exists or it can't be refreshed.
    */
   async restore(did: string): Promise<Agent | null> {
+    if (!this.client) return null;
     try {
       const session = await this.client.restore(did);
       return new Agent(session);
@@ -114,6 +121,7 @@ export class GameOAuthClient {
    * Revoke a player's session.
    */
   async revoke(did: string): Promise<void> {
+    if (!this.client) return;
     try {
       await this.client.revoke(did);
     } catch {
@@ -125,13 +133,14 @@ export class GameOAuthClient {
    * Returns the OAuth client metadata JSON for serving at
    * /oauth/client-metadata.json
    */
-  getClientMetadata(): Record<string, unknown> {
+  getClientMetadata(publicUrlOverride?: string): Record<string, unknown> {
+    const publicUrl = this.config?.publicUrl ?? publicUrlOverride ?? "http://localhost:3000";
     return {
-      client_id: `${this.config.publicUrl}/oauth/client-metadata.json`,
+      client_id: `${publicUrl}/oauth/client-metadata.json`,
       client_name: "Federated Realms",
-      client_uri: this.config.publicUrl,
+      client_uri: publicUrl,
       redirect_uris: [
-        `${this.config.publicUrl}/oauth/callback`,
+        `${publicUrl}/oauth/callback`,
         "http://127.0.0.1/oauth/callback",
       ],
       grant_types: ["authorization_code", "refresh_token"],
