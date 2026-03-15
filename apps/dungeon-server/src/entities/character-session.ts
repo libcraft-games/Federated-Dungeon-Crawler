@@ -100,6 +100,22 @@ export class CharacterSession {
     );
   }
 
+  countItem(definitionId: string): number {
+    return this.state.inventory.find(i => i.definitionId === definitionId)?.quantity ?? 0;
+  }
+
+  removeItemByDefId(definitionId: string, quantity: number): boolean {
+    const index = this.state.inventory.findIndex(i => i.definitionId === definitionId);
+    if (index === -1) return false;
+    const item = this.state.inventory[index];
+    if (quantity >= item.quantity) {
+      this.state.inventory.splice(index, 1);
+    } else {
+      item.quantity -= quantity;
+    }
+    return true;
+  }
+
   get inventory(): ItemInstance[] {
     return this.state.inventory;
   }

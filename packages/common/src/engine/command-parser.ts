@@ -93,6 +93,7 @@ export function getCommandHelp(): string[] {
     "Items:    take/get <item>, drop <item>, inventory/i, use/drink <item>",
     "Quests:   quests, log, accept <quest>, abandon <quest>, turnin",
     "Trade:    shop, buy <item>, sell <item>",
+    "Craft:    recipes, craft <recipe>, gather [node]",
     "Equip:    equip/wield <item>, unequip/remove <item>, equipment/eq",
     "Combat:   attack/kill <target> (2 AP), defend (1 AP), flee/retreat (3 AP)",
     "Spells:   cast <spell> [target], spells   Items in combat: use <item> (2 AP)",
