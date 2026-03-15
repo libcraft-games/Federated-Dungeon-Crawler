@@ -1,14 +1,56 @@
 services:
+  pds:
+    image: ghcr.io/bluesky-social/pds:latest
+    ports:
+      - "${PDS_PORT:-2583}:3000"
+    volumes:
+      - pds-data:/pds
+    environment:
+      - PDS_HOSTNAME=${PDS_HOSTNAME:-localhost}
+      - PDS_DATA_DIRECTORY=/pds
+      - PDS_BLOBSTORE_DISK_LOCATION=/pds/blocks
+      - PDS_JWT_SECRET=${PDS_JWT_SECRET:?PDS_JWT_SECRET is required}
+      - PDS_ADMIN_PASSWORD=${PDS_ADMIN_PASSWORD:?PDS_ADMIN_PASSWORD is required}
+      - PDS_PLC_ROTATION_KEY_K256_PRIVATE_KEY_HEX=${PDS_ROTATION_KEY:-}
+      - PDS_DID_PLC_URL=${PDS_PLC_URL:-https://plc.directory}
+      - PDS_INVITE_REQUIRED=false
+      - PDS_EMAIL_SMTP_URL=
+      - PDS_EMAIL_FROM_ADDRESS=noreply@${PDS_HOSTNAME:-localhost}
+      - LOG_ENABLED=true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/xrpc/_health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 10s
+
   dungeon-server:
     build: .
     ports:
       - "${PORT:-3000}:${PORT:-3000}"
+    depends_on:
+      pds:
+        condition: service_healthy
     environment:
+      # Server basics
       - PORT=${PORT:-3000}
       - HOST=0.0.0.0
       - SERVER_NAME=${SERVER_NAME:-Federated Realms}
       - SERVER_DESCRIPTION=${SERVER_DESCRIPTION:-A mysterious dungeon awaits...}
       - DEFAULT_SPAWN=${DEFAULT_SPAWN:-starter-town:town-square}
+      # AT Proto / PDS
+      - PDS_URL=http://pds:3000
+      - PDS_HOSTNAME=${PDS_HOSTNAME:-localhost}
+      - SERVER_DID=${SERVER_DID:-}
+      - SERVER_HANDLE=${SERVER_HANDLE:-server.${PDS_HOSTNAME:-localhost}}
+      - SERVER_PASSWORD=${SERVER_PASSWORD:-}
+      # OAuth
+      - PUBLIC_URL=${PUBLIC_URL:-http://localhost:${PORT:-3000}}
+      # Federation
+      - TRUST_POLICY=${TRUST_POLICY:-trust-listed}
+      - TRUSTED_SERVERS=${TRUSTED_SERVERS:-}
+      - MAX_ACCEPTED_LEVEL=${MAX_ACCEPTED_LEVEL:-50}
+      # Bluesky bridge (optional)
       - BSKY_ENABLED=${BSKY_ENABLED:-false}
       - BSKY_IDENTIFIER=${BSKY_IDENTIFIER:-}
       - BSKY_PASSWORD=${BSKY_PASSWORD:-}
@@ -18,3 +60,6 @@ services:
       - BSKY_THREAD_REFRESH=${BSKY_THREAD_REFRESH:-60}
       - BSKY_THROTTLE_MS=${BSKY_THROTTLE_MS:-2000}
     restart: unless-stopped
+
+volumes:
+  pds-data:
