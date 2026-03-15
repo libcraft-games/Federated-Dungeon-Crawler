@@ -4,6 +4,7 @@ import type { WorldManager } from "../world/world-manager.js";
 import type { SessionManager } from "../server/session-manager.js";
 import type { BlueskyBridge } from "../bluesky/bridge.js";
 import type { CombatSystem } from "../systems/combat-system.js";
+import type { PortalHandler } from "../federation/portal-handler.js";
 import { handleMovement } from "./movement.js";
 import { handleLook, handleTalk } from "./interaction.js";
 import { handleSocial } from "./social.js";
@@ -24,6 +25,7 @@ export interface CommandContext {
   broadcast: (roomId: string, msg: ServerMessage, excludeSessionId?: string) => void;
   bluesky: BlueskyBridge;
   combat: CombatSystem;
+  portalHandler?: PortalHandler;
 }
 
 export function handleCommand(cmd: ParsedCommand, ctx: CommandContext): void {

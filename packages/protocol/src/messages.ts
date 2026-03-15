@@ -12,12 +12,26 @@ export interface CombatantInfo {
   art?: string[];
 }
 
+// ── Shared adaptation types ──
+
+export interface AdaptationOption {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export interface AdaptationRequired {
+  class?: { original: string; options: AdaptationOption[] };
+  race?: { original: string; options: AdaptationOption[] };
+}
+
 // Client -> Server messages
 export type ClientMessage =
   | { type: "command"; id: string; command: string; args: string[] }
   | { type: "move"; id: string; direction: string }
   | { type: "chat"; channel: string; message: string }
   | { type: "interact"; id: string; targetId: string; action: string }
+  | { type: "adaptation_response"; classId?: string; raceId?: string }
   | { type: "ping" };
 
 // Server -> Client messages
@@ -67,6 +81,17 @@ export type ServerMessage =
         status: "active" | "completed" | "failed";
         objectives: { description: string; current: number; required: number; done: boolean }[];
       }>;
+    }
+  | {
+      type: "portal_offer";
+      targetServer: { name: string; did: string; endpoint: string };
+      sessionId: string;
+      websocketUrl: string;
+    }
+  | {
+      type: "adaptation_required";
+      adaptation: AdaptationRequired;
+      message: string;
     };
 
 export function encodeMessage(msg: ClientMessage | ServerMessage): string {
