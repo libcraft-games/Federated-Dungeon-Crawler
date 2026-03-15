@@ -167,3 +167,23 @@
     - direction: east
       target: crossroads
       description: The road leads back to the crossroads.
+    - direction: west
+      target: portal-chamber
+      description: The crumbling walls give way to an ancient stone archway.
+
+- id: portal-chamber
+  title: The Portal Chamber
+  description: >
+    A circular chamber of ancient stonework, half-reclaimed by ivy and moss.
+    At its center stands a massive stone archway carved with runes that pulse
+    with a faint blue light. The air here hums with energy, and you can feel
+    the fabric of reality thinning near the arch. Through the portal's
+    shimmering surface, you catch glimpses of an unfamiliar landscape — proof
+    that other realms exist beyond this one. A plaque at the base reads:
+    "Gateway to the Federated Realms. Step through to journey beyond."
+  coordinates: { x: -2, y: -2, z: 0 }
+  flags: [safe]
+  exits:
+    - direction: east
+      target: old-road
+      description: The old road leads back toward the crossroads.
