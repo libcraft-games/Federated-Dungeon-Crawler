@@ -200,10 +200,10 @@ describe("items", () => {
     await client.connect(port);
     await client.waitFor("room_state");
 
-    // Go to blacksmith and take leather cap
+    // Go to blacksmith and buy leather cap
     await client.commandAndWaitRoom("e");
-    client.command("take leather cap");
-    await client.tick(300);
+    await client.commandAndWait("buy leather cap");
+    await client.waitFor("inventory_update");
     client.clearMessages();
 
     // Drop it
@@ -218,8 +218,10 @@ describe("items", () => {
     await client.connect(port);
     await client.waitFor("room_state");
 
-    // Go to blacksmith for items with properties
+    // Buy rusty sword from blacksmith and examine it
     await client.commandAndWaitRoom("e");
+    await client.commandAndWait("buy rusty sword");
+    await client.waitFor("inventory_update");
     client.clearMessages();
 
     const text = await client.commandAndWait("examine rusty sword");
@@ -234,19 +236,21 @@ describe("items", () => {
     await client.connect(port);
     await client.waitFor("room_state");
 
-    // Blacksmith has 2 rusty swords (non-stackable, quantity: 2)
-    const room = await client.commandAndWaitRoom("e"); // blacksmith
-    const swords = room.room.items.filter((i: any) => i.name === "Rusty Sword");
+    // Forest edge has 2 gnarled staffs (non-stackable, quantity: 2)
+    await client.commandAndWaitRoom("s"); // gate
+    await client.commandAndWaitRoom("s"); // crossroads
+    const room = await client.commandAndWaitRoom("e"); // forest edge
+    const staffs = room.room.items.filter((i: any) => i.name === "Gnarled Staff");
 
     // Should be 2 separate items with quantity 1 each, not 1 item with quantity 2
-    expect(swords.length).toBe(2);
-    expect(swords[0].quantity).toBe(1);
-    expect(swords[1].quantity).toBe(1);
+    expect(staffs.length).toBe(2);
+    expect(staffs[0].quantity).toBe(1);
+    expect(staffs[1].quantity).toBe(1);
 
     // Taking one should leave the other
-    await client.commandAndWait("take rusty sword");
+    await client.commandAndWait("take gnarled staff");
     const room2 = await client.commandAndWaitRoom("look");
-    const remaining = room2.room.items.filter((i: any) => i.name === "Rusty Sword");
+    const remaining = room2.room.items.filter((i: any) => i.name === "Gnarled Staff");
     expect(remaining.length).toBe(1);
 
     client.disconnect();
@@ -513,14 +517,14 @@ describe("multiplayer", () => {
 // ─── Equipment ──────────────────────────────────────────────
 
 describe("equipment", () => {
-  test("equip a weapon from the alley", async () => {
+  test("equip a weapon from the shop", async () => {
     const client = new TestClient("Equipper");
     await client.connect(port);
     await client.waitFor("room_state");
 
-    // Go to alley and take the iron dagger
-    await client.commandAndWaitRoom("w"); // alley
-    await client.commandAndWait("take iron dagger");
+    // Go to blacksmith and buy an iron dagger
+    await client.commandAndWaitRoom("e"); // blacksmith
+    await client.commandAndWait("buy iron dagger");
     await client.waitFor("inventory_update");
     client.clearMessages();
 
@@ -542,9 +546,9 @@ describe("equipment", () => {
     let text = await client.commandAndWait("eq");
     expect(text).toContain("Main Hand: —");
 
-    // Go to blacksmith and take leather cap (head armor, level 1)
+    // Go to blacksmith and buy leather cap (head armor, level 1)
     await client.commandAndWaitRoom("e");
-    await client.commandAndWait("take leather cap");
+    await client.commandAndWait("buy leather cap");
     await client.waitFor("inventory_update");
     client.clearMessages();
 
@@ -674,9 +678,9 @@ describe("combat", () => {
     await client.connect(port, { classId: "warrior", raceId: "human" });
     await client.waitFor("room_state");
 
-    // Get bread from tavern (consumable that heals)
+    // Buy bread from tavern (consumable that heals)
     await client.commandAndWaitRoom("n"); // tavern
-    await client.commandAndWait("take bread");
+    await client.commandAndWait("buy bread");
     await client.waitFor("inventory_update");
 
     // Navigate to forest path (wolf auto-aggros — starts combat)
@@ -739,9 +743,9 @@ describe("use items", () => {
     await client.connect(port);
     await client.waitFor("room_state");
 
-    // Get bread from tavern
+    // Buy bread from tavern
     await client.commandAndWaitRoom("n"); // tavern
-    await client.commandAndWait("take bread");
+    await client.commandAndWait("buy bread");
     await client.waitFor("inventory_update");
     client.clearMessages();
 
@@ -782,19 +786,17 @@ describe("full adventure walkthrough", () => {
     text = await hero.commandAndWait("talk grimjaw");
     expect(text).toContain("blades, shields, and armor");
 
-    // 5. Pick up gear
-    text = await hero.commandAndWait("take rusty sword");
-    expect(text).toContain("pick up");
-    await hero.waitFor("inventory_update");
+    // 5. Buy gear from Grimjaw's shop
+    text = await hero.commandAndWait("shop");
+    expect(text).toContain("Rusty Sword");
 
-    text = await hero.commandAndWait("take wooden shield");
-    expect(text).toContain("pick up");
+    text = await hero.commandAndWait("buy rusty sword");
+    expect(text).toContain("buy");
     await hero.waitFor("inventory_update");
 
     // 6. Check inventory
     text = await hero.commandAndWait("i");
     expect(text).toContain("Rusty Sword");
-    expect(text).toContain("Wooden Shield");
 
     // 7. Examine the sword
     text = await hero.commandAndWait("ex rusty sword");
@@ -813,9 +815,9 @@ describe("full adventure walkthrough", () => {
     expect(text).toContain("Dark Forest");
     expect(text).toContain("Grimjaw");
 
-    // 10. Grab some bread for the journey
-    text = await hero.commandAndWait("take bread");
-    expect(text).toContain("pick up");
+    // 10. Buy bread for the journey
+    text = await hero.commandAndWait("buy bread");
+    expect(text).toContain("buy");
     await hero.waitFor("inventory_update");
 
     // 11. Head south through town to the crossroads
@@ -869,7 +871,6 @@ describe("full adventure walkthrough", () => {
     // 18. Final inventory check
     text = await hero.commandAndWait("i");
     expect(text).toContain("Rusty Sword");
-    expect(text).toContain("Wooden Shield");
     expect(text).toContain("Loaf of Bread");
     expect(text).toContain("Gnarled Staff");
     expect(text).toContain("Glowing Mushroom");
