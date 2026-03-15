@@ -12,6 +12,11 @@ export interface ConnectionOptions {
   raceId: string;
 }
 
+export interface SessionConnectionOptions {
+  url: string;
+  sessionId: string;
+}
+
 export class WsClient {
   private ws: WebSocket | null = null;
   private handlers: MessageHandler[] = [];
@@ -29,12 +34,33 @@ export class WsClient {
     };
   }
 
+  /** Connect using dev mode query params (no auth) */
   connect(opts: ConnectionOptions): void {
     const protocol = opts.tls ? "wss" : "ws";
     const defaultPort = opts.tls ? 443 : 80;
     const portSuffix = opts.port === defaultPort ? "" : `:${opts.port}`;
     const url = `${protocol}://${opts.host}${portSuffix}/ws?name=${encodeURIComponent(opts.name)}&class=${opts.classId}&race=${opts.raceId}`;
+    this.openSocket(url);
+  }
 
+  /** Connect using a pre-authenticated session ID */
+  connectWithSession(opts: SessionConnectionOptions): void {
+    const url = opts.url.includes("?")
+      ? `${opts.url}&session=${opts.sessionId}`
+      : `${opts.url}?session=${opts.sessionId}`;
+    this.openSocket(url);
+  }
+
+  /** Reconnect to a different server (for portal traversal) */
+  switchServer(websocketUrl: string, sessionId: string): void {
+    this.disconnect();
+    const url = websocketUrl.includes("?")
+      ? `${websocketUrl}&session=${sessionId}`
+      : `${websocketUrl}?session=${sessionId}`;
+    this.openSocket(url);
+  }
+
+  private openSocket(url: string): void {
     this.ws = new WebSocket(url);
 
     this.ws.onopen = () => {
@@ -84,7 +110,15 @@ export class WsClient {
     this.ws.send(encodeMessage(msg));
   }
 
+  /** Send a raw typed message (e.g. adaptation_response) */
+  sendRaw(msg: ClientMessage): void {
+    if (!this.ws || !this._connected) return;
+    this.ws.send(encodeMessage(msg));
+  }
+
   disconnect(): void {
     this.ws?.close();
+    this.ws = null;
+    this._connected = false;
   }
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import type { ServerMessage, CombatantInfo } from "@realms/protocol";
+import type { ServerMessage, CombatantInfo, AdaptationRequired } from "@realms/protocol";
 import type { RoomState, ItemInstance } from "@realms/common";
 import type { WsClient } from "../connection/ws-client.js";
 
@@ -55,6 +55,12 @@ export interface CombatState {
   targetId: string;
 }
 
+export interface PortalOfferState {
+  targetServer: { name: string; did: string; endpoint: string };
+  sessionId: string;
+  websocketUrl: string;
+}
+
 export interface GameState {
   connected: boolean;
   sessionId: string | null;
@@ -67,6 +73,8 @@ export interface GameState {
   equipment: EquipmentMap;
   narrative: NarrativeLine[];
   quests: QuestEntry[];
+  portalOffer: PortalOfferState | null;
+  adaptation: AdaptationRequired | null;
 }
 
 const MAX_NARRATIVE = 500;
@@ -84,6 +92,8 @@ export function useGameState(client: WsClient) {
     equipment: {},
     narrative: [],
     quests: [],
+    portalOffer: null,
+    adaptation: null,
   });
 
   const addNarrative = useCallback((text: string, style: NarrativeLine["style"] = "info") => {
@@ -257,6 +267,23 @@ export function useGameState(client: WsClient) {
                 objectives: q.objectives,
               })),
           }));
+          break;
+
+        case "portal_offer":
+          setState((prev) => ({
+            ...prev,
+            portalOffer: {
+              targetServer: msg.targetServer,
+              sessionId: msg.sessionId,
+              websocketUrl: msg.websocketUrl,
+            },
+          }));
+          addNarrative(`The portal pulls you through to ${msg.targetServer.name}...`, "system");
+          break;
+
+        case "adaptation_required":
+          setState((prev) => ({ ...prev, adaptation: msg.adaptation }));
+          addNarrative(msg.message, "system");
           break;
 
         case "pong":
