@@ -1,5 +1,6 @@
 import { AtpAgent } from "@atproto/api";
 import { Secp256k1Keypair } from "@atproto/crypto";
+import { verifySig } from "@atproto/crypto/dist/secp256k1/operations";
 import * as jose from "jose";
 import type { AtProtoConfig } from "../config.js";
 import { NSID } from "@realms/lexicons";
@@ -88,7 +89,11 @@ export class ServerIdentity {
     // In production, this should be loaded from persistent storage
     this.signingKey = await Secp256k1Keypair.create({ exportable: true });
 
-    // Convert to jose-compatible key for JWT operations
+    // Convert to jose-compatible key for JWT operations (transfer tokens)
+    await this.initJwtKey();
+  }
+
+  private async initJwtKey(): Promise<void> {
     const rawKey = await this.signingKey.export();
     this.jwtPrivateKey = await jose.importJWK({
       kty: "EC",
@@ -97,6 +102,14 @@ export class ServerIdentity {
       x: Buffer.from(this.signingKey.publicKeyBytes().slice(1, 33)).toString("base64url"),
       y: Buffer.from(this.signingKey.publicKeyBytes().slice(33, 65)).toString("base64url"),
     }, "ES256K") as CryptoKey;
+  }
+
+  /**
+   * Initialize just the signing key (without jose JWT key).
+   * Used for testing attestation signing in isolation.
+   */
+  async initSigningKeyOnly(): Promise<void> {
+    this.signingKey = await Secp256k1Keypair.create({ exportable: true });
   }
 
   private async publishServerRecord(config: AtProtoConfig, serverName: string, serverDescription: string): Promise<void> {
@@ -157,24 +170,39 @@ export class ServerIdentity {
     }
   }
 
-  signAttestation(playerDid: string, claims: AttestationClaims): SignedAttestation {
+  async signAttestation(playerDid: string, claims: AttestationClaims): Promise<SignedAttestation> {
     const attestation: SignedAttestation = {
       iss: this.did,
       sub: playerDid,
       iat: Math.floor(Date.now() / 1000),
       claims,
-      sig: "", // filled below
+      sig: "",
     };
 
-    // Sign the attestation payload (excluding sig field)
+    // Sign the payload (excluding sig field) with the server's secp256k1 key
     const { sig: _, ...payload } = attestation;
     const data = new TextEncoder().encode(JSON.stringify(payload));
-    // Use synchronous HMAC-based signing for attestations (fast path)
-    // Full asymmetric verification happens on transfer
-    const hash = new Bun.CryptoHasher("sha256").update(data).digest("base64url");
-    attestation.sig = hash;
+    const sigBytes = await this.signingKey.sign(data);
+    attestation.sig = Buffer.from(sigBytes).toString("base64url");
 
     return attestation;
+  }
+
+  /**
+   * Verify an attestation signature against our own public key.
+   * For cross-server verification, the source server's public key would be
+   * resolved from its DID document. For now, verifies against our own key
+   * (useful for round-trip tests and self-signed attestations).
+   */
+  async verifyAttestation(attestation: SignedAttestation): Promise<boolean> {
+    try {
+      const { sig, ...payload } = attestation;
+      const data = new TextEncoder().encode(JSON.stringify(payload));
+      const sigBytes = Buffer.from(sig, "base64url");
+      return verifySig(this.signingKey.publicKeyBytes(), data, sigBytes);
+    } catch {
+      return false;
+    }
   }
 
   getPublicKeyBytes(): Uint8Array {

@@ -64,6 +64,7 @@ function handleTake(cmd: ParsedCommand, ctx: CommandContext): void {
   }
 
   session.addItem(item);
+  session.attestations.recordItemGrant(item.definitionId);
 
   // Quest collect tracking
   const collectUpdates = ctx.world.questManager.recordCollect(session.characterDid, item.definitionId, item.quantity);

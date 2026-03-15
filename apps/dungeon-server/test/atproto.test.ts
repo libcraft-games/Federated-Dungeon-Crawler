@@ -1,6 +1,8 @@
 import { describe, expect, test, beforeAll, afterAll } from "bun:test";
 import type { Subprocess } from "bun";
 import { TestClient, startServer, stopServer } from "./helpers.ts";
+import { ServerIdentity } from "../src/atproto/server-identity.ts";
+import { AttestationTracker } from "../src/atproto/attestation-tracker.ts";
 
 // ── Server in dev mode (AT Proto endpoints still respond) ──
 
@@ -299,5 +301,167 @@ describe("transfer handler validation", () => {
     expect(res.status).toBe(200);
     const text = await res.text();
     expect(text).toContain("Federated Realms");
+  });
+});
+
+// ─── Attestation Signing & Verification ──────────────────────
+
+describe("attestation signing", () => {
+  let identity: ServerIdentity;
+
+  beforeAll(async () => {
+    identity = new ServerIdentity();
+    identity.did = "did:plc:testserver123";
+    await identity.initSigningKeyOnly();
+  });
+
+  test("signAttestation produces valid signature", async () => {
+    const attestation = await identity.signAttestation("did:plc:player1", {
+      level: 5,
+      xp: 500,
+      gold: 100,
+    });
+
+    expect(attestation.iss).toBe("did:plc:testserver123");
+    expect(attestation.sub).toBe("did:plc:player1");
+    expect(attestation.claims.level).toBe(5);
+    expect(attestation.claims.xp).toBe(500);
+    expect(attestation.claims.gold).toBe(100);
+    expect(attestation.sig).toBeTruthy();
+    expect(attestation.sig.length).toBeGreaterThan(10);
+  });
+
+  test("verifyAttestation validates own signatures", async () => {
+    const attestation = await identity.signAttestation("did:plc:player1", {
+      level: 3,
+      itemsGranted: ["iron-sword", "health-potion"],
+    });
+
+    const valid = await identity.verifyAttestation(attestation);
+    expect(valid).toBe(true);
+  });
+
+  test("verifyAttestation rejects tampered claims", async () => {
+    const attestation = await identity.signAttestation("did:plc:player1", {
+      level: 3,
+    });
+
+    // Tamper with the claims
+    attestation.claims.level = 99;
+
+    const valid = await identity.verifyAttestation(attestation);
+    expect(valid).toBe(false);
+  });
+
+  test("verifyAttestation rejects tampered subject", async () => {
+    const attestation = await identity.signAttestation("did:plc:player1", {
+      gold: 1000,
+    });
+
+    attestation.sub = "did:plc:cheater";
+
+    const valid = await identity.verifyAttestation(attestation);
+    expect(valid).toBe(false);
+  });
+
+  test("signAttestation includes quest and item arrays", async () => {
+    const attestation = await identity.signAttestation("did:plc:player2", {
+      questsCompleted: ["kill-rats", "find-sword"],
+      itemsGranted: ["magic-ring"],
+    });
+
+    expect(attestation.claims.questsCompleted).toEqual(["kill-rats", "find-sword"]);
+    expect(attestation.claims.itemsGranted).toEqual(["magic-ring"]);
+  });
+});
+
+// ─── Attestation Tracker ──────────────────────
+
+describe("attestation tracker", () => {
+  let identity: ServerIdentity;
+
+  beforeAll(async () => {
+    identity = new ServerIdentity();
+    identity.did = "did:plc:testserver456";
+    await identity.initSigningKeyOnly();
+  });
+
+  test("recordLevelUp triggers immediate flush", async () => {
+    const tracker = new AttestationTracker(identity, "did:plc:player1");
+
+    tracker.recordLevelUp(5, 500);
+
+    const attestations = await tracker.finalize();
+    expect(attestations.length).toBe(1);
+    expect(attestations[0].claims.level).toBe(5);
+    expect(attestations[0].claims.xp).toBe(500);
+  });
+
+  test("recordQuestComplete triggers immediate flush", async () => {
+    const tracker = new AttestationTracker(identity, "did:plc:player1");
+
+    tracker.recordQuestComplete("kill-rats");
+
+    const attestations = await tracker.finalize();
+    expect(attestations.length).toBe(1);
+    expect(attestations[0].claims.questsCompleted).toEqual(["kill-rats"]);
+  });
+
+  test("batches gold and item changes until flush", async () => {
+    const tracker = new AttestationTracker(identity, "did:plc:player1");
+
+    tracker.recordGoldChange(50);
+    tracker.recordItemGrant("iron-sword");
+    tracker.recordItemGrant("health-potion");
+
+    // Nothing flushed yet — no high-value events
+    expect(tracker.attestations.length).toBe(0);
+
+    // Finalize forces flush
+    const attestations = await tracker.finalize();
+    expect(attestations.length).toBe(1);
+    expect(attestations[0].claims.gold).toBe(50);
+    expect(attestations[0].claims.itemsGranted).toEqual(["iron-sword", "health-potion"]);
+  });
+
+  test("level up flushes pending gold/items into same attestation", async () => {
+    const tracker = new AttestationTracker(identity, "did:plc:player1");
+
+    tracker.recordGoldChange(100);
+    tracker.recordItemGrant("epic-staff");
+    // Level up should flush everything pending
+    tracker.recordLevelUp(10, 2000);
+
+    const attestations = await tracker.finalize();
+    expect(attestations.length).toBe(1);
+    expect(attestations[0].claims.level).toBe(10);
+    expect(attestations[0].claims.gold).toBe(100);
+    expect(attestations[0].claims.itemsGranted).toEqual(["epic-staff"]);
+  });
+
+  test("does nothing when server identity has no DID", async () => {
+    const emptyIdentity = { did: "" } as ServerIdentity;
+    const tracker = new AttestationTracker(emptyIdentity, "did:plc:player1");
+
+    tracker.recordLevelUp(5, 500);
+    tracker.recordGoldChange(100);
+
+    const attestations = await tracker.finalize();
+    expect(attestations.length).toBe(0);
+  });
+
+  test("multiple high-value events produce multiple attestations", async () => {
+    const tracker = new AttestationTracker(identity, "did:plc:player1");
+
+    tracker.recordLevelUp(2, 100);
+    tracker.recordGoldChange(50);
+    tracker.recordQuestComplete("quest-1");
+
+    const attestations = await tracker.finalize();
+    // Level up = 1 attestation, then quest complete flushes gold = 1 attestation
+    expect(attestations.length).toBe(2);
+    expect(attestations[0].claims.level).toBe(2);
+    expect(attestations[1].claims.questsCompleted).toEqual(["quest-1"]);
+    expect(attestations[1].claims.gold).toBe(50);
   });
 });
