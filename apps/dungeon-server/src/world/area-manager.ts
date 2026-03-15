@@ -440,6 +440,10 @@ export class AreaManager {
     return this.areas.get(id);
   }
 
+  getAllAreas(): Map<string, AreaManifest> {
+    return this.areas;
+  }
+
   getItemDefinition(id: string): ItemDefinition | undefined {
     return this.itemDefinitions.get(id);
   }

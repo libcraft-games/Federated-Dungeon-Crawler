@@ -14,6 +14,8 @@ import { GameOAuthClient } from "./atproto/oauth.js";
 import { PdsClient } from "./atproto/pds-client.js";
 import { PortalHandler } from "./federation/portal-handler.js";
 import { TransferHandler } from "./federation/transfer-handler.js";
+import { WorldPublisher } from "./atproto/world-publisher.js";
+import { FederationManager } from "./federation/federation-manager.js";
 
 const config = loadConfig();
 const world = new WorldManager(config);
@@ -38,6 +40,17 @@ if (!DEV_MODE && config.atproto.serverPassword) {
     await serverIdentity.initialize(config.atproto, config.name, config.description);
     await oauthClient.initialize(config.atproto);
     sessions.setServerIdentity(serverIdentity);
+
+    // Publish world data as AT Proto records
+    const publisher = new WorldPublisher(serverIdentity.agent, serverIdentity.did);
+    const { portalCount } = await publisher.publishAll(world);
+
+    // Federation: publish registration and seed known servers
+    const federation = new FederationManager(
+      serverIdentity, config.federation, config.atproto, config.name, config.description,
+    );
+    await federation.publishRegistration(portalCount, 0);
+    await federation.seedFromConfig();
   } catch (err) {
     console.warn("   AT Proto initialization failed:", err instanceof Error ? err.message : err);
     console.warn("   Running without AT Proto auth (set DEV_MODE=true to suppress)");

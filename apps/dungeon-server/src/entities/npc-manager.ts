@@ -174,6 +174,10 @@ export class NpcManager {
     return respawned;
   }
 
+  getAllDefinitions(): Map<string, NpcDefinition> {
+    return this.definitions;
+  }
+
   get definitionCount(): number {
     return this.definitions.size;
   }
