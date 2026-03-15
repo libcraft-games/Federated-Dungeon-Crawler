@@ -2,6 +2,8 @@ import type { CharacterProfile, FormulaDef } from "@realms/lexicons";
 import type { CharacterState, ItemInstance } from "@realms/common";
 import { profileToState, computeDerivedStats, xpToNextLevel } from "@realms/common";
 import type { ServerWebSocket } from "bun";
+import { AttestationTracker } from "../atproto/attestation-tracker.js";
+import type { ServerIdentity } from "../atproto/server-identity.js";
 
 export interface SessionData {
   sessionId: string;
@@ -11,6 +13,7 @@ export class CharacterSession {
   readonly sessionId: string;
   readonly characterDid: string;
   readonly state: CharacterState;
+  readonly attestations: AttestationTracker;
   ws: ServerWebSocket<SessionData> | null = null;
 
   // Combat state
@@ -22,12 +25,23 @@ export class CharacterSession {
 
   private formulas: Record<string, FormulaDef>;
 
-  constructor(sessionId: string, characterDid: string, profile: CharacterProfile, spawnRoom: string, formulas: Record<string, FormulaDef> = {}) {
+  constructor(
+    sessionId: string,
+    characterDid: string,
+    profile: CharacterProfile,
+    spawnRoom: string,
+    formulas: Record<string, FormulaDef> = {},
+    serverIdentity?: ServerIdentity,
+  ) {
     this.sessionId = sessionId;
     this.characterDid = characterDid;
     this.state = profileToState(profile, spawnRoom, formulas);
     this.formulas = formulas;
     this.visitedRooms.add(spawnRoom);
+    this.attestations = new AttestationTracker(
+      serverIdentity ?? ({ did: "" } as ServerIdentity),
+      characterDid,
+    );
   }
 
   get currentRoom(): string {
@@ -152,6 +166,7 @@ export class CharacterSession {
 
   addGold(amount: number): void {
     this.state.gold += amount;
+    this.attestations.recordGoldChange(this.state.gold);
   }
 
   spendGold(amount: number): boolean {
@@ -198,12 +213,13 @@ export class CharacterSession {
     // Check for level up
     const newLevel = this.checkLevelUp();
     if (newLevel > this.state.level) {
-      const oldLevel = this.state.level;
       this.state.level = newLevel;
       this.recalculateDerived();
       // Heal to full on level up
       this.state.currentHp = this.state.maxHp;
       this.state.currentMp = this.state.maxMp;
+      // Attest the level up
+      this.attestations.recordLevelUp(newLevel, this.state.experience);
       return newLevel;
     }
     return null;

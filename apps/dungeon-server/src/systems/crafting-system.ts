@@ -156,6 +156,7 @@ export class CraftingSystem {
     }
     const outputItem = createItemInstance(matchDef.output.itemId, outputDef, matchDef.output.count);
     session.addItem(outputItem);
+    session.attestations.recordItemGrant(matchDef.output.itemId);
 
     return {
       success: true,
@@ -203,6 +204,7 @@ export class CraftingSystem {
         if (def) {
           const item = createItemInstance(yld.itemId, def, count);
           session.addItem(item);
+          session.attestations.recordItemGrant(yld.itemId);
           gained.push({ name: def.name, count });
         }
       }

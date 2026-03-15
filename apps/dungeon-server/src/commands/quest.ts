@@ -129,6 +129,9 @@ export function handleTurnIn(cmd: ParsedCommand, ctx: CommandContext): void {
     const completed = world.questManager.completeQuest(session.characterDid, questId);
     if (!completed) continue;
 
+    // Attest quest completion
+    session.attestations.recordQuestComplete(questId);
+
     const lines = [`\u2605 Quest Complete: ${def.name}!`];
 
     // Grant rewards
@@ -148,6 +151,7 @@ export function handleTurnIn(cmd: ParsedCommand, ctx: CommandContext): void {
         if (itemDef) {
           const item = createItemInstance(itemId, itemDef, 1);
           session.addItem(item);
+          session.attestations.recordItemGrant(itemId);
           rewardParts.push(item.name);
         }
       }
