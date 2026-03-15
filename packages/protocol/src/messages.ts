@@ -1,4 +1,4 @@
-import type { RoomState, EntityBrief, ItemBrief, ItemInstance } from "@realms/common";
+import type { RoomState, EntityBrief, ItemInstance } from "@realms/common";
 
 // ── Shared combat types ──
 

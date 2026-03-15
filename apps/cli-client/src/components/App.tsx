@@ -18,8 +18,25 @@ import { saveProfile, loadProfile } from "../connection/saved-profile.js";
 type AppPhase = "splash" | "account" | "server" | "create" | "play";
 
 interface SystemData {
-  classes: Record<string, { name: string; description: string; attributeBonuses?: Record<string, number>; spells?: string[]; tags?: string[] }>;
-  races: Record<string, { name: string; description: string; attributeBonuses?: Record<string, number>; tags?: string[] }>;
+  classes: Record<
+    string,
+    {
+      name: string;
+      description: string;
+      attributeBonuses?: Record<string, number>;
+      spells?: string[];
+      tags?: string[];
+    }
+  >;
+  races: Record<
+    string,
+    {
+      name: string;
+      description: string;
+      attributeBonuses?: Record<string, number>;
+      tags?: string[];
+    }
+  >;
 }
 
 interface ServerInfo {
@@ -38,7 +55,7 @@ export function App() {
 
   // Server state
   const [serverUrl, setServerUrl] = useState("");
-  const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null);
+  const [, setServerInfo] = useState<ServerInfo | null>(null);
   const [system, setSystem] = useState<SystemData | null>(null);
 
   // Character state
@@ -88,39 +105,42 @@ export function App() {
     setPhase("server");
   }, []);
 
-  const handleServerConnect = useCallback((url: string, info: ServerInfo) => {
-    setServerUrl(url);
-    setServerInfo(info);
+  const handleServerConnect = useCallback(
+    (url: string, info: ServerInfo) => {
+      setServerUrl(url);
+      setServerInfo(info);
 
-    // Save last server to profile
-    if (account) {
-      saveProfile({
-        handle: account.handle,
-        did: account.did ?? "",
-        pdsUrl: account.pdsUrl ?? "",
-        lastServer: url,
-        lastServerName: info.name,
-      });
-    }
+      // Save last server to profile
+      if (account) {
+        saveProfile({
+          handle: account.handle,
+          did: account.did ?? "",
+          pdsUrl: account.pdsUrl ?? "",
+          lastServer: url,
+          lastServerName: info.name,
+        });
+      }
 
-    // Fetch system data for character creation
-    fetch(`${url}/system`)
-      .then((res) => res.json())
-      .then((data) => {
-        setSystem(data as SystemData);
-        if (account?.mode === "dev") {
-          setPlayerName(account.handle);
-        }
-        setPhase("create");
-      })
-      .catch(() => {
-        // If system fetch fails, skip creation and go straight to play
-        if (account?.mode === "dev") {
-          setPlayerName(account.handle);
-        }
-        setPhase("play");
-      });
-  }, [account]);
+      // Fetch system data for character creation
+      fetch(`${url}/system`)
+        .then((res) => res.json())
+        .then((data) => {
+          setSystem(data as SystemData);
+          if (account?.mode === "dev") {
+            setPlayerName(account.handle);
+          }
+          setPhase("create");
+        })
+        .catch(() => {
+          // If system fetch fails, skip creation and go straight to play
+          if (account?.mode === "dev") {
+            setPlayerName(account.handle);
+          }
+          setPhase("play");
+        });
+    },
+    [account],
+  );
 
   const handleCreateComplete = useCallback((chosenClass: string, chosenRace: string) => {
     setFinalClass(chosenClass);
@@ -193,11 +213,7 @@ export function App() {
   }
 
   return (
-    <GameView
-      client={client}
-      name={playerName || account?.handle || "Adventurer"}
-      exit={exit}
-    />
+    <GameView client={client} name={playerName || account?.handle || "Adventurer"} exit={exit} />
   );
 }
 
@@ -229,7 +245,9 @@ function GameView({ client, name, exit }: { client: WsClient; name: string; exit
   useEffect(() => {
     const onResize = () => setRows(stdout.rows ?? 24);
     stdout.on("resize", onResize);
-    return () => { stdout.off("resize", onResize); };
+    return () => {
+      stdout.off("resize", onResize);
+    };
   }, [stdout]);
 
   // Tab toggles info panel
@@ -248,7 +266,7 @@ function GameView({ client, name, exit }: { client: WsClient; name: string; exit
       }
       client.sendCommand(input);
     },
-    [client, exit]
+    [client, exit],
   );
 
   const inCombat = state.combat?.active ?? false;
@@ -256,8 +274,8 @@ function GameView({ client, name, exit }: { client: WsClient; name: string; exit
 
   const contextPanelHeight = useMemo(() => {
     if (inCombat && state.combat) {
-      const hasArt = state.combat.combatants.some((c) =>
-        c.id === state.combat!.targetId && c.art && c.art.length > 0
+      const hasArt = state.combat.combatants.some(
+        (c) => c.id === state.combat!.targetId && c.art && c.art.length > 0,
       );
       return getCombatPanelHeight(state.combat.combatants.length, hasArt);
     }
@@ -269,9 +287,7 @@ function GameView({ client, name, exit }: { client: WsClient; name: string; exit
 
   return (
     <Box flexDirection="column" height={rows}>
-      {infoPanelOpen && (
-        <InfoPanel state={state} playerName={name} width={cols} />
-      )}
+      {infoPanelOpen && <InfoPanel state={state} playerName={name} width={cols} />}
 
       <StatusBar state={state} playerName={name} connecting={connecting} />
 

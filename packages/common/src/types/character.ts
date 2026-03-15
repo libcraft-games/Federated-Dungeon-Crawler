@@ -53,15 +53,10 @@ export interface GameSystem {
 // Simple expression evaluator for derived stat formulas.
 // Supports: +, -, *, /, parentheses, floor(), ceil(), min(), max(), and variable references.
 
-export function evaluateFormula(
-  expression: string,
-  variables: Record<string, number>
-): number {
+export function evaluateFormula(expression: string, variables: Record<string, number>): number {
   // Replace variable names with their values (longest first to avoid partial matches)
   let expr = expression;
-  const sortedVars = Object.entries(variables).sort(
-    ([a], [b]) => b.length - a.length
-  );
+  const sortedVars = Object.entries(variables).sort(([a], [b]) => b.length - a.length);
   for (const [name, value] of sortedVars) {
     expr = expr.replaceAll(name, String(value));
   }
@@ -97,7 +92,7 @@ export function evaluateFormula(
 export function computeDerivedStats(
   formulas: Record<string, FormulaDef>,
   level: number,
-  attributes: Attributes
+  attributes: Attributes,
 ): DerivedStats {
   const variables: Record<string, number> = { level, ...attributes };
   const derived: DerivedStats = {};
@@ -114,11 +109,7 @@ export function computeDerivedStats(
 
 // ── Character creation ──
 
-export function buildAttributes(
-  system: GameSystem,
-  classId: string,
-  raceId: string
-): Attributes {
+export function buildAttributes(system: GameSystem, classId: string, raceId: string): Attributes {
   const attrs: Attributes = {};
 
   // Start with default values from attribute definitions
@@ -148,7 +139,7 @@ export function buildAttributes(
 export function profileToState(
   profile: CharacterProfile,
   currentRoom: string,
-  formulas: Record<string, FormulaDef>
+  formulas: Record<string, FormulaDef>,
 ): CharacterState {
   const derived = computeDerivedStats(formulas, profile.level, profile.attributes);
 

@@ -1,6 +1,6 @@
 import type { CharacterProfile, FormulaDef } from "@realms/lexicons";
 import type { CharacterState, ItemInstance } from "@realms/common";
-import { profileToState, computeDerivedStats, xpToNextLevel } from "@realms/common";
+import { profileToState, computeDerivedStats } from "@realms/common";
 import type { ServerWebSocket } from "bun";
 import { AttestationTracker } from "../atproto/attestation-tracker.js";
 import type { ServerIdentity } from "../atproto/server-identity.js";
@@ -74,9 +74,7 @@ export class CharacterSession {
 
   addItem(item: ItemInstance): void {
     // Try to stack with existing item of same definition
-    const existing = this.state.inventory.find(
-      (i) => i.definitionId === item.definitionId
-    );
+    const existing = this.state.inventory.find((i) => i.definitionId === item.definitionId);
     if (existing) {
       existing.quantity += item.quantity;
     } else {
@@ -87,7 +85,7 @@ export class CharacterSession {
   removeItem(identifier: string, quantity: number = 1): ItemInstance | undefined {
     const lower = identifier.toLowerCase();
     const index = this.state.inventory.findIndex(
-      (i) => i.instanceId === identifier || i.name.toLowerCase().includes(lower)
+      (i) => i.instanceId === identifier || i.name.toLowerCase().includes(lower),
     );
     if (index === -1) return undefined;
 
@@ -110,16 +108,16 @@ export class CharacterSession {
   findItem(identifier: string): ItemInstance | undefined {
     const lower = identifier.toLowerCase();
     return this.state.inventory.find(
-      (i) => i.instanceId === identifier || i.name.toLowerCase().includes(lower)
+      (i) => i.instanceId === identifier || i.name.toLowerCase().includes(lower),
     );
   }
 
   countItem(definitionId: string): number {
-    return this.state.inventory.find(i => i.definitionId === definitionId)?.quantity ?? 0;
+    return this.state.inventory.find((i) => i.definitionId === definitionId)?.quantity ?? 0;
   }
 
   removeItemByDefId(definitionId: string, quantity: number): boolean {
-    const index = this.state.inventory.findIndex(i => i.definitionId === definitionId);
+    const index = this.state.inventory.findIndex((i) => i.definitionId === definitionId);
     if (index === -1) return false;
     const item = this.state.inventory[index];
     if (quantity >= item.quantity) {

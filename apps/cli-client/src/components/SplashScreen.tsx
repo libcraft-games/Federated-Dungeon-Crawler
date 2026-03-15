@@ -39,7 +39,9 @@ export function SplashScreen({ onContinue }: Props) {
 
       <Box height={1} />
 
-      <Text color="gray" dimColor>CLI by OtherwiseJunk</Text>
+      <Text color="gray" dimColor>
+        CLI by OtherwiseJunk
+      </Text>
 
       <Box height={3} />
 

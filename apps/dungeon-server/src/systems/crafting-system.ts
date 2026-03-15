@@ -4,8 +4,8 @@ import type { Room } from "../world/room.js";
 import { createItemInstance } from "@realms/common";
 
 export interface GatherYield {
-  itemId: string;   // area-prefixed
-  chance: number;   // 0-100
+  itemId: string; // area-prefixed
+  chance: number; // 0-100
   min: number;
   max: number;
 }
@@ -83,7 +83,10 @@ export class CraftingSystem {
   }
 
   /** List all recipes. If session+room provided, filter to craftable only. */
-  listRecipes(session?: CharacterSession, room?: Room): Array<{ id: string; def: RecipeDef; craftable: boolean; missingStation?: string }> {
+  listRecipes(
+    session?: CharacterSession,
+    room?: Room,
+  ): Array<{ id: string; def: RecipeDef; craftable: boolean; missingStation?: string }> {
     const result = [];
     for (const [id, def] of this.recipes.entries()) {
       if (session && room) {
@@ -96,7 +99,12 @@ export class CraftingSystem {
     return result;
   }
 
-  craft(session: CharacterSession, room: Room, recipeName: string, itemDefs: Map<string, ItemDefinition>): CraftResult {
+  craft(
+    session: CharacterSession,
+    room: Room,
+    recipeName: string,
+    itemDefs: Map<string, ItemDefinition>,
+  ): CraftResult {
     // Find recipe by name or partial match
     const lower = recipeName.toLowerCase();
     let matchId: string | undefined;
@@ -110,19 +118,28 @@ export class CraftingSystem {
     }
 
     if (!matchId || !matchDef) {
-      return { success: false, reason: `Unknown recipe '${recipeName}'. Use 'recipes' to see what you can make.` };
+      return {
+        success: false,
+        reason: `Unknown recipe '${recipeName}'. Use 'recipes' to see what you can make.`,
+      };
     }
 
     // Check level requirement
     if (matchDef.levelRequired && session.state.level < matchDef.levelRequired) {
-      return { success: false, reason: `You need to be level ${matchDef.levelRequired} to craft ${matchDef.name}.` };
+      return {
+        success: false,
+        reason: `You need to be level ${matchDef.levelRequired} to craft ${matchDef.name}.`,
+      };
     }
 
     // Check station requirement
     if (matchDef.station) {
       const hasStation = room.flags?.includes(`station:${matchDef.station}`) ?? false;
       if (!hasStation) {
-        return { success: false, reason: `You need a ${matchDef.station} to craft ${matchDef.name}. Find a room with one.` };
+        return {
+          success: false,
+          reason: `You need a ${matchDef.station} to craft ${matchDef.name}. Find a room with one.`,
+        };
       }
     }
 
@@ -156,7 +173,10 @@ export class CraftingSystem {
     // Create output item
     const outputDef = itemDefs.get(matchDef.output.itemId);
     if (!outputDef) {
-      return { success: false, reason: `Output item definition not found: ${matchDef.output.itemId}` };
+      return {
+        success: false,
+        reason: `Output item definition not found: ${matchDef.output.itemId}`,
+      };
     }
     const outputItem = createItemInstance(matchDef.output.itemId, outputDef, matchDef.output.count);
     session.addItem(outputItem);
@@ -169,7 +189,12 @@ export class CraftingSystem {
     };
   }
 
-  gather(session: CharacterSession, roomId: string, nodeName: string | undefined, itemDefs: Map<string, ItemDefinition>): GatherResult {
+  gather(
+    session: CharacterSession,
+    roomId: string,
+    nodeName: string | undefined,
+    itemDefs: Map<string, ItemDefinition>,
+  ): GatherResult {
     const nodes = this.getNodesInRoom(roomId);
     if (nodes.length === 0) {
       return { success: false, reason: "There's nothing to gather here." };
@@ -178,17 +203,23 @@ export class CraftingSystem {
     let node: GatheringNode;
     if (nodeName) {
       const lower = nodeName.toLowerCase();
-      const found = nodes.find(n => n.name.toLowerCase().includes(lower));
+      const found = nodes.find((n) => n.name.toLowerCase().includes(lower));
       if (!found) {
-        return { success: false, reason: `No gathering node matching '${nodeName}' here. Try just 'gather'.` };
+        return {
+          success: false,
+          reason: `No gathering node matching '${nodeName}' here. Try just 'gather'.`,
+        };
       }
       node = found;
     } else if (nodes.length === 1) {
       node = nodes[0];
     } else {
       // Multiple nodes — list them
-      const names = nodes.map(n => `'${n.name}'`).join(", ");
-      return { success: false, reason: `Multiple gathering spots here: ${names}. Specify one: gather <name>` };
+      const names = nodes.map((n) => `'${n.name}'`).join(", ");
+      return {
+        success: false,
+        reason: `Multiple gathering spots here: ${names}. Specify one: gather <name>`,
+      };
     }
 
     if (this.isNodeDepleted(node.id)) {
@@ -227,13 +258,17 @@ export class CraftingSystem {
 
   private findNodeById(nodeId: string): GatheringNode | undefined {
     for (const nodes of this.nodesByRoom.values()) {
-      const found = nodes.find(n => n.id === nodeId);
+      const found = nodes.find((n) => n.id === nodeId);
       if (found) return found;
     }
     return undefined;
   }
 
-  private checkCraftable(session: CharacterSession, room: Room, def: RecipeDef): { ok: boolean; missingStation?: string } {
+  private checkCraftable(
+    session: CharacterSession,
+    room: Room,
+    def: RecipeDef,
+  ): { ok: boolean; missingStation?: string } {
     if (def.station) {
       const hasStation = room.flags?.includes(`station:${def.station}`) ?? false;
       if (!hasStation) return { ok: false, missingStation: def.station };

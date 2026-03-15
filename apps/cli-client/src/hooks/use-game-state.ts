@@ -141,25 +141,29 @@ export function useGameState(client: WsClient) {
         case "combat_update":
           setState((prev) => ({
             ...prev,
-            combat: prev.combat ? {
-              ...prev.combat,
-              combatants: msg.combatants,
-              targetId: msg.targetId,
-            } : {
-              active: true,
-              combatants: msg.combatants,
-              targetId: msg.targetId,
-            },
+            combat: prev.combat
+              ? {
+                  ...prev.combat,
+                  combatants: msg.combatants,
+                  targetId: msg.targetId,
+                }
+              : {
+                  active: true,
+                  combatants: msg.combatants,
+                  targetId: msg.targetId,
+                },
           }));
           break;
 
         case "combat_end":
           setState((prev) => ({ ...prev, combat: null }));
           addNarrative(
-            msg.reason === "victory" ? "Combat ends — victory!" :
-            msg.reason === "flee" ? "You escaped from combat." :
-            "You have been defeated.",
-            "combat"
+            msg.reason === "victory"
+              ? "Combat ends — victory!"
+              : msg.reason === "flee"
+                ? "You escaped from combat."
+                : "You have been defeated.",
+            "combat",
           );
           break;
 
@@ -184,7 +188,12 @@ export function useGameState(client: WsClient) {
         case "map_update":
           setState((prev) => ({
             ...prev,
-            map: { grid: msg.grid, cursorRow: msg.cursorRow, cursorCol: msg.cursorCol, legend: msg.legend },
+            map: {
+              grid: msg.grid,
+              cursorRow: msg.cursorRow,
+              cursorCol: msg.cursorCol,
+              legend: msg.legend,
+            },
           }));
           break;
 
@@ -199,7 +208,7 @@ export function useGameState(client: WsClient) {
         case "entity_leave":
           addNarrative(
             `${msg.entity.name} left${msg.direction ? ` to the ${msg.direction}` : ""}.`,
-            "system"
+            "system",
           );
           break;
 
@@ -239,10 +248,9 @@ export function useGameState(client: WsClient) {
           };
           setState((prev) => ({
             ...prev,
-            quests: [
-              ...prev.quests.filter(q => q.questId !== msg.questId),
-              entry,
-            ].filter(q => q.status === "active"),
+            quests: [...prev.quests.filter((q) => q.questId !== msg.questId), entry].filter(
+              (q) => q.status === "active",
+            ),
           }));
           if (msg.status === "completed") {
             addNarrative(`\u2605 Quest complete: ${msg.questName}!`, "system");
@@ -259,8 +267,8 @@ export function useGameState(client: WsClient) {
           setState((prev) => ({
             ...prev,
             quests: msg.quests
-              .filter(q => q.status === "active")
-              .map(q => ({
+              .filter((q) => q.status === "active")
+              .map((q) => ({
                 questId: q.questId,
                 questName: q.questName,
                 status: q.status,

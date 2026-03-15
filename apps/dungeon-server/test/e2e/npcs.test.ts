@@ -96,8 +96,9 @@ describe("NPCs", () => {
 
     // Try to talk to the wolf (hostile NPC) — should fail
     const text = await client.commandAndWait("talk wolf");
-    const hostile = text.toLowerCase().includes("interested in talking")
-      || text.toLowerCase().includes("don't see");
+    const hostile =
+      text.toLowerCase().includes("interested in talking") ||
+      text.toLowerCase().includes("don't see");
     expect(hostile).toBe(true);
     client.disconnect();
   });

@@ -94,11 +94,14 @@ export class PdsClient {
         collection: NSID.QuestProgress,
         limit: 100,
       });
-      return data.records.map((r) => r.value as unknown as {
-        questId: string;
-        status: string;
-        objectives: Record<string, unknown>[];
-      });
+      return data.records.map(
+        (r) =>
+          r.value as unknown as {
+            questId: string;
+            status: string;
+            objectives: Record<string, unknown>[];
+          },
+      );
     } catch (err: unknown) {
       if (isNotFound(err)) return [];
       throw err;

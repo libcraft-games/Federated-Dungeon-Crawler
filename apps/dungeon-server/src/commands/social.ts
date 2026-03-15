@@ -47,7 +47,7 @@ export function handleSocial(cmd: ParsedCommand, ctx: CommandContext): void {
             channel: "shout",
             sender: session.name,
             message,
-          })
+          }),
         );
       }
 
@@ -82,7 +82,7 @@ export function handleSocial(cmd: ParsedCommand, ctx: CommandContext): void {
           channel: "whisper",
           sender: session.name,
           message,
-        })
+        }),
       );
       sendNarrative(session, `You whisper to ${target.name}: ${message}`, "chat");
       // Whispers are private — never posted to Bluesky

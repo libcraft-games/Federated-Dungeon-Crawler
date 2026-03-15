@@ -11,14 +11,21 @@ export class SessionManager {
   /** Set once during startup so all sessions get attestation tracking */
   setServerIdentity(identity: ServerIdentity): void {
     if (this.serverIdentity) {
-      console.warn("   ⚠  Server identity already set on SessionManager — this should only happen once during startup");
+      console.warn(
+        "   ⚠  Server identity already set on SessionManager — this should only happen once during startup",
+      );
       console.warn("   Ignoring duplicate setServerIdentity call");
       return;
     }
     this.serverIdentity = identity;
   }
 
-  createSession(characterDid: string, profile: CharacterProfile, spawnRoom: string, formulas: Record<string, FormulaDef> = {}): CharacterSession {
+  createSession(
+    characterDid: string,
+    profile: CharacterProfile,
+    spawnRoom: string,
+    formulas: Record<string, FormulaDef> = {},
+  ): CharacterSession {
     // If player already has a session, remove it
     const existingSessionId = this.didToSession.get(characterDid);
     if (existingSessionId) {
@@ -26,13 +33,23 @@ export class SessionManager {
     }
 
     const sessionId = crypto.randomUUID();
-    const session = new CharacterSession(sessionId, characterDid, profile, spawnRoom, formulas, this.serverIdentity);
+    const session = new CharacterSession(
+      sessionId,
+      characterDid,
+      profile,
+      spawnRoom,
+      formulas,
+      this.serverIdentity,
+    );
     this.sessions.set(sessionId, session);
     this.didToSession.set(characterDid, sessionId);
     return session;
   }
 
-  attachWebSocket(sessionId: string, ws: ServerWebSocket<SessionData>): CharacterSession | undefined {
+  attachWebSocket(
+    sessionId: string,
+    ws: ServerWebSocket<SessionData>,
+  ): CharacterSession | undefined {
     const session = this.sessions.get(sessionId);
     if (session) {
       session.ws = ws;

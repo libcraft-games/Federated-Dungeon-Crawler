@@ -1,5 +1,10 @@
 import type { ParsedCommand } from "@realms/common";
-import { getEquipSlot, buildSlotAliases, getEquippedDefense, getWeaponDamage } from "@realms/common";
+import {
+  getEquipSlot,
+  buildSlotAliases,
+  getEquippedDefense,
+  getWeaponDamage,
+} from "@realms/common";
 import type { EquipmentConfig } from "@realms/common";
 import { encodeMessage } from "@realms/protocol";
 import type { CommandContext } from "./index.js";
@@ -58,7 +63,11 @@ function handleEquip(cmd: ParsedCommand, ctx: CommandContext): void {
 
   // Check level requirement
   if (def.levelRequired && session.state.level < def.levelRequired) {
-    sendNarrative(session, `You need to be level ${def.levelRequired} to equip ${item.name}.`, "error");
+    sendNarrative(
+      session,
+      `You need to be level ${def.levelRequired} to equip ${item.name}.`,
+      "error",
+    );
     return;
   }
 
@@ -168,10 +177,6 @@ function showEquipment(ctx: CommandContext): void {
 }
 
 function sendUpdates(ctx: CommandContext): void {
-  ctx.session.send(
-    encodeMessage({ type: "inventory_update", inventory: ctx.session.inventory })
-  );
-  ctx.session.send(
-    encodeMessage({ type: "equipment_update", equipment: ctx.session.equipment })
-  );
+  ctx.session.send(encodeMessage({ type: "inventory_update", inventory: ctx.session.inventory }));
+  ctx.session.send(encodeMessage({ type: "equipment_update", equipment: ctx.session.equipment }));
 }

@@ -27,7 +27,9 @@ export class PortalHandler {
    */
   parsePortalTarget(target: string): { serverDid: string; roomId: string } | null {
     // Portal targets use format: did:plc:xxx:roomId or did:web:xxx:roomId
-    const didMatch = target.match(/^(did:[a-z]+:[a-zA-Z0-9._:%-]+):([a-zA-Z0-9_-]+(?::[a-zA-Z0-9_-]+)*)$/);
+    const didMatch = target.match(
+      /^(did:[a-z]+:[a-zA-Z0-9._:%-]+):([a-zA-Z0-9_-]+(?::[a-zA-Z0-9_-]+)*)$/,
+    );
     if (!didMatch) return null;
 
     // The DID is everything up to the last colon-separated segment that looks like a room ID
@@ -118,7 +120,10 @@ export class PortalHandler {
       );
 
       if (!response.ok) {
-        sendNarrative("The portal rejects you. The destination realm refused the connection.", "error");
+        sendNarrative(
+          "The portal rejects you. The destination realm refused the connection.",
+          "error",
+        );
         return false;
       }
 
@@ -151,7 +156,7 @@ export class PortalHandler {
       );
 
       return true;
-    } catch (err) {
+    } catch {
       sendNarrative("The portal flickers and dies. The destination realm is unreachable.", "error");
       return false;
     }
@@ -168,8 +173,9 @@ export class PortalHandler {
       if (!didDoc) return null;
 
       // Find the PDS service endpoint
-      const service = (didDoc.service as Array<{ id: string; type: string; serviceEndpoint: string }>)
-        ?.find((s) => s.type === "AtprotoPersonalDataServer");
+      const service = (
+        didDoc.service as Array<{ id: string; type: string; serviceEndpoint: string }>
+      )?.find((s) => s.type === "AtprotoPersonalDataServer");
       if (!service) return null;
 
       // Read the server's world.server record to get its game endpoint

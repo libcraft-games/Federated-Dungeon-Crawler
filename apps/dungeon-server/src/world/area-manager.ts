@@ -1,12 +1,12 @@
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
-import type { RoomRecord, AreaRecord, ItemDefinition, NpcDefinition, NpcBehavior, DialogueNode, DialogueResponse, QuestDefinition } from "@realms/lexicons";
+import type { RoomRecord, ItemDefinition, NpcDefinition, NpcBehavior } from "@realms/lexicons";
 import { Room } from "./room.js";
 import { createItemInstance, type ItemRegistry } from "@realms/common";
 import { NpcManager, type LootEntry } from "../entities/npc-manager.js";
 import { QuestManager } from "../systems/quest-manager.js";
-import { CraftingSystem, type GatherYield } from "../systems/crafting-system.js";
+import { CraftingSystem } from "../systems/crafting-system.js";
 
 interface AreaManifest {
   id: string;
@@ -341,17 +341,19 @@ export class AreaManager {
           giver: q.giver ? prefixId(q.giver) : undefined,
           turnIn: q.turnIn ? prefixId(q.turnIn) : undefined,
           prerequisites: q.prerequisites?.map(prefixId),
-          objectives: q.objectives.map(o => ({
+          objectives: q.objectives.map((o) => ({
             type: o.type as any,
             description: o.description,
             target: o.target ? prefixId(o.target) : undefined,
             count: o.count,
           })),
-          rewards: q.rewards ? {
-            xp: q.rewards.xp,
-            gold: q.rewards.gold,
-            items: q.rewards.items?.map(prefixId),
-          } : undefined,
+          rewards: q.rewards
+            ? {
+                xp: q.rewards.xp,
+                gold: q.rewards.gold,
+                items: q.rewards.items?.map(prefixId),
+              }
+            : undefined,
           repeatable: q.repeatable,
           tags: q.tags,
         });
@@ -377,7 +379,7 @@ export class AreaManager {
           description: r.description,
           station: r.station,
           levelRequired: r.levelRequired,
-          ingredients: r.ingredients.map(ing => ({
+          ingredients: r.ingredients.map((ing) => ({
             itemId: prefixId(ing.itemId),
             count: ing.count,
           })),
@@ -412,7 +414,7 @@ export class AreaManager {
           description: n.description,
           roomId,
           respawnSeconds: n.respawnSeconds,
-          yields: n.yields.map(y => ({
+          yields: n.yields.map((y) => ({
             itemId: prefixId(y.itemId),
             chance: y.chance,
             min: y.min,

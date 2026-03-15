@@ -3,7 +3,7 @@ import type { ServerIdentity } from "../atproto/server-identity.js";
 import type { SessionManager } from "../server/session-manager.js";
 import type { WorldManager } from "../world/world-manager.js";
 import type { FederationConfig, AtProtoConfig } from "../config.js";
-import type { AdaptationRequired, AdaptationOption } from "@realms/protocol";
+import type { AdaptationRequired } from "@realms/protocol";
 import { buildAttributes, computeDerivedStats } from "@realms/common";
 
 export interface TransferInput {
@@ -114,10 +114,10 @@ export class TransferHandler {
 
     // Use temporary defaults for the initial session profile
     const tempClassId = needsClass
-      ? Object.keys(localSystem.classes)[0] ?? "warrior"
+      ? (Object.keys(localSystem.classes)[0] ?? "warrior")
       : trustedCharacter.class;
     const tempRaceId = needsRace
-      ? Object.keys(localSystem.races)[0] ?? "human"
+      ? (Object.keys(localSystem.races)[0] ?? "human")
       : trustedCharacter.race;
 
     const adaptedProfile = this.buildAdaptedProfile(trustedCharacter, tempClassId, tempRaceId);
@@ -209,12 +209,12 @@ export class TransferHandler {
     const localSystem = this.world.gameSystem;
 
     // Validate choices
-    const finalClass = (classId && localSystem.classes[classId])
-      ? classId
-      : Object.keys(localSystem.classes)[0] ?? "warrior";
-    const finalRace = (raceId && localSystem.races[raceId])
-      ? raceId
-      : Object.keys(localSystem.races)[0] ?? "human";
+    const finalClass =
+      classId && localSystem.classes[classId]
+        ? classId
+        : (Object.keys(localSystem.classes)[0] ?? "warrior");
+    const finalRace =
+      raceId && localSystem.races[raceId] ? raceId : (Object.keys(localSystem.races)[0] ?? "human");
 
     // Rebuild the character with chosen class/race
     const profile = this.buildAdaptedProfile(pending.sourceCharacter, finalClass, finalRace);
@@ -243,7 +243,7 @@ export class TransferHandler {
 
     // Store original class/race in extensions for when they return
     s.extensions = {
-      ...(s.extensions ?? {}),
+      ...s.extensions,
       _originalClass: pending.originalClass,
       _originalRace: pending.originalRace,
     };
@@ -260,7 +260,12 @@ export class TransferHandler {
       extensions?: Record<string, unknown>;
     },
     sourceServerDid: string,
-  ): CharacterProfile & { gold?: number; inventory?: unknown[]; equipment?: Record<string, unknown>; extensions?: Record<string, unknown> } {
+  ): CharacterProfile & {
+    gold?: number;
+    inventory?: unknown[];
+    equipment?: Record<string, unknown>;
+    extensions?: Record<string, unknown>;
+  } {
     switch (this.federationConfig.trustPolicy) {
       case "trust-all":
         return character;

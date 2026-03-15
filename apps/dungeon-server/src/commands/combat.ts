@@ -43,7 +43,11 @@ export function handleCombat(cmd: ParsedCommand, ctx: CommandContext): void {
     case "cast": {
       // Syntax: cast <spell> [target] or cast <spell> at <target>
       if (cmd.args.length === 0) {
-        sendNarrative(session, "Cast what? Specify a spell name. Type 'spells' to see your list.", "error");
+        sendNarrative(
+          session,
+          "Cast what? Specify a spell name. Type 'spells' to see your list.",
+          "error",
+        );
         return;
       }
 
@@ -65,7 +69,7 @@ export function handleCombat(cmd: ParsedCommand, ctx: CommandContext): void {
         const system = ctx.world.gameSystem;
         const lower = fullName.toLowerCase();
         const exactMatch = Object.entries(system.spells).find(
-          ([id, def]) => id.toLowerCase() === lower || def.name.toLowerCase() === lower
+          ([id, def]) => id.toLowerCase() === lower || def.name.toLowerCase() === lower,
         );
         if (exactMatch) {
           spellName = fullName;
@@ -87,7 +91,10 @@ export function handleCombat(cmd: ParsedCommand, ctx: CommandContext): void {
   }
 }
 
-function showSpells(session: import("../entities/character-session.js").CharacterSession, ctx: CommandContext): void {
+function showSpells(
+  session: import("../entities/character-session.js").CharacterSession,
+  ctx: CommandContext,
+): void {
   const system = ctx.world.gameSystem;
   const classDef = system.classes[session.state.class];
   const spellIds = classDef?.spells ?? [];
@@ -101,13 +108,18 @@ function showSpells(session: import("../entities/character-session.js").Characte
   for (const id of spellIds) {
     const spell = system.spells[id];
     if (!spell) continue;
-    const levelReq = spell.levelRequired && spell.levelRequired > session.state.level
-      ? ` [Requires level ${spell.levelRequired}]`
-      : "";
+    const levelReq =
+      spell.levelRequired && spell.levelRequired > session.state.level
+        ? ` [Requires level ${spell.levelRequired}]`
+        : "";
     const apCost = spell.apCost ?? AP_COST.castDefault;
-    lines.push(`  ${spell.name} — ${spell.mpCost} MP, ${apCost} AP — ${spell.description}${levelReq}`);
+    lines.push(
+      `  ${spell.name} — ${spell.mpCost} MP, ${apCost} AP — ${spell.description}${levelReq}`,
+    );
   }
   lines.push("");
-  lines.push(`Mana: ${session.state.currentMp}/${session.state.maxMp}  AP: ${session.state.currentAp}/${session.state.maxAp}`);
+  lines.push(
+    `Mana: ${session.state.currentMp}/${session.state.maxMp}  AP: ${session.state.currentAp}/${session.state.maxAp}`,
+  );
   sendNarrative(session, lines.join("\n"), "info");
 }

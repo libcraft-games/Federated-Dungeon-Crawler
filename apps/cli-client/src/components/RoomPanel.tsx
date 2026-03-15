@@ -20,10 +20,12 @@ export function RoomPanel({ room, playerName, maxDescLines = 3 }: Props) {
     infoParts.push(`NPCs: ${room.npcs.map((n) => n.name).join(", ")}`);
   }
   if (room.items.length > 0) {
-    const itemList = room.items.map((i) => {
-      const qty = i.quantity > 1 ? ` (x${i.quantity})` : "";
-      return `${i.name}${qty}`;
-    }).join(", ");
+    const itemList = room.items
+      .map((i) => {
+        const qty = i.quantity > 1 ? ` (x${i.quantity})` : "";
+        return `${i.name}${qty}`;
+      })
+      .join(", ");
     infoParts.push(`Items: ${itemList}`);
   }
 
@@ -38,16 +40,20 @@ export function RoomPanel({ room, playerName, maxDescLines = 3 }: Props) {
       paddingX={1}
       overflow="hidden"
     >
-      <Text bold color="cyan">{room.title}</Text>
+      <Text bold color="cyan">
+        {room.title}
+      </Text>
       <Box height={maxDescLines} overflow="hidden">
-        <Text color="white" wrap="wrap">{room.description.trim()}</Text>
+        <Text color="white" wrap="wrap">
+          {room.description.trim()}
+        </Text>
       </Box>
       <Box justifyContent="space-between">
         <Text>
           {infoParts.length > 0 ? (
             infoParts.map((part, i) => (
               <Text key={i}>
-                {i > 0 && <Text color="gray">  </Text>}
+                {i > 0 && <Text color="gray"> </Text>}
                 <Text color="yellow">{part}</Text>
               </Text>
             ))

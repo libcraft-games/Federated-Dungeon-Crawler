@@ -439,7 +439,8 @@ describe("multi-target combat", () => {
     const allText = narratives.map((n) => n.text).join("\n");
 
     // Should be in combat — either got combat_start or a narrative about being attacked
-    const inCombat = combatMsgs.length > 0 || allText.includes("attacks") || allText.includes("lunges");
+    const inCombat =
+      combatMsgs.length > 0 || allText.includes("attacks") || allText.includes("lunges");
     expect(inCombat).toBe(true);
 
     client.disconnect();
@@ -457,7 +458,8 @@ describe("multi-target combat", () => {
     const text = await client.commandAndWait("attack spider");
 
     // The narrative should mention at least one spider attack
-    const hasAction = text.includes("Spider") || text.includes("spider") || text.includes("not in combat");
+    const hasAction =
+      text.includes("Spider") || text.includes("spider") || text.includes("not in combat");
     expect(hasAction).toBe(true);
 
     client.disconnect();
@@ -483,10 +485,13 @@ describe("multi-target combat", () => {
       if (text.includes("not in combat")) break;
     }
 
-    const validOutcome = combatText.includes("turn to face")
-      || combatText.includes("slain") || combatText.includes("defeated")
-      || combatText.includes("darkness") || combatText.includes("respawn")
-      || combatText.includes("not in combat");
+    const validOutcome =
+      combatText.includes("turn to face") ||
+      combatText.includes("slain") ||
+      combatText.includes("defeated") ||
+      combatText.includes("darkness") ||
+      combatText.includes("respawn") ||
+      combatText.includes("not in combat");
     expect(validOutcome).toBe(true);
 
     client.disconnect();
@@ -540,8 +545,11 @@ describe("multi-target combat", () => {
 
     const text = await client.commandAndWait("defend");
 
-    const hasDefend = text.toLowerCase().includes("brace") || text.toLowerCase().includes("defend")
-      || text.toLowerCase().includes("spider") || text.includes("not in combat");
+    const hasDefend =
+      text.toLowerCase().includes("brace") ||
+      text.toLowerCase().includes("defend") ||
+      text.toLowerCase().includes("spider") ||
+      text.includes("not in combat");
     expect(hasDefend).toBe(true);
 
     client.disconnect();

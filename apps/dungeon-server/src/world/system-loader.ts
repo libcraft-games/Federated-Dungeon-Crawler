@@ -48,7 +48,7 @@ export async function loadGameSystem(dataPath: string): Promise<GameSystem> {
   const spellCount = Object.keys(system.spells).length;
 
   console.log(
-    `Game system loaded: ${attrCount} attributes, ${classCount} classes, ${raceCount} races, ${formulaCount} formulas, ${slotCount} equip slots, ${typeCount} item types, ${spellCount} spells`
+    `Game system loaded: ${attrCount} attributes, ${classCount} classes, ${raceCount} races, ${formulaCount} formulas, ${slotCount} equip slots, ${typeCount} item types, ${spellCount} spells`,
   );
 
   return system;

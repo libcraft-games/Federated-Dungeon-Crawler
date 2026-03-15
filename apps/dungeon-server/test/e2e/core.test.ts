@@ -49,7 +49,10 @@ describe("connection", () => {
 
   test("server system endpoint returns game system", async () => {
     const res = await fetch(`http://127.0.0.1:${port}/system`);
-    const data = (await res.json()) as { classes: Record<string, unknown>; races: Record<string, unknown> };
+    const data = (await res.json()) as {
+      classes: Record<string, unknown>;
+      races: Record<string, unknown>;
+    };
     expect(data.classes).toBeDefined();
     expect(data.races).toBeDefined();
   });

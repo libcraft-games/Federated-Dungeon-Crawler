@@ -25,8 +25,15 @@ export function handleQuestList(cmd: ParsedCommand, ctx: CommandContext): void {
     const npcDef = world.npcManager.getDefinition(npc.definitionId);
     const behavior = npcDef?.behavior ?? "";
     if (behavior === "questgiver" || behavior === "static" || behavior === "merchant") {
-      const available = world.questManager.getAvailableQuests(session.characterDid, npc.definitionId, session.state.level);
-      const completable = world.questManager.getCompletableQuests(session.characterDid, npc.definitionId);
+      const available = world.questManager.getAvailableQuests(
+        session.characterDid,
+        npc.definitionId,
+        session.state.level,
+      );
+      const completable = world.questManager.getCompletableQuests(
+        session.characterDid,
+        npc.definitionId,
+      );
       if (available.length > 0 || completable.length > 0) {
         const npcName = npc.name;
         const lines: string[] = [];
@@ -75,7 +82,11 @@ export function handleAcceptQuest(cmd: ParsedCommand, ctx: CommandContext): void
   // Find a matching available quest from any NPC in the room
   const npcs = world.npcManager.getAllInRoom(room.id);
   for (const npc of npcs) {
-    const available = world.questManager.getAvailableQuests(session.characterDid, npc.definitionId, session.state.level);
+    const available = world.questManager.getAvailableQuests(
+      session.characterDid,
+      npc.definitionId,
+      session.state.level,
+    );
     const match = available.find(({ def }) => def.name.toLowerCase().includes(questName));
     if (match) {
       world.questManager.acceptQuest(session.characterDid, match.questId);
@@ -90,7 +101,11 @@ export function handleAcceptQuest(cmd: ParsedCommand, ctx: CommandContext): void
     }
   }
 
-  sendNarrative(session, `No quest matching '${questName}' available here. Type 'quests' to see what's available.`, "error");
+  sendNarrative(
+    session,
+    `No quest matching '${questName}' available here. Type 'quests' to see what's available.`,
+    "error",
+  );
 }
 
 export function handleAbandonQuest(cmd: ParsedCommand, ctx: CommandContext): void {
@@ -121,7 +136,10 @@ export function handleTurnIn(cmd: ParsedCommand, ctx: CommandContext): void {
 
   const npcs = world.npcManager.getAllInRoom(room.id);
   for (const npc of npcs) {
-    const completable = world.questManager.getCompletableQuests(session.characterDid, npc.definitionId);
+    const completable = world.questManager.getCompletableQuests(
+      session.characterDid,
+      npc.definitionId,
+    );
     if (completable.length === 0) continue;
 
     // Complete the first completable quest
@@ -168,14 +186,21 @@ export function handleTurnIn(cmd: ParsedCommand, ctx: CommandContext): void {
 
     // Send character update for XP/gold changes
     const s = session.state;
-    session.send(encodeMessage({
-      type: "character_update",
-      hp: s.currentHp, maxHp: s.maxHp,
-      mp: s.currentMp, maxMp: s.maxMp,
-      ap: s.currentAp, maxAp: s.maxAp,
-      gold: s.gold, level: s.level,
-      xp: s.experience, xpToNext: xpToNextLevel(s.level, s.experience),
-    }));
+    session.send(
+      encodeMessage({
+        type: "character_update",
+        hp: s.currentHp,
+        maxHp: s.maxHp,
+        mp: s.currentMp,
+        maxMp: s.maxMp,
+        ap: s.currentAp,
+        maxAp: s.maxAp,
+        gold: s.gold,
+        level: s.level,
+        xp: s.experience,
+        xpToNext: xpToNextLevel(s.level, s.experience),
+      }),
+    );
 
     // Send inventory update if items were granted
     if (rewards?.items?.length) {
@@ -205,7 +230,7 @@ function showQuestLog(ctx: CommandContext): void {
       const obj = def.objectives[i];
       const prog = progress.objectives[i];
       const done = prog?.done ? "\u2713" : ">";
-      const prevDone = i === 0 || progress.objectives.slice(0, i).every(p => p.done);
+      const prevDone = i === 0 || progress.objectives.slice(0, i).every((p) => p.done);
       const locked = !prevDone && !prog?.done ? " [locked]" : "";
       const countStr = (obj.count ?? 1) > 1 ? ` (${prog?.current ?? 0}/${obj.count ?? 1})` : "";
       lines.push(`  ${done} ${obj.description}${countStr}${locked}`);
@@ -249,7 +274,7 @@ export function sendQuestUpdate(
   session: { send(data: string): void; characterDid: string },
   questManager: QuestManager,
   questId: string,
-  includeRewards = false
+  includeRewards = false,
 ): void {
   const payload = questManager.buildUpdatePayload(session.characterDid, questId, includeRewards);
   if (payload) session.send(encodeMessage(payload));

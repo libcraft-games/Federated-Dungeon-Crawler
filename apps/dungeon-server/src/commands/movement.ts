@@ -1,11 +1,10 @@
 import type { ParsedCommand } from "@realms/common";
 import { resolveDirection } from "@realms/common";
-import { encodeMessage } from "@realms/protocol";
 import type { CommandContext } from "./index.js";
 import { sendNarrative, sendRoomState, sendMapUpdate } from "./index.js";
 
 export function handleMovement(cmd: ParsedCommand, ctx: CommandContext): void {
-  const { session, world, sessions, broadcast } = ctx;
+  const { session, world, broadcast } = ctx;
   const dirStr = cmd.args[0];
 
   if (!dirStr) {
@@ -32,7 +31,11 @@ export function handleMovement(cmd: ParsedCommand, ctx: CommandContext): void {
   }
 
   if (exit.requiredLevel && session.state.level < exit.requiredLevel) {
-    sendNarrative(session, `You must be at least level ${exit.requiredLevel} to go that way.`, "error");
+    sendNarrative(
+      session,
+      `You must be at least level ${exit.requiredLevel} to go that way.`,
+      "error",
+    );
     return;
   }
 
@@ -56,7 +59,7 @@ export function handleMovement(cmd: ParsedCommand, ctx: CommandContext): void {
     broadcast(
       currentRoom.id,
       { type: "entity_leave", entity: playerEntity, room: currentRoom.id, direction },
-      session.sessionId
+      session.sessionId,
     );
   }
 
@@ -73,7 +76,7 @@ export function handleMovement(cmd: ParsedCommand, ctx: CommandContext): void {
       entity: { id: session.sessionId, name: session.name, type: "player" },
       room: targetRoom.id,
     },
-    session.sessionId
+    session.sessionId,
   );
 
   // Send room state and map update to the moving player
@@ -82,7 +85,8 @@ export function handleMovement(cmd: ParsedCommand, ctx: CommandContext): void {
 
   // Auto-aggro: hostile NPCs in the room attack the player
   if (!targetRoom.isSafe()) {
-    const hostiles = world.npcManager.getAllInRoom(targetRoom.id)
+    const hostiles = world.npcManager
+      .getAllInRoom(targetRoom.id)
       .filter((npc) => npc.behavior === "hostile" && npc.state === "idle");
     if (hostiles.length > 0) {
       const aggressor = hostiles[0];

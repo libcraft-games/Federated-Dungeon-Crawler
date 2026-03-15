@@ -101,7 +101,7 @@ export class TestClient {
   /** Wait for a specific message type, with timeout */
   async waitFor<T extends ServerMessage["type"]>(
     type: T,
-    timeoutMs: number = 2000
+    timeoutMs: number = 2000,
   ): Promise<Extract<ServerMessage, { type: T }>> {
     // Check already-received messages first
     const existing = this.messages.find((m) => m.type === type);
@@ -152,7 +152,9 @@ export class TestClient {
   }
 
   /** Get messages of a specific type */
-  getMessagesOfType<T extends ServerMessage["type"]>(type: T): Extract<ServerMessage, { type: T }>[] {
+  getMessagesOfType<T extends ServerMessage["type"]>(
+    type: T,
+  ): Extract<ServerMessage, { type: T }>[] {
     return this.messages.filter((m) => m.type === type) as Extract<ServerMessage, { type: T }>[];
   }
 
@@ -189,7 +191,7 @@ export async function startServer(opts?: {
       HOST: "127.0.0.1",
       BLUESKY_ENABLED: "false",
       DEV_MODE: devMode ? "true" : "false",
-      ...(opts?.env ?? {}),
+      ...opts?.env,
     },
     stdout: "pipe",
     stderr: "pipe",

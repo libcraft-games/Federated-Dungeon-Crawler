@@ -5,11 +5,11 @@
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",
-  "dependencies": {
-    "@realms/lexicons": "workspace:*"
-  },
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@realms/lexicons": "workspace:*"
   }
 }

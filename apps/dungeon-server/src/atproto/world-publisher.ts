@@ -156,14 +156,18 @@ export class WorldPublisher {
 
     console.log(
       `   Published world data: ${stats.areas} areas, ${stats.rooms} rooms, ` +
-      `${stats.items} items, ${stats.npcs} NPCs, ${stats.quests} quests, ${stats.recipes} recipes` +
-      (stats.portals > 0 ? `, ${stats.portals} portals` : ""),
+        `${stats.items} items, ${stats.npcs} NPCs, ${stats.quests} quests, ${stats.recipes} recipes` +
+        (stats.portals > 0 ? `, ${stats.portals} portals` : ""),
     );
 
     return { portalCount: stats.portals };
   }
 
-  private async putRecord(collection: string, rkey: string, record: Record<string, unknown>): Promise<void> {
+  private async putRecord(
+    collection: string,
+    rkey: string,
+    record: Record<string, unknown>,
+  ): Promise<void> {
     try {
       await this.agent.com.atproto.repo.putRecord({
         repo: this.did,
@@ -172,7 +176,10 @@ export class WorldPublisher {
         record,
       });
     } catch (err) {
-      console.warn(`   Failed to publish ${collection}/${rkey}:`, err instanceof Error ? err.message : err);
+      console.warn(
+        `   Failed to publish ${collection}/${rkey}:`,
+        err instanceof Error ? err.message : err,
+      );
     }
   }
 }

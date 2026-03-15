@@ -37,7 +37,11 @@ export class ServerIdentity {
   private signingKey!: Secp256k1Keypair;
   private jwtPrivateKey!: CryptoKey;
 
-  async initialize(config: AtProtoConfig, serverName: string, serverDescription: string): Promise<void> {
+  async initialize(
+    config: AtProtoConfig,
+    serverName: string,
+    serverDescription: string,
+  ): Promise<void> {
     this.agent = new AtpAgent({ service: config.pdsUrl });
 
     if (config.serverDid) {
@@ -95,13 +99,16 @@ export class ServerIdentity {
 
   private async initJwtKey(): Promise<void> {
     const rawKey = await this.signingKey.export();
-    this.jwtPrivateKey = await jose.importJWK({
-      kty: "EC",
-      crv: "secp256k1",
-      d: Buffer.from(rawKey).toString("base64url"),
-      x: Buffer.from(this.signingKey.publicKeyBytes().slice(1, 33)).toString("base64url"),
-      y: Buffer.from(this.signingKey.publicKeyBytes().slice(33, 65)).toString("base64url"),
-    }, "ES256K") as CryptoKey;
+    this.jwtPrivateKey = (await jose.importJWK(
+      {
+        kty: "EC",
+        crv: "secp256k1",
+        d: Buffer.from(rawKey).toString("base64url"),
+        x: Buffer.from(this.signingKey.publicKeyBytes().slice(1, 33)).toString("base64url"),
+        y: Buffer.from(this.signingKey.publicKeyBytes().slice(33, 65)).toString("base64url"),
+      },
+      "ES256K",
+    )) as CryptoKey;
   }
 
   /**
@@ -112,7 +119,11 @@ export class ServerIdentity {
     this.signingKey = await Secp256k1Keypair.create({ exportable: true });
   }
 
-  private async publishServerRecord(config: AtProtoConfig, serverName: string, serverDescription: string): Promise<void> {
+  private async publishServerRecord(
+    config: AtProtoConfig,
+    serverName: string,
+    serverDescription: string,
+  ): Promise<void> {
     try {
       await this.agent.com.atproto.repo.putRecord({
         repo: this.did,
@@ -147,7 +158,10 @@ export class ServerIdentity {
       .sign(this.jwtPrivateKey);
   }
 
-  async verifyTransferToken(jwt: string, expectedAudience: string): Promise<TransferPayload | null> {
+  async verifyTransferToken(
+    jwt: string,
+    expectedAudience: string,
+  ): Promise<TransferPayload | null> {
     try {
       // For incoming transfers, we need to resolve the source server's public key
       // from their DID document. For now, we extract the unverified payload
@@ -159,7 +173,7 @@ export class ServerIdentity {
       return {
         iss: payload.iss ?? "",
         sub: payload.sub ?? "",
-        aud: typeof payload.aud === "string" ? payload.aud : payload.aud?.[0] ?? "",
+        aud: typeof payload.aud === "string" ? payload.aud : (payload.aud?.[0] ?? ""),
         iat: payload.iat ?? 0,
         exp: payload.exp ?? 0,
         characterHash: (payload as Record<string, unknown>).characterHash as string,

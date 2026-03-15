@@ -9,7 +9,13 @@ interface Props {
 
 const ART_MAX_LINES = 6;
 
-function EnemyBar({ name, level, hp, maxHp, isTarget }: {
+function EnemyBar({
+  name,
+  level,
+  hp,
+  maxHp,
+  isTarget,
+}: {
   name: string;
   level: number;
   hp: number;
@@ -25,26 +31,33 @@ function EnemyBar({ name, level, hp, maxHp, isTarget }: {
 
   return (
     <Box>
-      <Text color={isTarget ? "red" : "gray"} bold={isTarget}>{marker} </Text>
-      <Text color={isTarget ? "white" : "gray"} bold={isTarget}>{name}</Text>
-      <Text color="gray"> (Lv.{level})  </Text>
+      <Text color={isTarget ? "red" : "gray"} bold={isTarget}>
+        {marker}{" "}
+      </Text>
+      <Text color={isTarget ? "white" : "gray"} bold={isTarget}>
+        {name}
+      </Text>
+      <Text color="gray"> (Lv.{level}) </Text>
       <Text color={hpColor}>{"█".repeat(filled)}</Text>
-      <Text color="gray" dimColor>{"░".repeat(empty)}</Text>
+      <Text color="gray" dimColor>
+        {"░".repeat(empty)}
+      </Text>
       <Text> </Text>
-      <Text color={hpColor} bold>{hp}</Text>
+      <Text color={hpColor} bold>
+        {hp}
+      </Text>
       <Text color="gray">/{maxHp}</Text>
     </Box>
   );
 }
 
-export function CombatPanel({ combat, width }: Props) {
+export function CombatPanel({ combat }: Props) {
   const { combatants, targetId } = combat;
   const target = combatants.find((c) => c.id === targetId) ?? combatants[0];
 
   // Layout: left side = art (if available), right side = description
   const hasArt = target?.art && target.art.length > 0;
   const artLines = hasArt ? target.art!.slice(0, ART_MAX_LINES) : [];
-  const artWidth = hasArt ? Math.max(...artLines.map((l) => l.length)) + 2 : 0;
 
   // Trim description to first sentence or first line
   const desc = target?.description?.trim().split("\n")[0] ?? "";
@@ -59,8 +72,12 @@ export function CombatPanel({ combat, width }: Props) {
     >
       {/* Header */}
       <Box justifyContent="space-between">
-        <Text bold color="red">COMBAT</Text>
-        <Text color="gray" dimColor>attack · defend · cast · flee · use</Text>
+        <Text bold color="red">
+          COMBAT
+        </Text>
+        <Text color="gray" dimColor>
+          attack · defend · cast · flee · use
+        </Text>
       </Box>
 
       {/* Enemy list with HP bars */}
@@ -81,13 +98,17 @@ export function CombatPanel({ combat, width }: Props) {
           {hasArt && (
             <Box flexDirection="column" marginRight={2}>
               {artLines.map((line, i) => (
-                <Text key={i} color="yellow">{line}</Text>
+                <Text key={i} color="yellow">
+                  {line}
+                </Text>
               ))}
             </Box>
           )}
           {desc && (
             <Box flexShrink={1}>
-              <Text color="gray" wrap="truncate-end">{desc}</Text>
+              <Text color="gray" wrap="truncate-end">
+                {desc}
+              </Text>
             </Box>
           )}
         </Box>
@@ -99,6 +120,6 @@ export function CombatPanel({ combat, width }: Props) {
 /** Height of the combat panel in rows */
 export function getCombatPanelHeight(combatantCount: number, hasArt: boolean): number {
   // borders(2) + header(1) + enemies + art/desc area
-  const artRows = hasArt ? ART_MAX_LINES : (1); // 1 for description line
+  const artRows = hasArt ? ART_MAX_LINES : 1; // 1 for description line
   return 2 + 1 + combatantCount + artRows;
 }
