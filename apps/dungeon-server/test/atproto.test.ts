@@ -407,6 +407,129 @@ describe("attestation signing", () => {
   });
 });
 
+// ─── Remote Attestation Verification ─────────────────────
+
+describe("remote attestation verification", () => {
+  let sourceServer: ServerIdentity;
+  let targetServer: ServerIdentity;
+
+  beforeAll(async () => {
+    sourceServer = new ServerIdentity();
+    sourceServer.did = "did:plc:sourceserver";
+    await sourceServer.initSigningKeyOnly();
+
+    targetServer = new ServerIdentity();
+    targetServer.did = "did:plc:targetserver";
+    await targetServer.initSigningKeyOnly();
+  });
+
+  test("target verifies attestation signed by source using source public key", async () => {
+    const attestation = await sourceServer.signAttestation("did:plc:player1", {
+      level: 10,
+      gold: 500,
+      itemsGranted: ["magic-sword"],
+    });
+
+    const valid = await targetServer.verifyRemoteAttestation(
+      attestation,
+      sourceServer.getPublicKeyBytes(),
+    );
+    expect(valid).toBe(true);
+  });
+
+  test("rejects attestation verified with wrong public key", async () => {
+    const attestation = await sourceServer.signAttestation("did:plc:player1", {
+      level: 5,
+    });
+
+    // Try to verify with target's own key (wrong key)
+    const valid = await targetServer.verifyRemoteAttestation(
+      attestation,
+      targetServer.getPublicKeyBytes(),
+    );
+    expect(valid).toBe(false);
+  });
+
+  test("rejects tampered attestation even with correct key", async () => {
+    const attestation = await sourceServer.signAttestation("did:plc:player1", {
+      level: 5,
+      gold: 100,
+    });
+
+    // Tamper with claims
+    attestation.claims.gold = 999999;
+
+    const valid = await targetServer.verifyRemoteAttestation(
+      attestation,
+      sourceServer.getPublicKeyBytes(),
+    );
+    expect(valid).toBe(false);
+  });
+
+  test("source can still verify its own attestations", async () => {
+    const attestation = await sourceServer.signAttestation("did:plc:player1", {
+      questsCompleted: ["save-the-village"],
+    });
+
+    const valid = await sourceServer.verifyAttestation(attestation);
+    expect(valid).toBe(true);
+  });
+
+  test("multiple attestations from same source all verify", async () => {
+    const att1 = await sourceServer.signAttestation("did:plc:player1", { level: 2 });
+    const att2 = await sourceServer.signAttestation("did:plc:player1", { gold: 50 });
+    const att3 = await sourceServer.signAttestation("did:plc:player2", {
+      itemsGranted: ["shield"],
+    });
+
+    const pubKey = sourceServer.getPublicKeyBytes();
+    expect(await targetServer.verifyRemoteAttestation(att1, pubKey)).toBe(true);
+    expect(await targetServer.verifyRemoteAttestation(att2, pubKey)).toBe(true);
+    expect(await targetServer.verifyRemoteAttestation(att3, pubKey)).toBe(true);
+  });
+});
+
+// ─── Public Key Serialization ────────────────────────────
+
+describe("signing key serialization", () => {
+  test("public key bytes round-trip through base64url", async () => {
+    const server = new ServerIdentity();
+    server.did = "did:plc:roundtrip";
+    await server.initSigningKeyOnly();
+
+    const keyBytes = server.getPublicKeyBytes();
+    const encoded = Buffer.from(keyBytes).toString("base64url");
+    const decoded = Buffer.from(encoded, "base64url");
+
+    expect(decoded.length).toBe(keyBytes.length);
+    expect(Buffer.from(keyBytes).equals(decoded)).toBe(true);
+  });
+
+  test("attestation verified via serialized key", async () => {
+    const source = new ServerIdentity();
+    source.did = "did:plc:source";
+    await source.initSigningKeyOnly();
+
+    const target = new ServerIdentity();
+    target.did = "did:plc:target";
+    await target.initSigningKeyOnly();
+
+    // Simulate: source publishes key as base64url
+    const publishedKey = Buffer.from(source.getPublicKeyBytes()).toString("base64url");
+
+    // Target resolves it back
+    const resolvedKey = new Uint8Array(Buffer.from(publishedKey, "base64url"));
+
+    const attestation = await source.signAttestation("did:plc:player", {
+      level: 7,
+      gold: 300,
+    });
+
+    const valid = await target.verifyRemoteAttestation(attestation, resolvedKey);
+    expect(valid).toBe(true);
+  });
+});
+
 // ─── Attestation Tracker ──────────────────────
 
 describe("attestation tracker", () => {

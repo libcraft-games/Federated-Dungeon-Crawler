@@ -10,6 +10,8 @@ export interface KnownServer {
   xrpcEndpoint?: string;
   levelRange?: { min?: number; max?: number };
   trustPolicy?: string;
+  /** Base64url-encoded secp256k1 public key for verifying attestations and transfer JWTs */
+  signingKey?: string;
   lastSeen: number; // Date.now()
 }
 
@@ -49,6 +51,7 @@ export class FederationManager {
           endpoint: `${this.atprotoConfig.publicUrl}/ws`,
           xrpcEndpoint: `${this.atprotoConfig.publicUrl}/xrpc`,
           trustPolicy: this.federationConfig.trustPolicy,
+          signingKey: Buffer.from(this.serverIdentity.getPublicKeyBytes()).toString("base64url"),
           portalCount,
           playerCount,
           createdAt: new Date().toISOString(),
@@ -81,6 +84,7 @@ export class FederationManager {
           endpoint: `${this.atprotoConfig.publicUrl}/ws`,
           xrpcEndpoint: `${this.atprotoConfig.publicUrl}/xrpc`,
           trustPolicy: this.federationConfig.trustPolicy,
+          signingKey: Buffer.from(this.serverIdentity.getPublicKeyBytes()).toString("base64url"),
           portalCount: this.lastPortalCount,
           playerCount: count,
           createdAt: new Date().toISOString(),
@@ -206,6 +210,7 @@ export class FederationManager {
           xrpcEndpoint?: string;
           levelRange?: { min?: number; max?: number };
           trustPolicy?: string;
+          signingKey?: string;
         };
       };
 
@@ -217,6 +222,7 @@ export class FederationManager {
         xrpcEndpoint: data.value.xrpcEndpoint,
         levelRange: data.value.levelRange,
         trustPolicy: data.value.trustPolicy,
+        signingKey: data.value.signingKey,
         lastSeen: Date.now(),
       };
     } catch (err) {

@@ -53,6 +53,11 @@ type Main = {
   portalCount?: number;
 
   /**
+   * Base64url-encoded secp256k1 public key bytes used for attestation signatures and transfer JWTs
+   */
+  signingKey?: string;
+
+  /**
    * Current number of connected players (updated periodically)
    */
   playerCount?: number;
@@ -79,6 +84,7 @@ const main = l.record<"literal:self", Main>(
       }>(),
     ),
     portalCount: l.optional(l.integer()),
+    signingKey: l.optional(l.string()),
     playerCount: l.optional(l.integer()),
     createdAt: l.string({ format: "datetime" }),
     updatedAt: l.optional(l.string({ format: "datetime" })),

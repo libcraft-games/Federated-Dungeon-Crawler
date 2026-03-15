@@ -69,6 +69,7 @@ if (!DEV_MODE && config.atproto.serverPassword) {
     );
     await federation.publishRegistration(portalCount, 0);
     await federation.seedFromConfig();
+    transferHandler.setFederationManager(federation);
 
     // Cross-server chat relay
     chatRelay = new ChatRelayService(serverIdentity, federation, sessions);

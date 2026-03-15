@@ -1,9 +1,10 @@
 import type { CharacterProfile } from "@realms/lexicons";
-import type { ServerIdentity } from "../atproto/server-identity.js";
+import type { ServerIdentity, SignedAttestation } from "../atproto/server-identity.js";
 import type { SessionManager } from "../server/session-manager.js";
 import type { WorldManager } from "../world/world-manager.js";
 import type { FederationConfig, AtProtoConfig } from "../config.js";
 import type { AdaptationRequired } from "@realms/protocol";
+import type { FederationManager } from "./federation-manager.js";
 import { buildAttributes, computeDerivedStats } from "@realms/common";
 
 export interface TransferInput {
@@ -58,14 +59,31 @@ export class TransferHandler {
     private federationConfig: FederationConfig,
     private atprotoConfig: AtProtoConfig,
     private serverName: string,
+    private federation?: FederationManager,
   ) {}
 
+  setFederationManager(fm: FederationManager): void {
+    this.federation = fm;
+  }
+
   async handleTransfer(input: TransferInput): Promise<TransferOutput> {
-    // 1. Verify transfer JWT
-    const payload = await this.serverIdentity.verifyTransferToken(
-      input.token,
-      this.serverIdentity.did,
-    );
+    // 1. Resolve the source server's signing key for verification
+    const sourceServerKey = await this.resolveSourceSigningKey(input);
+    let payload;
+
+    if (sourceServerKey) {
+      // Verify JWT with the source server's published public key
+      payload = await this.serverIdentity.verifyRemoteTransferToken(
+        input.token,
+        this.serverIdentity.did,
+        sourceServerKey,
+      );
+    } else {
+      // Fall back to decoding without cryptographic verification
+      // (source server may not have published a signing key yet)
+      payload = await this.serverIdentity.verifyTransferToken(input.token, this.serverIdentity.did);
+    }
+
     if (!payload) {
       return { accepted: false, reason: "Invalid transfer token" };
     }
@@ -88,7 +106,19 @@ export class TransferHandler {
       return { accepted: false, reason: "Character data was tampered with" };
     }
 
-    // 5. Apply trust policy to incoming character
+    // 5. Verify incoming attestations if source key is available
+    if (sourceServerKey && input.attestations && input.attestations.length > 0) {
+      const verified = await this.verifyAttestations(
+        input.attestations as SignedAttestation[],
+        payload.iss,
+        sourceServerKey,
+      );
+      if (!verified) {
+        return { accepted: false, reason: "Attestation verification failed" };
+      }
+    }
+
+    // 6. Apply trust policy to incoming character
     const character = input.character as unknown as CharacterProfile & {
       gold?: number;
       inventory?: unknown[];
@@ -99,7 +129,7 @@ export class TransferHandler {
 
     const trustedCharacter = this.applyTrustPolicy(character, payload.iss);
 
-    // 6. Check level cap
+    // 7. Check level cap
     if (trustedCharacter.level > this.federationConfig.maxAcceptedLevel) {
       return {
         accepted: false,
@@ -107,7 +137,7 @@ export class TransferHandler {
       };
     }
 
-    // 7. Check compatibility and adapt or flag for player choice
+    // 8. Check compatibility and adapt or flag for player choice
     const localSystem = this.world.gameSystem;
     const needsClass = !localSystem.classes[trustedCharacter.class];
     const needsRace = !localSystem.races[trustedCharacter.race];
@@ -122,13 +152,13 @@ export class TransferHandler {
 
     const adaptedProfile = this.buildAdaptedProfile(trustedCharacter, tempClassId, tempRaceId);
 
-    // 8. Resolve spawn room
+    // 9. Resolve spawn room
     const targetRoom = payload.targetRoom;
     const spawnRoom = this.world.getRoom(targetRoom)
       ? targetRoom
       : this.world.getDefaultSpawnRoom();
 
-    // 9. Create session
+    // 10. Create session
     const session = this.sessionManager.createSession(
       payload.sub,
       adaptedProfile,
@@ -136,7 +166,7 @@ export class TransferHandler {
       this.world.gameSystem.formulas,
     );
 
-    // 10. If adaptation needed, store pending and let the WS open handler prompt
+    // 11. If adaptation needed, store pending and let the WS open handler prompt
     if (needsClass || needsRace) {
       this.pendingAdaptations.set(session.sessionId, {
         originalClass: trustedCharacter.class,
@@ -249,6 +279,56 @@ export class TransferHandler {
     };
 
     this.pendingAdaptations.delete(sessionId);
+    return true;
+  }
+
+  /**
+   * Resolve the source server's secp256k1 public key from their federation
+   * registration record (via the FederationManager cache or PDS lookup).
+   */
+  private async resolveSourceSigningKey(input: TransferInput): Promise<Uint8Array | null> {
+    if (!this.federation) return null;
+
+    try {
+      // Decode JWT header to get the issuer without verifying
+      const parts = input.token.split(".");
+      if (parts.length < 2) return null;
+      const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString()) as {
+        iss?: string;
+      };
+      if (!payload.iss) return null;
+
+      const server = await this.federation.resolveServer(payload.iss);
+      if (!server?.signingKey) return null;
+
+      return Buffer.from(server.signingKey, "base64url");
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Verify all incoming attestations against the source server's public key.
+   * Returns false if any attestation fails verification.
+   */
+  private async verifyAttestations(
+    attestations: SignedAttestation[],
+    expectedIssuer: string,
+    publicKeyBytes: Uint8Array,
+  ): Promise<boolean> {
+    for (const att of attestations) {
+      // Attestation issuer must match the transfer JWT issuer
+      if (att.iss !== expectedIssuer) {
+        console.warn(`   Attestation issuer mismatch: ${att.iss} !== ${expectedIssuer}`);
+        return false;
+      }
+
+      const valid = await this.serverIdentity.verifyRemoteAttestation(att, publicKeyBytes);
+      if (!valid) {
+        console.warn(`   Attestation signature verification failed for ${att.sub}`);
+        return false;
+      }
+    }
     return true;
   }
 

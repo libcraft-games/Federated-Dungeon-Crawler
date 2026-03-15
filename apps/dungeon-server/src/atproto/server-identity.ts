@@ -162,11 +162,33 @@ export class ServerIdentity {
     jwt: string,
     expectedAudience: string,
   ): Promise<TransferPayload | null> {
+    return this.verifyTransferTokenWithKey(jwt, expectedAudience, this.jwtPrivateKey);
+  }
+
+  /**
+   * Verify a transfer JWT signed by a remote server using their public key.
+   * The publicKeyBytes should come from the server's federation registration record.
+   */
+  async verifyRemoteTransferToken(
+    jwt: string,
+    expectedAudience: string,
+    publicKeyBytes: Uint8Array,
+  ): Promise<TransferPayload | null> {
     try {
-      // For incoming transfers, we need to resolve the source server's public key
-      // from their DID document. For now, we extract the unverified payload
-      // and the full verification happens in the transfer handler.
-      const { payload } = await jose.jwtVerify(jwt, this.jwtPrivateKey, {
+      const jwtPublicKey = await this.importRemotePublicKey(publicKeyBytes);
+      return this.verifyTransferTokenWithKey(jwt, expectedAudience, jwtPublicKey);
+    } catch {
+      return null;
+    }
+  }
+
+  private async verifyTransferTokenWithKey(
+    jwt: string,
+    expectedAudience: string,
+    key: CryptoKey,
+  ): Promise<TransferPayload | null> {
+    try {
+      const { payload } = await jose.jwtVerify(jwt, key, {
         audience: expectedAudience,
       });
 
@@ -204,19 +226,54 @@ export class ServerIdentity {
 
   /**
    * Verify an attestation signature against our own public key.
-   * For cross-server verification, the source server's public key would be
-   * resolved from its DID document. For now, verifies against our own key
-   * (useful for round-trip tests and self-signed attestations).
    */
   async verifyAttestation(attestation: SignedAttestation): Promise<boolean> {
+    return this.verifyAttestationWithKey(attestation, this.signingKey.publicKeyBytes());
+  }
+
+  /**
+   * Verify an attestation signed by a remote server using their public key.
+   * The publicKeyBytes should come from the server's federation registration record.
+   */
+  async verifyRemoteAttestation(
+    attestation: SignedAttestation,
+    publicKeyBytes: Uint8Array,
+  ): Promise<boolean> {
+    return this.verifyAttestationWithKey(attestation, publicKeyBytes);
+  }
+
+  private async verifyAttestationWithKey(
+    attestation: SignedAttestation,
+    publicKeyBytes: Uint8Array,
+  ): Promise<boolean> {
     try {
       const { sig, ...payload } = attestation;
       const data = new TextEncoder().encode(JSON.stringify(payload));
       const sigBytes = Buffer.from(sig, "base64url");
-      return verifySig(this.signingKey.publicKeyBytes(), data, sigBytes);
+      return verifySig(publicKeyBytes, data, sigBytes);
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Import a remote server's base64url-encoded public key bytes into a CryptoKey
+   * suitable for jose JWT verification.
+   */
+  private async importRemotePublicKey(publicKeyBytes: Uint8Array): Promise<CryptoKey> {
+    // secp256k1 uncompressed public key is 65 bytes: 0x04 || x (32) || y (32)
+    const x = publicKeyBytes.slice(1, 33);
+    const y = publicKeyBytes.slice(33, 65);
+
+    return (await jose.importJWK(
+      {
+        kty: "EC",
+        crv: "secp256k1",
+        x: Buffer.from(x).toString("base64url"),
+        y: Buffer.from(y).toString("base64url"),
+      },
+      "ES256K",
+    )) as CryptoKey;
   }
 
   getPublicKeyBytes(): Uint8Array {

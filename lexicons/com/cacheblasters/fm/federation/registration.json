@@ -49,6 +49,10 @@
             "type": "integer",
             "description": "Number of outbound portals to other servers"
           },
+          "signingKey": {
+            "type": "string",
+            "description": "Base64url-encoded secp256k1 public key bytes used for attestation signatures and transfer JWTs"
+          },
           "playerCount": {
             "type": "integer",
             "description": "Current number of connected players (updated periodically)"
