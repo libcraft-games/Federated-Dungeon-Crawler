@@ -1,0 +1,33 @@
+# Gathering nodes for Dark Forest
+# Each node defines what can be harvested in a room and how long it takes to respawn.
+
+nodes:
+  - id: luminaris-caps
+    name: Luminaris Caps
+    description: >
+      Clusters of glowing blue-green mushrooms growing from the mossy ground.
+      They come away easily with a careful twist.
+    room: mushroom-grove
+    respawnSeconds: 90
+    yields:
+      - itemId: glowing-mushroom
+        chance: 90
+        min: 1
+        max: 3
+      - itemId: dreamcap-mushroom
+        chance: 15
+        min: 1
+        max: 1
+
+  - id: spider-webbing
+    name: Spider Webbing
+    description: >
+      Dense sheets of thick silk stretched between the trees. With care, you
+      can harvest usable strands without disturbing the spiders — mostly.
+    room: spider-hollow
+    respawnSeconds: 120
+    yields:
+      - itemId: spider-silk
+        chance: 80
+        min: 1
+        max: 2
