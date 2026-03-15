@@ -1,6 +1,7 @@
 import React from "react";
 import { Box, Text } from "ink";
-import type { GameState, MapState } from "../hooks/use-game-state.js";
+import type { GameState } from "../hooks/use-game-state.js";
+import { SLOT_LABELS, hpLevel, viewportMap } from "@realms/client-common";
 
 interface Props {
   state: GameState;
@@ -10,13 +11,10 @@ interface Props {
 
 const CONTENT_ROWS = 8;
 
-const SLOT_LABELS: Record<string, string> = {
-  mainHand: "Weap",
-  offHand: "Off",
-  head: "Head",
-  body: "Body",
-  feet: "Feet",
-  ring: "Ring",
+const HP_COLORS: Record<string, string> = {
+  high: "green",
+  mid: "yellow",
+  low: "red",
 };
 
 function Bar({
@@ -81,33 +79,6 @@ function Divider() {
   );
 }
 
-/** Viewport the map grid, centered on the cursor position */
-function viewportMap(map: MapState, viewWidth: number, viewHeight: number): string[] {
-  const { grid, cursorRow, cursorCol } = map;
-
-  // Calculate viewport window centered on cursor
-  const halfW = Math.floor(viewWidth / 2);
-  const halfH = Math.floor(viewHeight / 2);
-
-  const startRow = Math.max(0, cursorRow - halfH);
-  const startCol = Math.max(0, cursorCol - halfW);
-
-  const lines: string[] = [];
-  for (let r = 0; r < viewHeight; r++) {
-    const gridRow = startRow + r;
-    if (gridRow >= grid.length) {
-      lines.push("");
-      continue;
-    }
-    const row = grid[gridRow] ?? "";
-    // Slice the visible columns
-    const sliced = row.length > startCol ? row.slice(startCol, startCol + viewWidth) : "";
-    lines.push(sliced);
-  }
-
-  return lines;
-}
-
 export function InfoPanel({ state, playerName, width }: Props) {
   const { stats, inventory, equipment, map } = state;
 
@@ -141,13 +112,7 @@ export function InfoPanel({ state, playerName, width }: Props) {
               label="HP"
               current={stats.hp}
               max={stats.maxHp}
-              color={
-                stats.hp <= stats.maxHp * 0.25
-                  ? "red"
-                  : stats.hp <= stats.maxHp * 0.5
-                    ? "yellow"
-                    : "green"
-              }
+              color={HP_COLORS[hpLevel(stats.hp, stats.maxHp)]}
             />
             <StatRow label="MP" current={stats.mp} max={stats.maxMp} color="blue" />
             <StatRow label="AP" current={stats.ap} max={stats.maxAp} color="magenta" />

@@ -1,0 +1,22 @@
+{
+  "name": "@realms/client-common",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@realms/common": "workspace:*",
+    "@realms/protocol": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  }
+}

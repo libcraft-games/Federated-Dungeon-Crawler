@@ -1,5 +1,6 @@
 import React from "react";
 import { Box, Text, useInput } from "ink";
+import { SPLASH_ART, SPLASH_SUBTITLE, SPLASH_BYLINE } from "@realms/client-common";
 
 interface Props {
   onContinue: () => void;
@@ -12,36 +13,18 @@ export function SplashScreen({ onContinue }: Props) {
 
   return (
     <Box flexDirection="column" alignItems="center" justifyContent="center" height={24}>
-      <Box height={2} />
+      <Box height={1} />
 
-      <Text color="cyan" bold>
-        {"  ╔═══════════════════════════════════╗"}
-      </Text>
-      <Text color="cyan" bold>
-        {"  ║                                   ║"}
-      </Text>
-      <Text color="cyan" bold>
-        {"  ║       F E D E R A T E D           ║"}
-      </Text>
-      <Text color="cyan" bold>
-        {"  ║           R E A L M S             ║"}
-      </Text>
-      <Text color="cyan" bold>
-        {"  ║                                   ║"}
-      </Text>
-      <Text color="cyan" bold>
-        {"  ╚═══════════════════════════════════╝"}
-      </Text>
+      {SPLASH_ART.map((line, i) => (
+        <Text key={i} color="cyan" bold>
+          {"  " + line}
+        </Text>
+      ))}
 
       <Box height={1} />
 
-      <Text color="white">Federated MUD on the AT Protocol</Text>
-
-      <Box height={1} />
-
-      <Text color="gray" dimColor>
-        CLI by OtherwiseJunk
-      </Text>
+      <Text color="white">{SPLASH_SUBTITLE}</Text>
+      <Text color="gray">{SPLASH_BYLINE}</Text>
 
       <Box height={3} />
 

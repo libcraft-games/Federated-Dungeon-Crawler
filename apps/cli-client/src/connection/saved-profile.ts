@@ -1,14 +1,8 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
-
-export interface SavedProfile {
-  handle: string;
-  did: string;
-  pdsUrl: string;
-  lastServer?: string;
-  lastServerName?: string;
-}
+import type { SavedProfile } from "@realms/client-common";
+export type { SavedProfile } from "@realms/client-common";
 
 const PROFILE_DIR = join(homedir(), ".federated-realms");
 const PROFILE_PATH = join(PROFILE_DIR, "profile.json");
