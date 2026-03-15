@@ -14,6 +14,9 @@
     "test:unit": "bun test --recursive packages/",
     "test:e2e": "bun test --recursive apps/dungeon-server/test/",
     "typecheck": "tsc --noEmit",
+    "lint": "oxlint --deny warnings packages/ apps/",
+    "fmt": "oxfmt --write packages/ apps/",
+    "fmt:check": "oxfmt --check packages/ apps/",
     "clean": "rm -rf packages/*/dist apps/*/dist"
   },
   "devDependencies": {
