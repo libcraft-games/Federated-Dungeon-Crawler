@@ -1,10 +1,22 @@
 import type { CharacterProfile, FormulaDef } from "@realms/lexicons";
 import { CharacterSession, type SessionData } from "../entities/character-session.js";
 import type { ServerWebSocket } from "bun";
+import type { ServerIdentity } from "../atproto/server-identity.js";
 
 export class SessionManager {
   private sessions = new Map<string, CharacterSession>();
   private didToSession = new Map<string, string>();
+  private serverIdentity?: ServerIdentity;
+
+  /** Set once during startup so all sessions get attestation tracking */
+  setServerIdentity(identity: ServerIdentity): void {
+    if (this.serverIdentity) {
+      console.warn("   ⚠  Server identity already set on SessionManager — this should only happen once during startup");
+      console.warn("   Ignoring duplicate setServerIdentity call");
+      return;
+    }
+    this.serverIdentity = identity;
+  }
 
   createSession(characterDid: string, profile: CharacterProfile, spawnRoom: string, formulas: Record<string, FormulaDef> = {}): CharacterSession {
     // If player already has a session, remove it
@@ -14,7 +26,7 @@ export class SessionManager {
     }
 
     const sessionId = crypto.randomUUID();
-    const session = new CharacterSession(sessionId, characterDid, profile, spawnRoom, formulas);
+    const session = new CharacterSession(sessionId, characterDid, profile, spawnRoom, formulas, this.serverIdentity);
     this.sessions.set(sessionId, session);
     this.didToSession.set(characterDid, sessionId);
     return session;
