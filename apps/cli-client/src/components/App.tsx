@@ -57,6 +57,34 @@ export function App() {
 
   const handleAccountDone = useCallback((result: AccountResult) => {
     setAccount(result);
+
+    // If signup already resolved a server (create-account flow), skip ServerSelect
+    if (result.serverUrl && result.serverInfo) {
+      setServerUrl(result.serverUrl);
+      setServerInfo(result.serverInfo);
+
+      // Save profile with server info
+      saveProfile({
+        handle: result.handle,
+        did: result.did ?? "",
+        pdsUrl: result.pdsUrl ?? "",
+        lastServer: result.serverUrl,
+        lastServerName: result.serverInfo.name,
+      });
+
+      // Fetch system data for character creation
+      fetch(`${result.serverUrl}/system`)
+        .then((res) => res.json())
+        .then((data) => {
+          setSystem(data as SystemData);
+          setPhase("create");
+        })
+        .catch(() => {
+          setPhase("play");
+        });
+      return;
+    }
+
     setPhase("server");
   }, []);
 
