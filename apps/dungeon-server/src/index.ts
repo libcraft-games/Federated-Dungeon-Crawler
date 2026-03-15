@@ -200,6 +200,18 @@ const server = Bun.serve<SessionData>({
   async fetch(req, server) {
     const url = new URL(req.url);
 
+    // ── CORS preflight ──
+    if (req.method === "OPTIONS") {
+      return new Response(null, {
+        status: 204,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        },
+      });
+    }
+
     // ── WebSocket upgrade ──
     if (url.pathname === "/ws") {
       const sessionId = url.searchParams.get("session");
@@ -240,89 +252,152 @@ const server = Bun.serve<SessionData>({
       );
     }
 
-    // ── OAuth routes ──
+    // ── HTTP routes (all get CORS headers) ──
+    const httpResponse = await (async (): Promise<Response> => {
+      // ── OAuth routes ──
 
-    // OAuth client metadata (served for AT Proto client discovery)
-    if (url.pathname === "/oauth/client-metadata.json") {
-      return Response.json(oauthClient.getClientMetadata(config.atproto.publicUrl));
-    }
-
-    // Start OAuth flow
-    if (url.pathname === "/auth/login" && req.method === "GET") {
-      const handle = url.searchParams.get("handle");
-      if (!handle) {
-        return Response.json({ error: "handle parameter required" }, { status: 400 });
+      // OAuth client metadata (served for AT Proto client discovery)
+      if (url.pathname === "/oauth/client-metadata.json") {
+        return Response.json(oauthClient.getClientMetadata(config.atproto.publicUrl));
       }
-      try {
-        const authUrl = await oauthClient.authorize(handle);
-        return Response.json({ url: authUrl.toString() });
-      } catch (err) {
-        return Response.json(
-          { error: err instanceof Error ? err.message : "OAuth failed" },
-          { status: 500 },
-        );
-      }
-    }
 
-    // OAuth callback
-    if (url.pathname === "/oauth/callback") {
-      try {
-        const { session: oauthSession, agent } = await oauthClient.callback(url.searchParams);
-        const did = oauthSession.did;
-
-        // Check if player has a character on this server
-        const existingProfile = await pdsClient.loadCharacter(agent, did);
-        if (existingProfile) {
-          // Returning player — create game session
-          const gameSession = sessions.createSession(
-            did,
-            existingProfile,
-            world.getDefaultSpawnRoom(),
-            world.gameSystem.formulas,
-          );
-          return Response.json({
-            sessionId: gameSession.sessionId,
-            websocketUrl: `${config.atproto.publicUrl.replace(/^http/, "ws")}/ws?session=${gameSession.sessionId}`,
-            spawnRoom: gameSession.currentRoom,
-            characterState: gameSession.state,
-          });
+      // Start OAuth flow
+      if (url.pathname === "/auth/login" && req.method === "GET") {
+        const handle = url.searchParams.get("handle");
+        if (!handle) {
+          return Response.json({ error: "handle parameter required" }, { status: 400 });
         }
-
-        // New player — needs character creation
-        return Response.json({
-          needsCharacter: true,
-          did,
-          gameSystem: world.gameSystem,
-        });
-      } catch (err) {
-        return Response.json(
-          { error: err instanceof Error ? err.message : "Callback failed" },
-          { status: 500 },
-        );
-      }
-    }
-
-    // ── XRPC endpoints ──
-
-    // Connect: authenticate and load or prompt character creation
-    if (url.pathname === "/xrpc/com.cacheblasters.fm.action.connect" && req.method === "POST") {
-      try {
-        const body = (await req.json()) as { did: string };
-        if (!body.did) {
-          return Response.json({ error: "did is required" }, { status: 400 });
-        }
-
-        // Try to restore OAuth session and load character
-        const agent = await oauthClient.restore(body.did);
-        if (!agent) {
+        try {
+          const authUrl = await oauthClient.authorize(handle);
+          return Response.json({ url: authUrl.toString() });
+        } catch (err) {
           return Response.json(
-            { error: "No valid session. Please authenticate first." },
-            { status: 401 },
+            { error: err instanceof Error ? err.message : "OAuth failed" },
+            { status: 500 },
           );
         }
+      }
 
-        const profile = await pdsClient.loadCharacter(agent, body.did);
-        if (profile) {
+      // OAuth callback
+      if (url.pathname === "/oauth/callback") {
+        try {
+          const { session: oauthSession, agent } = await oauthClient.callback(url.searchParams);
+          const did = oauthSession.did;
+
+          // Check if player has a character on this server
+          const existingProfile = await pdsClient.loadCharacter(agent, did);
+          if (existingProfile) {
+            // Returning player — create game session
+            const gameSession = sessions.createSession(
+              did,
+              existingProfile,
+              world.getDefaultSpawnRoom(),
+              world.gameSystem.formulas,
+            );
+            return Response.json({
+              sessionId: gameSession.sessionId,
+              websocketUrl: `${config.atproto.publicUrl.replace(/^http/, "ws")}/ws?session=${gameSession.sessionId}`,
+              spawnRoom: gameSession.currentRoom,
+              characterState: gameSession.state,
+            });
+          }
+
+          // New player — needs character creation
+          return Response.json({
+            needsCharacter: true,
+            did,
+            gameSystem: world.gameSystem,
+          });
+        } catch (err) {
+          return Response.json(
+            { error: err instanceof Error ? err.message : "Callback failed" },
+            { status: 500 },
+          );
+        }
+      }
+
+      // ── XRPC endpoints ──
+
+      // Connect: authenticate and load or prompt character creation
+      if (url.pathname === "/xrpc/com.cacheblasters.fm.action.connect" && req.method === "POST") {
+        try {
+          const body = (await req.json()) as { did: string };
+          if (!body.did) {
+            return Response.json({ error: "did is required" }, { status: 400 });
+          }
+
+          // Try to restore OAuth session and load character
+          const agent = await oauthClient.restore(body.did);
+          if (!agent) {
+            return Response.json(
+              { error: "No valid session. Please authenticate first." },
+              { status: 401 },
+            );
+          }
+
+          const profile = await pdsClient.loadCharacter(agent, body.did);
+          if (profile) {
+            const gameSession = sessions.createSession(
+              body.did,
+              profile,
+              world.getDefaultSpawnRoom(),
+              world.gameSystem.formulas,
+            );
+            return Response.json({
+              sessionId: gameSession.sessionId,
+              websocketUrl: `${config.atproto.publicUrl.replace(/^http/, "ws")}/ws?session=${gameSession.sessionId}`,
+              spawnRoom: gameSession.currentRoom,
+              characterState: gameSession.state,
+            });
+          }
+
+          // New player
+          return Response.json({
+            needsCharacter: true,
+            gameSystem: world.gameSystem,
+          });
+        } catch (err) {
+          return Response.json(
+            { error: err instanceof Error ? err.message : "Connect failed" },
+            { status: 500 },
+          );
+        }
+      }
+
+      // Create character: build a new character and write to PDS
+      if (
+        url.pathname === "/xrpc/com.cacheblasters.fm.action.createCharacter" &&
+        req.method === "POST"
+      ) {
+        try {
+          const body = (await req.json()) as {
+            did: string;
+            name: string;
+            classId: string;
+            raceId: string;
+          };
+          if (!body.did || !body.name || !body.classId || !body.raceId) {
+            return Response.json(
+              { error: "did, name, classId, and raceId are required" },
+              { status: 400 },
+            );
+          }
+
+          const agent = await oauthClient.restore(body.did);
+          if (!agent) {
+            return Response.json(
+              { error: "No valid session. Please authenticate first." },
+              { status: 401 },
+            );
+          }
+
+          // Build character profile using this server's game system
+          const profile = buildCharacterProfile(body.name, body.classId, body.raceId);
+
+          // Write to player's PDS
+          await pdsClient.saveCharacter(agent, body.did, profile);
+
+          // Create game session
           const gameSession = sessions.createSession(
             body.did,
             profile,
@@ -335,217 +410,161 @@ const server = Bun.serve<SessionData>({
             spawnRoom: gameSession.currentRoom,
             characterState: gameSession.state,
           });
-        }
-
-        // New player
-        return Response.json({
-          needsCharacter: true,
-          gameSystem: world.gameSystem,
-        });
-      } catch (err) {
-        return Response.json(
-          { error: err instanceof Error ? err.message : "Connect failed" },
-          { status: 500 },
-        );
-      }
-    }
-
-    // Create character: build a new character and write to PDS
-    if (
-      url.pathname === "/xrpc/com.cacheblasters.fm.action.createCharacter" &&
-      req.method === "POST"
-    ) {
-      try {
-        const body = (await req.json()) as {
-          did: string;
-          name: string;
-          classId: string;
-          raceId: string;
-        };
-        if (!body.did || !body.name || !body.classId || !body.raceId) {
+        } catch (err) {
           return Response.json(
-            { error: "did, name, classId, and raceId are required" },
-            { status: 400 },
+            { error: err instanceof Error ? err.message : "Character creation failed" },
+            { status: 500 },
           );
         }
+      }
 
-        const agent = await oauthClient.restore(body.did);
-        if (!agent) {
+      // Federation: receive character transfer from another server
+      if (
+        url.pathname === "/xrpc/com.cacheblasters.fm.federation.transfer" &&
+        req.method === "POST"
+      ) {
+        try {
+          const body = (await req.json()) as {
+            token: string;
+            character: Record<string, unknown>;
+            attestations?: unknown[];
+          };
+          if (!body.token || !body.character) {
+            return Response.json({ error: "token and character are required" }, { status: 400 });
+          }
+          const result = await transferHandler.handleTransfer(body);
+          return Response.json(result);
+        } catch (err) {
           return Response.json(
-            { error: "No valid session. Please authenticate first." },
-            { status: 401 },
+            { error: err instanceof Error ? err.message : "Transfer failed" },
+            { status: 500 },
           );
         }
-
-        // Build character profile using this server's game system
-        const profile = buildCharacterProfile(body.name, body.classId, body.raceId);
-
-        // Write to player's PDS
-        await pdsClient.saveCharacter(agent, body.did, profile);
-
-        // Create game session
-        const gameSession = sessions.createSession(
-          body.did,
-          profile,
-          world.getDefaultSpawnRoom(),
-          world.gameSystem.formulas,
-        );
-        return Response.json({
-          sessionId: gameSession.sessionId,
-          websocketUrl: `${config.atproto.publicUrl.replace(/^http/, "ws")}/ws?session=${gameSession.sessionId}`,
-          spawnRoom: gameSession.currentRoom,
-          characterState: gameSession.state,
-        });
-      } catch (err) {
-        return Response.json(
-          { error: err instanceof Error ? err.message : "Character creation failed" },
-          { status: 500 },
-        );
       }
-    }
 
-    // Federation: receive character transfer from another server
-    if (
-      url.pathname === "/xrpc/com.cacheblasters.fm.federation.transfer" &&
-      req.method === "POST"
-    ) {
-      try {
-        const body = (await req.json()) as {
-          token: string;
-          character: Record<string, unknown>;
-          attestations?: unknown[];
-        };
-        if (!body.token || !body.character) {
-          return Response.json({ error: "token and character are required" }, { status: 400 });
+      // Chat relay: receive a tell message from another federated server
+      if (url.pathname === "/xrpc/com.cacheblasters.fm.chat.relay" && req.method === "POST") {
+        try {
+          const body = (await req.json()) as {
+            senderName: string;
+            senderDid: string;
+            recipientName: string;
+            message: string;
+            sourceServer: string;
+          };
+          if (!body.senderName || !body.recipientName || !body.message) {
+            return Response.json({ delivered: false, reason: "Missing fields" }, { status: 400 });
+          }
+          const target = sessions.findByName(body.recipientName);
+          if (!target) {
+            return Response.json({ delivered: false, reason: "Player not online" });
+          }
+          target.send(
+            encodeMessage({
+              type: "chat",
+              channel: "tell",
+              sender: body.senderName,
+              message: body.message,
+            }),
+          );
+          return Response.json({ delivered: true });
+        } catch {
+          return Response.json({ delivered: false, reason: "Internal error" }, { status: 500 });
         }
-        const result = await transferHandler.handleTransfer(body);
-        return Response.json(result);
-      } catch (err) {
-        return Response.json(
-          { error: err instanceof Error ? err.message : "Transfer failed" },
-          { status: 500 },
-        );
       }
-    }
 
-    // Chat relay: receive a tell message from another federated server
-    if (url.pathname === "/xrpc/com.cacheblasters.fm.chat.relay" && req.method === "POST") {
-      try {
-        const body = (await req.json()) as {
-          senderName: string;
-          senderDid: string;
-          recipientName: string;
-          message: string;
-          sourceServer: string;
-        };
-        if (!body.senderName || !body.recipientName || !body.message) {
-          return Response.json({ delivered: false, reason: "Missing fields" }, { status: 400 });
+      // Chat locate: check if a player is online on this server
+      if (url.pathname === "/xrpc/com.cacheblasters.fm.chat.locatePlayer" && req.method === "GET") {
+        const name = url.searchParams.get("name");
+        if (!name) {
+          return Response.json({ found: false });
         }
-        const target = sessions.findByName(body.recipientName);
-        if (!target) {
-          return Response.json({ delivered: false, reason: "Player not online" });
+        const target = sessions.findByName(name);
+        if (target) {
+          return Response.json({ found: true, playerDid: target.characterDid });
         }
-        target.send(
-          encodeMessage({
-            type: "chat",
-            channel: "tell",
-            sender: body.senderName,
-            message: body.message,
-          }),
-        );
-        return Response.json({ delivered: true });
-      } catch {
-        return Response.json({ delivered: false, reason: "Internal error" }, { status: 500 });
-      }
-    }
-
-    // Chat locate: check if a player is online on this server
-    if (url.pathname === "/xrpc/com.cacheblasters.fm.chat.locatePlayer" && req.method === "GET") {
-      const name = url.searchParams.get("name");
-      if (!name) {
         return Response.json({ found: false });
       }
-      const target = sessions.findByName(name);
-      if (target) {
-        return Response.json({ found: true, playerDid: target.characterDid });
-      }
-      return Response.json({ found: false });
-    }
 
-    // ── Account creation (proxied to co-located PDS) ──
+      // ── Account creation (proxied to co-located PDS) ──
 
-    if (url.pathname === "/auth/create-account" && req.method === "POST") {
-      try {
-        const body = (await req.json()) as { handle: string; email: string; password: string };
-        if (!body.handle || !body.email || !body.password) {
+      if (url.pathname === "/auth/create-account" && req.method === "POST") {
+        try {
+          const body = (await req.json()) as { handle: string; email: string; password: string };
+          if (!body.handle || !body.email || !body.password) {
+            return Response.json(
+              { error: "handle, email, and password are required" },
+              { status: 400 },
+            );
+          }
+
+          // Resolve handle: if no dot, append the PDS hostname
+          const handle = body.handle.includes(".")
+            ? body.handle
+            : `${body.handle}.${config.atproto.pdsHostname}`;
+
+          const pdsRes = await fetch(
+            `${config.atproto.pdsUrl}/xrpc/com.atproto.server.createAccount`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ handle, email: body.email, password: body.password }),
+            },
+          );
+
+          if (!pdsRes.ok) {
+            const errData = (await pdsRes.json().catch(() => ({}))) as { message?: string };
+            return Response.json(
+              { error: errData.message ?? `Account creation failed (${pdsRes.status})` },
+              { status: pdsRes.status },
+            );
+          }
+
+          const data = (await pdsRes.json()) as { did: string; handle: string };
+          return Response.json({ did: data.did, handle: data.handle });
+        } catch (err) {
           return Response.json(
-            { error: "handle, email, and password are required" },
-            { status: 400 },
+            { error: err instanceof Error ? err.message : "Account creation failed" },
+            { status: 500 },
           );
         }
-
-        // Resolve handle: if no dot, append the PDS hostname
-        const handle = body.handle.includes(".")
-          ? body.handle
-          : `${body.handle}.${config.atproto.pdsHostname}`;
-
-        const pdsRes = await fetch(
-          `${config.atproto.pdsUrl}/xrpc/com.atproto.server.createAccount`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ handle, email: body.email, password: body.password }),
-          },
-        );
-
-        if (!pdsRes.ok) {
-          const errData = (await pdsRes.json().catch(() => ({}))) as { message?: string };
-          return Response.json(
-            { error: errData.message ?? `Account creation failed (${pdsRes.status})` },
-            { status: pdsRes.status },
-          );
-        }
-
-        const data = (await pdsRes.json()) as { did: string; handle: string };
-        return Response.json({ did: data.did, handle: data.handle });
-      } catch (err) {
-        return Response.json(
-          { error: err instanceof Error ? err.message : "Account creation failed" },
-          { status: 500 },
-        );
       }
-    }
 
-    // ── Info routes ──
+      // ── Info routes ──
 
-    // Health check
-    if (url.pathname === "/health") {
-      return Response.json({
-        status: "ok",
-        server: config.name,
-        players: sessions.getOnlineCount(),
-        serverDid: serverIdentity.did || undefined,
-      });
-    }
+      // Health check
+      if (url.pathname === "/health") {
+        return Response.json({
+          status: "ok",
+          server: config.name,
+          players: sessions.getOnlineCount(),
+          serverDid: serverIdentity.did || undefined,
+        });
+      }
 
-    // Server info
-    if (url.pathname === "/info") {
-      return Response.json({
-        name: config.name,
-        description: config.description,
-        players: sessions.getOnlineCount(),
-        rooms: world.areaManager.getAllRooms().size,
-        serverDid: serverIdentity.did || undefined,
-        pdsHostname: config.atproto.pdsHostname,
-      });
-    }
+      // Server info
+      if (url.pathname === "/info") {
+        return Response.json({
+          name: config.name,
+          description: config.description,
+          players: sessions.getOnlineCount(),
+          rooms: world.areaManager.getAllRooms().size,
+          serverDid: serverIdentity.did || undefined,
+          pdsHostname: config.atproto.pdsHostname,
+        });
+      }
 
-    // Game system schema
-    if (url.pathname === "/system") {
-      return Response.json(world.gameSystem);
-    }
+      // Game system schema
+      if (url.pathname === "/system") {
+        return Response.json(world.gameSystem);
+      }
 
-    return new Response("Federated Realms Dungeon Server", { status: 200 });
+      return new Response("Federated Realms Dungeon Server", { status: 200 });
+    })();
+    httpResponse.headers.set("Access-Control-Allow-Origin", "*");
+    httpResponse.headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    httpResponse.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    return httpResponse;
   },
 
   websocket: {
