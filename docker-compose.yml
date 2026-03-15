@@ -38,6 +38,7 @@ services:
       - SERVER_NAME=${SERVER_NAME:-Federated Realms}
       - SERVER_DESCRIPTION=${SERVER_DESCRIPTION:-A mysterious dungeon awaits...}
       - DEFAULT_SPAWN=${DEFAULT_SPAWN:-starter-town:town-square}
+      - DEV_MODE=${DEV_MODE:-false}
       # AT Proto / PDS
       - PDS_URL=http://pds:3000
       - PDS_HOSTNAME=${PDS_HOSTNAME:-localhost}
