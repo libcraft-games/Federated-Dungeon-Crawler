@@ -3,6 +3,64 @@ import { encodeMessage } from "@realms/protocol";
 import type { CommandContext } from "./index.js";
 import { sendNarrative } from "./index.js";
 
+export function handleTell(cmd: ParsedCommand, ctx: CommandContext): void {
+  const { session, sessions, chatRelay } = ctx;
+
+  if (cmd.args.length < 2) {
+    sendNarrative(session, "Tell whom? Usage: tell <player> <message>", "error");
+    return;
+  }
+
+  const targetName = cmd.args[0];
+  const message = cmd.args.slice(1).join(" ");
+
+  if (targetName.toLowerCase() === session.name.toLowerCase()) {
+    sendNarrative(session, "Talking to yourself?", "error");
+    return;
+  }
+
+  // Rate limiting (via chatRelay if available, otherwise simple local check)
+  if (chatRelay?.isRateLimited(session.sessionId)) {
+    sendNarrative(session, "You're sending messages too fast. Please wait.", "error");
+    return;
+  }
+
+  // Check local sessions first
+  const target = sessions.findByName(targetName);
+  if (target) {
+    target.send(
+      encodeMessage({
+        type: "chat",
+        channel: "tell",
+        sender: session.name,
+        message,
+      }),
+    );
+    sendNarrative(session, `You tell ${target.name}: ${message}`, "chat");
+    return;
+  }
+
+  // Try cross-server relay
+  if (chatRelay) {
+    chatRelay.relayMessage(session, targetName, message).then((result) => {
+      if (result.delivered) {
+        sendNarrative(session, `You tell ${targetName}: ${message}`, "chat");
+      } else if (result.offline) {
+        sendNarrative(
+          session,
+          `${targetName} is offline. Your message has been saved for delivery.`,
+          "info",
+        );
+      } else {
+        sendNarrative(session, `No player named '${targetName}' could be found.`, "error");
+      }
+    });
+    return;
+  }
+
+  sendNarrative(session, `Player '${targetName}' is not online.`, "error");
+}
+
 export function handleSocial(cmd: ParsedCommand, ctx: CommandContext): void {
   const { session, broadcast, sessions, bluesky } = ctx;
 

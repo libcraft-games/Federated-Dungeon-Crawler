@@ -213,12 +213,23 @@ export function useGameState(client: WsClient) {
           break;
 
         case "chat":
-          if (msg.channel === "whisper") {
+          if (msg.channel === "tell") {
+            addNarrative(`${msg.sender} tells you: ${msg.message}`, "chat");
+          } else if (msg.channel === "whisper") {
             addNarrative(`${msg.sender} whispers: ${msg.message}`, "chat");
           } else if (msg.channel === "shout") {
             addNarrative(`${msg.sender} shouts: ${msg.message}`, "chat");
           } else {
             addNarrative(`${msg.sender} says: ${msg.message}`, "chat");
+          }
+          break;
+
+        case "mailbox":
+          if (msg.messages.length > 0) {
+            addNarrative(`You have ${msg.messages.length} message(s) waiting:`, "system");
+            for (const m of msg.messages) {
+              addNarrative(`  [${m.sentAt}] ${m.senderName}: ${m.message}`, "chat");
+            }
           }
           break;
 

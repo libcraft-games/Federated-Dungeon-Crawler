@@ -92,6 +92,16 @@ export type ServerMessage =
       type: "adaptation_required";
       adaptation: AdaptationRequired;
       message: string;
+    }
+  | {
+      type: "mailbox";
+      messages: Array<{
+        senderName: string;
+        senderDid: string;
+        message: string;
+        sourceServer: string;
+        sentAt: string;
+      }>;
     };
 
 export function encodeMessage(msg: ClientMessage | ServerMessage): string {

@@ -66,6 +66,7 @@ import type {
   LevelRange as _FedLevelRange,
 } from "./lexicons/com/cacheblasters/fm/federation/registration.defs.js";
 import type { Main as _PortalRecord } from "./lexicons/com/cacheblasters/fm/world/portal.defs.js";
+import type { Main as _ChatMessage } from "./lexicons/com/cacheblasters/fm/chat/message.defs.js";
 
 // ── Character ──
 
@@ -159,6 +160,13 @@ export type FlagRecord = Omit<_FlagRecord, "$type"> & { $type?: string };
 export type PortalRecord = Omit<_PortalRecord, "$type" | "direction"> & {
   $type?: string;
   direction: Direction;
+};
+
+// ── Chat ──
+
+export type ChatMessage = Omit<_ChatMessage, "$type" | "createdAt"> & {
+  $type?: string;
+  createdAt: string;
 };
 
 // ── Federation ──
@@ -278,6 +286,11 @@ export const NSID = {
 
   // Crafting
   CraftRecipe: "com.cacheblasters.fm.craft.recipe",
+
+  // Chat
+  ChatMessage: "com.cacheblasters.fm.chat.message",
+  ChatRelay: "com.cacheblasters.fm.chat.relay",
+  ChatLocatePlayer: "com.cacheblasters.fm.chat.locatePlayer",
 
   // Federation
   FederationRegistration: "com.cacheblasters.fm.federation.registration",

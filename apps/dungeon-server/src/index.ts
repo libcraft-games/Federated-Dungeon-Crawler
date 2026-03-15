@@ -22,6 +22,7 @@ import { PortalHandler } from "./federation/portal-handler.js";
 import { TransferHandler } from "./federation/transfer-handler.js";
 import { WorldPublisher } from "./atproto/world-publisher.js";
 import { FederationManager } from "./federation/federation-manager.js";
+import { ChatRelayService } from "./federation/chat-relay.js";
 
 const config = loadConfig();
 const world = new WorldManager(config);
@@ -32,6 +33,8 @@ const oauthClient = new GameOAuthClient();
 const pdsClient = new PdsClient(serverIdentity);
 
 const DEV_MODE = process.env.DEV_MODE === "true";
+let federation: FederationManager | null = null;
+let chatRelay: ChatRelayService | null = null;
 const portalHandler = new PortalHandler(serverIdentity, pdsClient, config.federation);
 const transferHandler = new TransferHandler(
   serverIdentity,
@@ -57,7 +60,7 @@ if (!DEV_MODE && config.atproto.serverPassword) {
     const { portalCount } = await publisher.publishAll(world);
 
     // Federation: publish registration and seed known servers
-    const federation = new FederationManager(
+    federation = new FederationManager(
       serverIdentity,
       config.federation,
       config.atproto,
@@ -66,6 +69,9 @@ if (!DEV_MODE && config.atproto.serverPassword) {
     );
     await federation.publishRegistration(portalCount, 0);
     await federation.seedFromConfig();
+
+    // Cross-server chat relay
+    chatRelay = new ChatRelayService(serverIdentity, federation, sessions);
   } catch (err) {
     console.warn("   AT Proto initialization failed:", err instanceof Error ? err.message : err);
     console.warn("   Running without AT Proto auth (set DEV_MODE=true to suppress)");
@@ -89,7 +95,16 @@ const combat = new CombatSystem({ world, sessions, broadcast });
 function makeContext(sessionId: string): CommandContext | null {
   const session = sessions.getSession(sessionId);
   if (!session) return null;
-  return { session, world, sessions, broadcast, bluesky, combat, portalHandler };
+  return {
+    session,
+    world,
+    sessions,
+    broadcast,
+    bluesky,
+    combat,
+    portalHandler,
+    chatRelay: chatRelay ?? undefined,
+  };
 }
 
 function buildCharacterProfile(
@@ -412,6 +427,50 @@ const server = Bun.serve<SessionData>({
       }
     }
 
+    // Chat relay: receive a tell message from another federated server
+    if (url.pathname === "/xrpc/com.cacheblasters.fm.chat.relay" && req.method === "POST") {
+      try {
+        const body = (await req.json()) as {
+          senderName: string;
+          senderDid: string;
+          recipientName: string;
+          message: string;
+          sourceServer: string;
+        };
+        if (!body.senderName || !body.recipientName || !body.message) {
+          return Response.json({ delivered: false, reason: "Missing fields" }, { status: 400 });
+        }
+        const target = sessions.findByName(body.recipientName);
+        if (!target) {
+          return Response.json({ delivered: false, reason: "Player not online" });
+        }
+        target.send(
+          encodeMessage({
+            type: "chat",
+            channel: "tell",
+            sender: body.senderName,
+            message: body.message,
+          }),
+        );
+        return Response.json({ delivered: true });
+      } catch {
+        return Response.json({ delivered: false, reason: "Internal error" }, { status: 500 });
+      }
+    }
+
+    // Chat locate: check if a player is online on this server
+    if (url.pathname === "/xrpc/com.cacheblasters.fm.chat.locatePlayer" && req.method === "GET") {
+      const name = url.searchParams.get("name");
+      if (!name) {
+        return Response.json({ found: false });
+      }
+      const target = sessions.findByName(name);
+      if (target) {
+        return Response.json({ found: true, playerDid: target.characterDid });
+      }
+      return Response.json({ found: false });
+    }
+
     // ── Account creation (proxied to co-located PDS) ──
 
     if (url.pathname === "/auth/create-account" && req.method === "POST") {
@@ -573,6 +632,16 @@ const server = Bun.serve<SessionData>({
       if (ctx) {
         sendRoomState(session, ctx);
         sendMapUpdate(session, ctx);
+      }
+
+      // Deliver pending offline messages
+      if (chatRelay) {
+        chatRelay.deliverPendingMessages(session).catch((err) => {
+          console.warn(
+            `   Failed to deliver mailbox for ${session.name}:`,
+            err instanceof Error ? err.message : err,
+          );
+        });
       }
 
       // Check for pending portal adaptation (foreign class/race)

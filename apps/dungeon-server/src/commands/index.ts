@@ -5,9 +5,10 @@ import type { SessionManager } from "../server/session-manager.js";
 import type { BlueskyBridge } from "../bluesky/bridge.js";
 import type { CombatSystem } from "../systems/combat-system.js";
 import type { PortalHandler } from "../federation/portal-handler.js";
+import type { ChatRelayService } from "../federation/chat-relay.js";
 import { handleMovement } from "./movement.js";
 import { handleLook, handleTalk } from "./interaction.js";
-import { handleSocial } from "./social.js";
+import { handleSocial, handleTell } from "./social.js";
 import { handleInventory } from "./inventory.js";
 import { handleCombat } from "./combat.js";
 import { handleEquipment } from "./equipment.js";
@@ -32,6 +33,7 @@ export interface CommandContext {
   bluesky: BlueskyBridge;
   combat: CombatSystem;
   portalHandler?: PortalHandler;
+  chatRelay?: ChatRelayService;
 }
 
 export function handleCommand(cmd: ParsedCommand, ctx: CommandContext): void {
@@ -58,6 +60,7 @@ export function handleCommand(cmd: ParsedCommand, ctx: CommandContext): void {
       "quest",
       "quests",
       "log",
+      "tell",
     ]);
     if (!allowedInCombat.has(cmd.verb)) {
       if (cmd.verb === "go") {
@@ -86,6 +89,10 @@ export function handleCommand(cmd: ParsedCommand, ctx: CommandContext): void {
     case "shout":
     case "whisper":
       handleSocial(cmd, ctx);
+      break;
+
+    case "tell":
+      handleTell(cmd, ctx);
       break;
 
     case "inventory":

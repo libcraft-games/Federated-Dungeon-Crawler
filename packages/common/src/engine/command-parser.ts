@@ -31,6 +31,9 @@ const ALIASES: Record<string, string> = {
   j: "log",
   b: "buy",
   purchase: "buy",
+  msg: "tell",
+  message: "tell",
+  pm: "tell",
   "?": "help",
   quit: "disconnect",
   exit: "disconnect",
@@ -113,7 +116,7 @@ export function getCommandHelp(): string[] {
     "Combat:   attack/kill <target> (2 AP), defend (1 AP), flee/retreat (3 AP)",
     "Spells:   cast <spell> [target], spells   Items in combat: use <item> (2 AP)",
     "NPCs:     talk <npc> [topic], look <npc>",
-    "Social:   say <message>, shout <message>, whisper <player> <message>",
+    "Social:   say <msg>, shout <msg>, whisper <player> <msg>, tell/msg <player> <msg>",
     "Info:     who, stats, map/m, help/?",
     "System:   disconnect/quit",
   ];

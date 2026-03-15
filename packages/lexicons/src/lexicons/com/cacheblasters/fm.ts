@@ -4,6 +4,7 @@
 
 export * as action from "./fm/action.js";
 export * as character from "./fm/character.js";
+export * as chat from "./fm/chat.js";
 export * as craft from "./fm/craft.js";
 export * as federation from "./fm/federation.js";
 export * as item from "./fm/item.js";
