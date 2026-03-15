@@ -1,0 +1,11 @@
+.narrative-view {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 12px;
+  min-height: 0;
+}
+
+.narrative-line {
+  white-space: pre-wrap;
+  word-break: break-word;
+}

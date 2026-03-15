@@ -26,4 +26,4 @@ export { SLOT_LABELS, hpLevel, viewportMap } from "./utils/game-ui.js";
 export type { HpLevel } from "./utils/game-ui.js";
 
 // Branding
-export { SPLASH_ART, SPLASH_TITLE, SPLASH_SUBTITLE } from "./splash.js";
+export { SPLASH_ART, SPLASH_TITLE, SPLASH_SUBTITLE, SPLASH_BYLINE } from "./splash.js";

@@ -1,0 +1,60 @@
+.room-panel {
+  flex-shrink: 0;
+}
+
+.room-title {
+  font-weight: bold;
+  color: var(--color-cyan);
+  margin-bottom: 2px;
+}
+
+.room-description {
+  color: var(--text);
+  margin-bottom: 6px;
+  max-height: 3.6em;
+  overflow: hidden;
+}
+
+.room-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.room-entities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--color-yellow);
+}
+
+.entity-group {
+  white-space: nowrap;
+}
+
+.room-exits {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.entity-link {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+}
+.entity-link:hover {
+  color: var(--text);
+}
+
+.exit-link {
+  color: var(--color-yellow);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+}
+.exit-link:hover {
+  color: var(--text);
+}
