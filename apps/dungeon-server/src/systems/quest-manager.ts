@@ -29,6 +29,10 @@ export class QuestManager {
     return this.definitions.get(id);
   }
 
+  getAllDefinitions(): Map<string, QuestDefinition> {
+    return this.definitions;
+  }
+
   getProgress(characterDid: string, questId: string): ActiveQuestState | undefined {
     return this.progress.get(characterDid)?.get(questId);
   }

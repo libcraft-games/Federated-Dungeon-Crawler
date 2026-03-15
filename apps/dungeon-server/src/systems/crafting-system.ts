@@ -66,6 +66,10 @@ export class CraftingSystem {
     return this.recipes.get(id);
   }
 
+  getAllRecipes(): Map<string, RecipeDef> {
+    return this.recipes;
+  }
+
   getNodesInRoom(roomId: string): GatheringNode[] {
     return this.nodesByRoom.get(roomId) ?? [];
   }
