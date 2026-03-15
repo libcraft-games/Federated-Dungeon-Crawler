@@ -3,3 +3,4 @@
  */
 
 export * as connect from './action/connect.js'
+export * as createCharacter from './action/createCharacter.js'
