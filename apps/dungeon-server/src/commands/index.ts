@@ -13,6 +13,7 @@ import { handleEquipment } from "./equipment.js";
 import { handleMerchant } from "./merchant.js";
 import { handleMap, generateMapData } from "./map.js";
 import { handleQuest, handleQuestList, handleAcceptQuest, handleAbandonQuest, handleTurnIn } from "./quest.js";
+import { handleCrafting } from "./crafting.js";
 import { encodeMessage, type ServerMessage } from "@realms/protocol";
 import { getCommandHelp, xpToNextLevel } from "@realms/common";
 
@@ -121,6 +122,13 @@ export function handleCommand(cmd: ParsedCommand, ctx: CommandContext): void {
     case "turnin":
     case "turn":
       handleTurnIn(cmd, ctx);
+      break;
+
+    case "recipes":
+    case "recipe":
+    case "craft":
+    case "gather":
+      handleCrafting(cmd, ctx);
       break;
 
     case "who":

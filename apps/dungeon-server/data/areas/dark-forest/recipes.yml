@@ -1,0 +1,41 @@
+# Crafting recipes for Dark Forest
+# Ingredients use area-prefixed IDs. Cross-area items use full id (e.g. starter-town:bread-loaf).
+
+recipes:
+  - id: silk-bandage
+    name: Silk Bandage
+    description: Weave spider silk into crude but effective bandages. No station needed.
+    ingredients:
+      - itemId: spider-silk
+        count: 3
+    output:
+      itemId: silk-bandage
+      count: 1
+    tags: [field-craft, healing]
+
+  - id: wolf-stew
+    name: Wolf Stew
+    description: Slow-cook wolf pelt and glowing mushroom over a campfire for a hearty healing stew.
+    station: campfire
+    ingredients:
+      - itemId: wolf-pelt
+        count: 1
+      - itemId: glowing-mushroom
+        count: 1
+    output:
+      itemId: wolf-stew
+      count: 1
+    tags: [cooking, healing]
+
+  - id: antidote-brew
+    name: Crude Antidote
+    description: Grind a poison fang into glowing mushroom juice to neutralize toxins.
+    ingredients:
+      - itemId: poison-fang
+        count: 1
+      - itemId: glowing-mushroom
+        count: 2
+    output:
+      itemId: antidote
+      count: 1
+    tags: [field-craft, alchemy]
