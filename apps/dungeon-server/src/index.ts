@@ -131,6 +131,17 @@ setInterval(() => {
   }
 }, TICK_INTERVAL_MS);
 
+// ── Periodic Attestation Flush ──
+// Flush pending attestation claims for all sessions every 15 minutes
+// so accumulated gold/item changes aren't lost to crashes or long sessions.
+const ATTESTATION_FLUSH_MS = 15 * 60 * 1000;
+
+setInterval(() => {
+  for (const session of sessions.getAllSessions()) {
+    session.attestations.flush();
+  }
+}, ATTESTATION_FLUSH_MS);
+
 const server = Bun.serve<SessionData>({
   port: config.port,
   hostname: config.host,
