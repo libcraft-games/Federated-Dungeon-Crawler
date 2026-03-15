@@ -36,6 +36,7 @@ import type { Main as _ItemDefinition } from "./lexicons/com/cacheblasters/fm/it
 import type { Main as _NpcDefinition } from "./lexicons/com/cacheblasters/fm/npc/definition.defs.js";
 import type { Main as _QuestDefinition, Objective as _QuestObjective, Rewards as _QuestRewards } from "./lexicons/com/cacheblasters/fm/quest/definition.defs.js";
 import type { Main as _QuestProgress, ObjectiveProgress as _QuestObjectiveProgress } from "./lexicons/com/cacheblasters/fm/quest/progress.defs.js";
+import type { Main as _RecipeDef, Ingredient as _RecipeIngredient, Output as _RecipeOutput } from "./lexicons/com/cacheblasters/fm/craft/recipe.defs.js";
 
 // ── Character ──
 
@@ -177,6 +178,18 @@ export type QuestProgress = Omit<_QuestProgress, "$type" | "status" | "acceptedA
   completedAt?: string;
 };
 
+// ── Crafting ──
+
+export type RecipeIngredient = Omit<_RecipeIngredient, "$type"> & { $type?: string };
+
+export type RecipeOutput = Omit<_RecipeOutput, "$type"> & { $type?: string };
+
+export type RecipeDef = Omit<_RecipeDef, "$type" | "ingredients" | "output"> & {
+  $type?: string;
+  ingredients: RecipeIngredient[];
+  output: RecipeOutput;
+};
+
 // ── NSID constants ──
 
 export const NSID = {
@@ -207,6 +220,9 @@ export const NSID = {
   // Quests
   QuestDefinition: "com.cacheblasters.fm.quest.definition",
   QuestProgress: "com.cacheblasters.fm.quest.progress",
+
+  // Crafting
+  CraftRecipe: "com.cacheblasters.fm.craft.recipe",
 
   // Actions
   ActionConnect: "com.cacheblasters.fm.action.connect",
