@@ -1,0 +1,303 @@
+import { describe, expect, test, beforeAll, afterAll } from "bun:test";
+import type { Subprocess } from "bun";
+import { TestClient, startServer, stopServer } from "./helpers.ts";
+
+// ── Server in dev mode (AT Proto endpoints still respond) ──
+
+let devPort: number;
+let devProc: Subprocess;
+
+// ── Server in auth mode (no PDS, but AT Proto required) ──
+
+let authPort: number;
+let authProc: Subprocess;
+
+beforeAll(async () => {
+  const [dev, auth] = await Promise.all([
+    startServer({ devMode: true }),
+    startServer({ devMode: false }),
+  ]);
+  devPort = dev.port;
+  devProc = dev.process;
+  authPort = auth.port;
+  authProc = auth.process;
+});
+
+afterAll(() => {
+  stopServer(devProc);
+  stopServer(authProc);
+});
+
+// ─── OAuth Client Metadata ──────────────────────────────────
+
+describe("oauth client metadata", () => {
+  test("serves client metadata JSON", async () => {
+    const res = await fetch(`http://127.0.0.1:${devPort}/oauth/client-metadata.json`);
+    expect(res.ok).toBe(true);
+    const meta = await res.json() as Record<string, unknown>;
+    expect(meta.client_name).toBe("Federated Realms");
+    expect(meta.grant_types).toEqual(["authorization_code", "refresh_token"]);
+    expect(meta.dpop_bound_access_tokens).toBe(true);
+    expect(meta.token_endpoint_auth_method).toBe("none");
+    expect(meta.scope).toBe("atproto transition:generic");
+  });
+
+  test("client_id points to itself", async () => {
+    const res = await fetch(`http://127.0.0.1:${devPort}/oauth/client-metadata.json`);
+    const meta = await res.json() as Record<string, unknown>;
+    expect(meta.client_id).toContain("/oauth/client-metadata.json");
+  });
+
+  test("redirect_uris includes localhost for CLI", async () => {
+    const res = await fetch(`http://127.0.0.1:${devPort}/oauth/client-metadata.json`);
+    const meta = await res.json() as Record<string, unknown>;
+    const uris = meta.redirect_uris as string[];
+    expect(uris.some((u) => u.startsWith("http://127.0.0.1"))).toBe(true);
+  });
+});
+
+// ─── Auth Endpoints ─────────────────────────────────────────
+
+describe("auth endpoints", () => {
+  test("/auth/login requires handle param", async () => {
+    const res = await fetch(`http://127.0.0.1:${devPort}/auth/login`);
+    expect(res.status).toBe(400);
+    const data = await res.json() as Record<string, unknown>;
+    expect(data.error).toContain("handle");
+  });
+
+  test("/auth/login with invalid handle returns error (no PDS)", async () => {
+    const res = await fetch(`http://127.0.0.1:${devPort}/auth/login?handle=nonexistent.invalid`);
+    // Should fail because OAuth client isn't initialized (no PDS configured)
+    expect(res.status).toBe(500);
+    const data = await res.json() as Record<string, unknown>;
+    expect(data.error).toBeTruthy();
+  });
+});
+
+// ─── XRPC Endpoints ─────────────────────────────────────────
+
+describe("XRPC action.connect", () => {
+  test("rejects without DID", async () => {
+    const res = await fetch(
+      `http://127.0.0.1:${devPort}/xrpc/com.cacheblasters.fm.action.connect`,
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) },
+    );
+    expect(res.status).toBe(400);
+    const data = await res.json() as Record<string, unknown>;
+    expect(data.error).toContain("did");
+  });
+
+  test("rejects with unknown DID (no OAuth session)", async () => {
+    const res = await fetch(
+      `http://127.0.0.1:${devPort}/xrpc/com.cacheblasters.fm.action.connect`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ did: "did:plc:fake123" }),
+      },
+    );
+    expect(res.status).toBe(401);
+    const data = await res.json() as Record<string, unknown>;
+    expect(data.error).toContain("session");
+  });
+});
+
+describe("XRPC action.createCharacter", () => {
+  test("rejects with missing fields", async () => {
+    const res = await fetch(
+      `http://127.0.0.1:${devPort}/xrpc/com.cacheblasters.fm.action.createCharacter`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ did: "did:plc:test", name: "Hero" }),
+      },
+    );
+    expect(res.status).toBe(400);
+    const data = await res.json() as Record<string, unknown>;
+    expect(data.error).toContain("required");
+  });
+
+  test("rejects without valid OAuth session", async () => {
+    const res = await fetch(
+      `http://127.0.0.1:${devPort}/xrpc/com.cacheblasters.fm.action.createCharacter`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ did: "did:plc:fake", name: "Hero", classId: "warrior", raceId: "human" }),
+      },
+    );
+    expect(res.status).toBe(401);
+  });
+});
+
+// ─── Federation Transfer ────────────────────────────────────
+
+describe("XRPC federation.transfer", () => {
+  test("rejects with missing fields", async () => {
+    const res = await fetch(
+      `http://127.0.0.1:${devPort}/xrpc/com.cacheblasters.fm.federation.transfer`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      },
+    );
+    expect(res.status).toBe(400);
+    const data = await res.json() as Record<string, unknown>;
+    expect(data.error).toContain("required");
+  });
+
+  test("rejects with invalid JWT token", async () => {
+    const res = await fetch(
+      `http://127.0.0.1:${devPort}/xrpc/com.cacheblasters.fm.federation.transfer`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: "invalid.jwt.token",
+          character: { name: "Hacker", class: "warrior", race: "human", level: 1, experience: 0, attributes: {}, createdAt: new Date().toISOString() },
+        }),
+      },
+    );
+    expect(res.ok).toBe(true);
+    const data = await res.json() as Record<string, unknown>;
+    expect(data.accepted).toBe(false);
+    expect(data.reason).toContain("Invalid transfer token");
+  });
+});
+
+// ─── Auth-Required Server (no dev mode) ─────────────────────
+
+describe("auth enforcement (no dev mode)", () => {
+  test("health endpoint still works", async () => {
+    const res = await fetch(`http://127.0.0.1:${authPort}/health`);
+    expect(res.ok).toBe(true);
+    const data = await res.json() as Record<string, unknown>;
+    expect(data.status).toBe("ok");
+  });
+
+  test("info endpoint still works", async () => {
+    const res = await fetch(`http://127.0.0.1:${authPort}/info`);
+    expect(res.ok).toBe(true);
+  });
+
+  test("system endpoint still works", async () => {
+    const res = await fetch(`http://127.0.0.1:${authPort}/system`);
+    expect(res.ok).toBe(true);
+    const data = await res.json() as Record<string, unknown>;
+    expect(data.classes).toBeDefined();
+  });
+
+  test("WebSocket rejects connection without session", async () => {
+    // Without DEV_MODE, connecting to /ws without a valid session should fail
+    try {
+      const ws = new WebSocket(`ws://127.0.0.1:${authPort}/ws`);
+      const result = await new Promise<string>((resolve) => {
+        ws.onopen = () => resolve("opened");
+        ws.onerror = () => resolve("error");
+        ws.onclose = (e) => resolve(`closed:${e.code}`);
+        setTimeout(() => resolve("timeout"), 3000);
+      });
+      // Server should have returned a 401, which closes/rejects the WS
+      expect(result).not.toBe("opened");
+    } catch {
+      // Connection failure is expected
+    }
+  });
+
+  test("XRPC endpoints respond with proper errors", async () => {
+    const res = await fetch(
+      `http://127.0.0.1:${authPort}/xrpc/com.cacheblasters.fm.action.connect`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ did: "did:plc:test123" }),
+      },
+    );
+    // Should return 401 since there's no OAuth session
+    expect(res.status).toBe(401);
+  });
+});
+
+// ─── Adaptation Protocol ────────────────────────────────────
+
+describe("adaptation protocol", () => {
+  test("dev mode server accepts WebSocket with session param", async () => {
+    // In dev mode, WS connections create sessions on the fly
+    const client = new TestClient("AdaptTest");
+    await client.connect(devPort);
+    const welcome = await client.waitFor("welcome");
+    expect(welcome.sessionId).toBeTruthy();
+    client.disconnect();
+  });
+
+  test("adaptation_response is handled without error for non-pending session", async () => {
+    // Connect normally (no pending adaptation), send adaptation_response
+    // Server should silently ignore it (no crash, no error)
+    const client = new TestClient("NoAdaptTest");
+    await client.connect(devPort);
+    await client.waitFor("welcome");
+    await client.waitFor("room_state");
+
+    // Send an adaptation response with no pending adaptation
+    client.sendRaw({ type: "adaptation_response", classId: "mage", raceId: "elf" });
+
+    // Should still be able to send normal commands after
+    await client.tick(200);
+    const room = await client.commandAndWaitRoom("look");
+    expect(room.room.title).toBe("Town Square");
+
+    client.disconnect();
+  });
+});
+
+// ─── Transfer Handler Logic (via HTTP) ──────────────────────
+
+describe("transfer handler validation", () => {
+  test("rejects expired JWT-like structure", async () => {
+    // Even with a structurally valid JWT, it should be rejected
+    // because it can't be verified without the signing key
+    const fakeJwt = [
+      btoa(JSON.stringify({ alg: "ES256K", typ: "JWT" })),
+      btoa(JSON.stringify({ iss: "did:plc:source", sub: "did:plc:player", aud: "did:plc:target", exp: 0, iat: 0, characterHash: "abc", targetRoom: "room-1" })),
+      "fakesignature",
+    ].join(".");
+
+    const res = await fetch(
+      `http://127.0.0.1:${devPort}/xrpc/com.cacheblasters.fm.federation.transfer`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: fakeJwt,
+          character: { name: "Intruder", class: "warrior", race: "human", level: 99, experience: 0, attributes: {}, createdAt: new Date().toISOString() },
+        }),
+      },
+    );
+
+    const data = await res.json() as Record<string, unknown>;
+    expect(data.accepted).toBe(false);
+  });
+
+  test("transfer endpoint accepts POST only", async () => {
+    const res = await fetch(
+      `http://127.0.0.1:${devPort}/xrpc/com.cacheblasters.fm.federation.transfer`,
+      { method: "GET" },
+    );
+    // GET should not match the route and fall through to default handler
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    expect(text).toContain("Federated Realms");
+  });
+
+  test("connect endpoint accepts POST only", async () => {
+    const res = await fetch(
+      `http://127.0.0.1:${devPort}/xrpc/com.cacheblasters.fm.action.connect`,
+      { method: "GET" },
+    );
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    expect(text).toContain("Federated Realms");
+  });
+});
