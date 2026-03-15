@@ -57,10 +57,7 @@ export class GameOAuthClient {
         client_id: `${config.publicUrl}/oauth/client-metadata.json`,
         client_name: "Federated Realms",
         client_uri: config.publicUrl,
-        redirect_uris: [
-          `${config.publicUrl}/oauth/callback`,
-          "http://127.0.0.1/oauth/callback",
-        ],
+        redirect_uris: [`${config.publicUrl}/oauth/callback`, "http://127.0.0.1/oauth/callback"],
         grant_types: ["authorization_code", "refresh_token"],
         response_types: ["code"],
         scope: "atproto transition:generic",
@@ -139,10 +136,7 @@ export class GameOAuthClient {
       client_id: `${publicUrl}/oauth/client-metadata.json`,
       client_name: "Federated Realms",
       client_uri: publicUrl,
-      redirect_uris: [
-        `${publicUrl}/oauth/callback`,
-        "http://127.0.0.1/oauth/callback",
-      ],
+      redirect_uris: [`${publicUrl}/oauth/callback`, "http://127.0.0.1/oauth/callback"],
       grant_types: ["authorization_code", "refresh_token"],
       response_types: ["code"],
       scope: "atproto transition:generic",

@@ -1,6 +1,6 @@
 import React from "react";
 import { Box, Text } from "ink";
-import type { GameState, MapState, EquipmentMap } from "../hooks/use-game-state.js";
+import type { GameState, MapState } from "../hooks/use-game-state.js";
 
 interface Props {
   state: GameState;
@@ -19,19 +19,41 @@ const SLOT_LABELS: Record<string, string> = {
   ring: "Ring",
 };
 
-function Bar({ current, max, color, width = 16 }: { current: number; max: number; color: string; width?: number }) {
+function Bar({
+  current,
+  max,
+  color,
+  width = 16,
+}: {
+  current: number;
+  max: number;
+  color: string;
+  width?: number;
+}) {
   const ratio = max > 0 ? Math.min(current / max, 1) : 0;
   const filled = Math.round(ratio * width);
   const empty = width - filled;
   return (
     <Text>
       <Text color={color}>{"█".repeat(filled)}</Text>
-      <Text color="gray" dimColor>{"░".repeat(empty)}</Text>
+      <Text color="gray" dimColor>
+        {"░".repeat(empty)}
+      </Text>
     </Text>
   );
 }
 
-function StatRow({ label, current, max, color }: { label: string; current: number; max: number; color: string }) {
+function StatRow({
+  label,
+  current,
+  max,
+  color,
+}: {
+  label: string;
+  current: number;
+  max: number;
+  color: string;
+}) {
   return (
     <Box>
       <Box width={4}>
@@ -39,7 +61,9 @@ function StatRow({ label, current, max, color }: { label: string; current: numbe
       </Box>
       <Bar current={current} max={max} color={color} />
       <Text> </Text>
-      <Text color={color} bold>{current}</Text>
+      <Text color={color} bold>
+        {current}
+      </Text>
       <Text color="gray">/{max}</Text>
     </Box>
   );
@@ -49,7 +73,9 @@ function Divider() {
   return (
     <Box flexDirection="column" paddingX={1}>
       {Array.from({ length: CONTENT_ROWS }, (_, i) => (
-        <Text key={i} dimColor>│</Text>
+        <Text key={i} dimColor>
+          │
+        </Text>
       ))}
     </Box>
   );
@@ -93,28 +119,35 @@ export function InfoPanel({ state, playerName, width }: Props) {
   const mapWidth = innerWidth - statsWidth - gearWidth - invWidth - 9; // subtract divider padding (3 dividers)
 
   return (
-    <Box
-      borderStyle="single"
-      borderColor="magenta"
-      paddingX={1}
-      flexDirection="row"
-    >
+    <Box borderStyle="single" borderColor="magenta" paddingX={1} flexDirection="row">
       {/* Left: Character stats */}
       <Box flexDirection="column" width={statsWidth}>
-        <Text bold color="magenta">Character</Text>
+        <Text bold color="magenta">
+          Character
+        </Text>
         {stats ? (
           <>
             <Text>
-              <Text color="green" bold>{playerName}</Text>
+              <Text color="green" bold>
+                {playerName}
+              </Text>
               <Text color="gray"> — Level </Text>
-              <Text color="white" bold>{stats.level}</Text>
+              <Text color="white" bold>
+                {stats.level}
+              </Text>
             </Text>
             <Text> </Text>
             <StatRow
               label="HP"
               current={stats.hp}
               max={stats.maxHp}
-              color={stats.hp <= stats.maxHp * 0.25 ? "red" : stats.hp <= stats.maxHp * 0.5 ? "yellow" : "green"}
+              color={
+                stats.hp <= stats.maxHp * 0.25
+                  ? "red"
+                  : stats.hp <= stats.maxHp * 0.5
+                    ? "yellow"
+                    : "green"
+              }
             />
             <StatRow label="MP" current={stats.mp} max={stats.maxMp} color="blue" />
             <StatRow label="AP" current={stats.ap} max={stats.maxAp} color="magenta" />
@@ -138,7 +171,9 @@ export function InfoPanel({ state, playerName, width }: Props) {
 
       {/* Center: Inventory */}
       <Box flexDirection="column" width={invWidth}>
-        <Text bold color="magenta">Inventory</Text>
+        <Text bold color="magenta">
+          Inventory
+        </Text>
         {inventory.length > 0 ? (
           inventory.slice(0, CONTENT_ROWS - 1).map((item, i) => (
             <Text key={i} color="white">
@@ -159,14 +194,18 @@ export function InfoPanel({ state, playerName, width }: Props) {
 
       {/* Gear: Equipment slots */}
       <Box flexDirection="column" width={gearWidth}>
-        <Text bold color="magenta">Gear</Text>
+        <Text bold color="magenta">
+          Gear
+        </Text>
         {Object.keys(equipment).length > 0 ? (
-          Object.entries(equipment).slice(0, CONTENT_ROWS - 1).map(([slot, item]) => (
-            <Text key={slot} color="white">
-              <Text color="gray">{(SLOT_LABELS[slot] ?? slot).padEnd(4)} </Text>
-              <Text>{item.name}</Text>
-            </Text>
-          ))
+          Object.entries(equipment)
+            .slice(0, CONTENT_ROWS - 1)
+            .map(([slot, item]) => (
+              <Text key={slot} color="white">
+                <Text color="gray">{(SLOT_LABELS[slot] ?? slot).padEnd(4)} </Text>
+                <Text>{item.name}</Text>
+              </Text>
+            ))
         ) : (
           <Text dimColor> None</Text>
         )}
@@ -176,10 +215,14 @@ export function InfoPanel({ state, playerName, width }: Props) {
 
       {/* Right: Map (viewported, centered on player) */}
       <Box flexDirection="column" flexGrow={1}>
-        <Text bold color="magenta">Map <Text dimColor>[@]=you [+]=visited</Text></Text>
+        <Text bold color="magenta">
+          Map <Text dimColor>[@]=you [+]=visited</Text>
+        </Text>
         {map ? (
           viewportMap(map, mapWidth, CONTENT_ROWS - 1).map((line, i) => (
-            <Text key={i} color="cyan" wrap="truncate-end">{line || " "}</Text>
+            <Text key={i} color="cyan" wrap="truncate-end">
+              {line || " "}
+            </Text>
           ))
         ) : (
           <Text dimColor> Explore to reveal.</Text>

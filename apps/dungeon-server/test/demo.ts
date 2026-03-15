@@ -159,9 +159,7 @@ async function main() {
     step("Encountering the Grey Wolf");
     cmd("east");
     r = await hero.commandAndWaitRoom("e");
-    room(r.room.title, r.room.description, [
-      `NPCs: ${r.room.npcs.map((n) => n.name).join(", ")}`,
-    ]);
+    room(r.room.title, r.room.description, [`NPCs: ${r.room.npcs.map((n) => n.name).join(", ")}`]);
 
     cmd("attack wolf");
     let combatText = await hero.commandAndWait("attack wolf");
@@ -275,7 +273,9 @@ async function main() {
 
     // ── Done ──
     step("Adventure Complete!");
-    console.log(`  ${BOLD}${GREEN}Kaelith the elf rogue has explored the realm and fought monsters!${RESET}`);
+    console.log(
+      `  ${BOLD}${GREEN}Kaelith the elf rogue has explored the realm and fought monsters!${RESET}`,
+    );
     console.log(`  ${DIM}Visited: Town Square, Blacksmith, Tavern, Gate, Crossroads,`);
     console.log(`  Forest Edge, Forest Path, Mushroom Grove, Spider Hollow${RESET}`);
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Box, Text, useInput } from "ink";
 import type { SavedProfile } from "../connection/saved-profile.js";
 
@@ -17,7 +17,7 @@ interface Props {
 export function ServerSelect({ savedProfile, onConnect }: Props) {
   const [inputValue, setInputValue] = useState(savedProfile?.lastServer ?? "");
   const [status, setStatus] = useState<"input" | "connecting" | "error">("input");
-  const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null);
+  const [, setServerInfo] = useState<ServerInfo | null>(null);
   const [error, setError] = useState("");
 
   useInput((input, key) => {
@@ -77,7 +77,9 @@ export function ServerSelect({ savedProfile, onConnect }: Props) {
   if (status === "connecting") {
     return (
       <Box flexDirection="column" paddingX={2} paddingY={1}>
-        <Text color="cyan" bold>Server Connection</Text>
+        <Text color="cyan" bold>
+          Server Connection
+        </Text>
         <Box height={1} />
         <Text color="yellow">Connecting to {inputValue}...</Text>
       </Box>
@@ -86,14 +88,18 @@ export function ServerSelect({ savedProfile, onConnect }: Props) {
 
   return (
     <Box flexDirection="column" paddingX={2} paddingY={1}>
-      <Text color="cyan" bold>Choose a Server</Text>
+      <Text color="cyan" bold>
+        Choose a Server
+      </Text>
       <Box height={1} />
 
       <Text>Enter server address:</Text>
       <Box height={1} />
 
       <Box>
-        <Text color="green" bold>{"> "}</Text>
+        <Text color="green" bold>
+          {"> "}
+        </Text>
         <Text>{inputValue}</Text>
         <Text color="gray">{"█"}</Text>
       </Box>
@@ -103,7 +109,9 @@ export function ServerSelect({ savedProfile, onConnect }: Props) {
       {error ? (
         <>
           <Text color="red">{error}</Text>
-          <Text color="gray" dimColor>Press any key to try again</Text>
+          <Text color="gray" dimColor>
+            Press any key to try again
+          </Text>
         </>
       ) : (
         <Text color="gray" dimColor>

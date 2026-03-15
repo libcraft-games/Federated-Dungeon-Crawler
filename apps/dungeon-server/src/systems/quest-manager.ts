@@ -1,4 +1,3 @@
-import { encodeMessage } from "@realms/protocol";
 import type { QuestDefinition } from "@realms/lexicons";
 
 interface QuestObjectiveProgress {
@@ -37,7 +36,9 @@ export class QuestManager {
     return this.progress.get(characterDid)?.get(questId);
   }
 
-  getActiveQuests(characterDid: string): Array<{ questId: string; def: QuestDefinition; progress: ActiveQuestState }> {
+  getActiveQuests(
+    characterDid: string,
+  ): Array<{ questId: string; def: QuestDefinition; progress: ActiveQuestState }> {
     const playerProgress = this.progress.get(characterDid);
     if (!playerProgress) return [];
     const result = [];
@@ -55,7 +56,11 @@ export class QuestManager {
   }
 
   /** Get quests this NPC offers that the player can accept */
-  getAvailableQuests(characterDid: string, npcDefId: string, playerLevel: number): Array<{ questId: string; def: QuestDefinition }> {
+  getAvailableQuests(
+    characterDid: string,
+    npcDefId: string,
+    playerLevel: number,
+  ): Array<{ questId: string; def: QuestDefinition }> {
     const result = [];
     for (const [questId, def] of this.definitions.entries()) {
       if (def.giver !== npcDefId) continue;
@@ -69,7 +74,9 @@ export class QuestManager {
       if (def.level && playerLevel < def.level) continue;
 
       // Check prerequisites
-      const prereqsMet = (def.prerequisites ?? []).every(prereqId => this.hasCompleted(characterDid, prereqId));
+      const prereqsMet = (def.prerequisites ?? []).every((prereqId) =>
+        this.hasCompleted(characterDid, prereqId),
+      );
       if (!prereqsMet) continue;
 
       result.push({ questId, def });
@@ -78,12 +85,15 @@ export class QuestManager {
   }
 
   /** Get active quests the player can turn in at this NPC, where all objectives are done */
-  getCompletableQuests(characterDid: string, npcDefId: string): Array<{ questId: string; def: QuestDefinition; progress: ActiveQuestState }> {
+  getCompletableQuests(
+    characterDid: string,
+    npcDefId: string,
+  ): Array<{ questId: string; def: QuestDefinition; progress: ActiveQuestState }> {
     const active = this.getActiveQuests(characterDid);
     return active.filter(({ def, progress }) => {
       const turnInNpc = def.turnIn ?? def.giver;
       if (turnInNpc !== npcDefId) return false;
-      return progress.objectives.every(o => o.done);
+      return progress.objectives.every((o) => o.done);
     });
   }
 
@@ -95,7 +105,7 @@ export class QuestManager {
       questId,
       serverId: "local",
       status: "active",
-      objectives: def.objectives.map(obj => ({
+      objectives: def.objectives.map((obj) => ({
         current: 0,
         required: obj.count ?? 1,
         done: false,
@@ -146,7 +156,12 @@ export class QuestManager {
     return this.recordEvent(characterDid, "visit", roomId);
   }
 
-  private recordEvent(characterDid: string, type: string, targetId: string, count: number = 1): string[] {
+  private recordEvent(
+    characterDid: string,
+    type: string,
+    targetId: string,
+    count: number = 1,
+  ): string[] {
     const active = this.getActiveQuests(characterDid);
     const updated: string[] = [];
 
@@ -162,7 +177,7 @@ export class QuestManager {
         if (obj.target && obj.target !== targetId) continue;
 
         // Only advance if previous objectives are done (or this is first)
-        const prevDone = i === 0 || progress.objectives.slice(0, i).every(p => p.done);
+        const prevDone = i === 0 || progress.objectives.slice(0, i).every((p) => p.done);
         if (!prevDone) continue;
 
         prog.current = Math.min(prog.current + count, prog.required);

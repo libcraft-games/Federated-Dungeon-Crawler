@@ -72,7 +72,7 @@ describe("computeDerivedStats", () => {
     const derived = computeDerivedStats(
       { test: { name: "Test", expression: "str - 100", min: 1 } },
       1,
-      { str: 10 }
+      { str: 10 },
     );
     expect(derived.test).toBe(1);
   });

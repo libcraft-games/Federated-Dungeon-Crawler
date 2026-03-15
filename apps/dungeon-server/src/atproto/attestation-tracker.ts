@@ -69,13 +69,15 @@ export class AttestationTracker {
 
     // Chain onto any in-flight signing to avoid races
     const prev = this.signing ?? Promise.resolve();
-    this.signing = prev.then(async () => {
-      const attestation = await this.serverIdentity.signAttestation(this.playerDid, claims);
-      this.attestations.push(attestation);
-    }).catch(() => {
-      // Signing failed — re-merge claims so they aren't lost
-      this.pending = { ...claims, ...this.pending };
-    });
+    this.signing = prev
+      .then(async () => {
+        const attestation = await this.serverIdentity.signAttestation(this.playerDid, claims);
+        this.attestations.push(attestation);
+      })
+      .catch(() => {
+        // Signing failed — re-merge claims so they aren't lost
+        this.pending = { ...claims, ...this.pending };
+      });
   }
 
   /**

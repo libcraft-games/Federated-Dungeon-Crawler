@@ -1,4 +1,9 @@
-import { encodeMessage, decodeServerMessage, type ClientMessage, type ServerMessage } from "@realms/protocol";
+import {
+  encodeMessage,
+  decodeServerMessage,
+  type ClientMessage,
+  type ServerMessage,
+} from "@realms/protocol";
 import { parseCommand } from "@realms/common";
 
 export type MessageHandler = (msg: ServerMessage) => void;

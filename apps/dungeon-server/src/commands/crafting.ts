@@ -30,12 +30,13 @@ function handleRecipes(cmd: ParsedCommand, ctx: CommandContext): void {
     return;
   }
 
-  const visible = showAll ? allRecipes : allRecipes.filter(r => r.craftable);
+  const visible = showAll ? allRecipes : allRecipes.filter((r) => r.craftable);
 
   if (visible.length === 0) {
-    const hint = allRecipes.length > 0
-      ? ` (${allRecipes.length} recipes known — use 'recipes all' to see them)`
-      : "";
+    const hint =
+      allRecipes.length > 0
+        ? ` (${allRecipes.length} recipes known — use 'recipes all' to see them)`
+        : "";
     sendNarrative(session, `You can't craft anything here right now.${hint}`, "info");
     return;
   }
@@ -43,23 +44,33 @@ function handleRecipes(cmd: ParsedCommand, ctx: CommandContext): void {
   const itemDefs = world.areaManager.getAllItemDefinitions();
   const lines = [showAll ? "=== Known Recipes ===" : "=== Craftable Recipes ==="];
 
-  for (const { id, def, craftable, missingStation } of visible) {
-    const ingredientList = def.ingredients.map(ing => {
-      const d = itemDefs.get(ing.itemId);
-      const have = session.countItem(ing.itemId);
-      return `${ing.count}x ${d?.name ?? ing.itemId} (${have}/${ing.count})`;
-    }).join(", ");
+  for (const { def, craftable, missingStation } of visible) {
+    const ingredientList = def.ingredients
+      .map((ing) => {
+        const d = itemDefs.get(ing.itemId);
+        const have = session.countItem(ing.itemId);
+        return `${ing.count}x ${d?.name ?? ing.itemId} (${have}/${ing.count})`;
+      })
+      .join(", ");
 
     const outputDef = itemDefs.get(def.output.itemId);
     const outputName = outputDef?.name ?? def.output.itemId;
     const stationNote = def.station ? ` [${def.station}]` : "";
-    const readyMark = craftable ? "" : missingStation ? ` [needs ${missingStation}]` : " [missing ingredients]";
+    const readyMark = craftable
+      ? ""
+      : missingStation
+        ? ` [needs ${missingStation}]`
+        : " [missing ingredients]";
 
-    lines.push(`  ${def.name} — ${ingredientList} → ${def.output.count}x ${outputName}${stationNote}${readyMark}`);
+    lines.push(
+      `  ${def.name} — ${ingredientList} → ${def.output.count}x ${outputName}${stationNote}${readyMark}`,
+    );
   }
 
   if (!showAll && allRecipes.length > visible.length) {
-    lines.push(`\n(${allRecipes.length - visible.length} more recipes not currently craftable — 'recipes all' to list them)`);
+    lines.push(
+      `\n(${allRecipes.length - visible.length} more recipes not currently craftable — 'recipes all' to list them)`,
+    );
   }
 
   sendNarrative(session, lines.join("\n"), "info");
@@ -86,11 +97,15 @@ function handleCraft(cmd: ParsedCommand, ctx: CommandContext): void {
   if (!result.success) {
     if (result.missingIngredients) {
       const missing = result.missingIngredients
-        .map(m => `${m.name} (have ${m.have}, need ${m.need})`)
+        .map((m) => `${m.name} (have ${m.have}, need ${m.need})`)
         .join(", ");
       sendNarrative(session, `You're missing: ${missing}.`, "error");
     } else if (result.failedRoll) {
-      sendNarrative(session, "Your hands slip — the materials are ruined. You fail to craft anything.", "info");
+      sendNarrative(
+        session,
+        "Your hands slip — the materials are ruined. You fail to craft anything.",
+        "info",
+      );
     } else {
       sendNarrative(session, result.reason ?? "Crafting failed.", "error");
     }
@@ -100,7 +115,7 @@ function handleCraft(cmd: ParsedCommand, ctx: CommandContext): void {
   sendNarrative(
     session,
     `You craft: ${result.outputName} (x${result.outputCount}) — added to inventory.`,
-    "info"
+    "info",
   );
 
   // Send inventory update
@@ -123,17 +138,21 @@ function handleGather(cmd: ParsedCommand, ctx: CommandContext): void {
     sendNarrative(
       session,
       `The ${result.node?.name ?? "gathering spot"} is depleted. Come back later.`,
-      "info"
+      "info",
     );
     return;
   }
 
   if (!result.items || result.items.length === 0) {
-    sendNarrative(session, `You search the ${result.node?.name ?? "area"} but find nothing this time.`, "info");
+    sendNarrative(
+      session,
+      `You search the ${result.node?.name ?? "area"} but find nothing this time.`,
+      "info",
+    );
     return;
   }
 
-  const gained = result.items.map(i => `${i.name} (x${i.count})`).join(", ");
+  const gained = result.items.map((i) => `${i.name} (x${i.count})`).join(", ");
   sendNarrative(session, `You gather from the ${result.node?.name}: ${gained}.`, "info");
 
   // Send inventory update

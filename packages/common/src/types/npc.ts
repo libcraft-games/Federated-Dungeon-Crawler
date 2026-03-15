@@ -28,7 +28,7 @@ export function generateNpcId(): string {
 export function createNpcInstance(
   definitionId: string,
   definition: NpcDefinition,
-  roomId: string
+  roomId: string,
 ): NpcInstance {
   const level = definition.level ?? 1;
   const maxHp = computeNpcMaxHp(level, definition.attributes);

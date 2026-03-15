@@ -1,6 +1,6 @@
 import type { NpcDefinition, ItemDefinition } from "@realms/lexicons";
 import type { NpcInstance, ItemInstance } from "@realms/common";
-import { createNpcInstance, computeNpcMaxHp, createItemInstance } from "@realms/common";
+import { createNpcInstance, createItemInstance } from "@realms/common";
 import type { Room } from "../world/room.js";
 
 /** Server-internal loot table entry (not part of AT Proto lexicon) */
@@ -74,7 +74,11 @@ export class NpcManager {
   findInRoom(roomId: string, name: string): NpcInstance | undefined {
     const lower = name.toLowerCase();
     for (const npc of this.instances.values()) {
-      if (npc.currentRoom === roomId && npc.state !== "dead" && npc.name.toLowerCase().includes(lower)) {
+      if (
+        npc.currentRoom === roomId &&
+        npc.state !== "dead" &&
+        npc.name.toLowerCase().includes(lower)
+      ) {
         return npc;
       }
     }
@@ -131,7 +135,10 @@ export class NpcManager {
   }
 
   /** Generate loot drops for a killed NPC */
-  generateLoot(definitionId: string, getItemDef: (id: string) => ItemDefinition | undefined): ItemInstance[] {
+  generateLoot(
+    definitionId: string,
+    getItemDef: (id: string) => ItemDefinition | undefined,
+  ): ItemInstance[] {
     const loot = this.lootTables.get(definitionId);
     if (!loot) return [];
 
@@ -141,9 +148,11 @@ export class NpcManager {
       if (roll < entry.chance) {
         const itemDef = getItemDef(entry.itemId);
         if (itemDef) {
-          const qty = entry.minQuantity && entry.maxQuantity
-            ? Math.floor(Math.random() * (entry.maxQuantity - entry.minQuantity + 1)) + entry.minQuantity
-            : entry.minQuantity ?? 1;
+          const qty =
+            entry.minQuantity && entry.maxQuantity
+              ? Math.floor(Math.random() * (entry.maxQuantity - entry.minQuantity + 1)) +
+                entry.minQuantity
+              : (entry.minQuantity ?? 1);
           drops.push(createItemInstance(entry.itemId, itemDef, qty));
         }
       }

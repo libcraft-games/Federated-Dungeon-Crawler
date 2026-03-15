@@ -87,8 +87,10 @@ export function handleMap(ctx: CommandContext): void {
 }
 
 function renderMap(rooms: MapRoom[], _z: number): MapData {
-  let minX = Infinity, maxX = -Infinity;
-  let minY = Infinity, maxY = -Infinity;
+  let minX = Infinity,
+    maxX = -Infinity;
+  let minY = Infinity,
+    maxY = -Infinity;
   for (const r of rooms) {
     minX = Math.min(minX, r.x);
     maxX = Math.max(maxX, r.x);
@@ -101,7 +103,7 @@ function renderMap(rooms: MapRoom[], _z: number): MapData {
 
   const grid: string[][] = [];
   for (let row = 0; row < gridH; row++) {
-    grid.push(new Array(gridW).fill(" "));
+    grid.push(Array.from({ length: gridW }, () => " "));
   }
 
   const roomAt = new Map<string, MapRoom>();

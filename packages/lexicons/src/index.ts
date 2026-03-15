@@ -26,18 +26,45 @@ import type { Main as _ClassDef } from "./lexicons/com/cacheblasters/fm/system/c
 import type { Main as _SpellDef } from "./lexicons/com/cacheblasters/fm/system/spell.defs.js";
 import type { Main as _RaceDef } from "./lexicons/com/cacheblasters/fm/system/race.defs.js";
 import type { Main as _EquipSlotDef } from "./lexicons/com/cacheblasters/fm/system/equipSlot.defs.js";
-import type { Main as _ItemTypeDef, PropertyDef as _PropertyDef } from "./lexicons/com/cacheblasters/fm/system/itemType.defs.js";
+import type {
+  Main as _ItemTypeDef,
+  PropertyDef as _PropertyDef,
+} from "./lexicons/com/cacheblasters/fm/system/itemType.defs.js";
 import type { Main as _FormulaDef } from "./lexicons/com/cacheblasters/fm/system/formula.defs.js";
-import type { Main as _RoomRecord, Exit as _RoomExit, Coordinates as _Coordinates } from "./lexicons/com/cacheblasters/fm/world/room.defs.js";
-import type { Main as _AreaRecord, LevelRange } from "./lexicons/com/cacheblasters/fm/world/area.defs.js";
+import type {
+  Main as _RoomRecord,
+  Exit as _RoomExit,
+  Coordinates as _Coordinates,
+} from "./lexicons/com/cacheblasters/fm/world/room.defs.js";
+import type {
+  Main as _AreaRecord,
+  LevelRange,
+} from "./lexicons/com/cacheblasters/fm/world/area.defs.js";
 import type { Main as _ServerRecord } from "./lexicons/com/cacheblasters/fm/world/server.defs.js";
-import type { Main as _FlagRecord, FlagEffect as _FlagEffect } from "./lexicons/com/cacheblasters/fm/world/flag.defs.js";
+import type {
+  Main as _FlagRecord,
+  FlagEffect as _FlagEffect,
+} from "./lexicons/com/cacheblasters/fm/world/flag.defs.js";
 import type { Main as _ItemDefinition } from "./lexicons/com/cacheblasters/fm/item/definition.defs.js";
 import type { Main as _NpcDefinition } from "./lexicons/com/cacheblasters/fm/npc/definition.defs.js";
-import type { Main as _QuestDefinition, Objective as _QuestObjective, Rewards as _QuestRewards } from "./lexicons/com/cacheblasters/fm/quest/definition.defs.js";
-import type { Main as _QuestProgress, ObjectiveProgress as _QuestObjectiveProgress } from "./lexicons/com/cacheblasters/fm/quest/progress.defs.js";
-import type { Main as _RecipeDef, Ingredient as _RecipeIngredient, Output as _RecipeOutput } from "./lexicons/com/cacheblasters/fm/craft/recipe.defs.js";
-import type { Main as _FederationRegistration, LevelRange as _FedLevelRange } from "./lexicons/com/cacheblasters/fm/federation/registration.defs.js";
+import type {
+  Main as _QuestDefinition,
+  Objective as _QuestObjective,
+  Rewards as _QuestRewards,
+} from "./lexicons/com/cacheblasters/fm/quest/definition.defs.js";
+import type {
+  Main as _QuestProgress,
+  ObjectiveProgress as _QuestObjectiveProgress,
+} from "./lexicons/com/cacheblasters/fm/quest/progress.defs.js";
+import type {
+  Main as _RecipeDef,
+  Ingredient as _RecipeIngredient,
+  Output as _RecipeOutput,
+} from "./lexicons/com/cacheblasters/fm/craft/recipe.defs.js";
+import type {
+  Main as _FederationRegistration,
+  LevelRange as _FedLevelRange,
+} from "./lexicons/com/cacheblasters/fm/federation/registration.defs.js";
 import type { Main as _PortalRecord } from "./lexicons/com/cacheblasters/fm/world/portal.defs.js";
 
 // ── Character ──
@@ -115,7 +142,10 @@ export type { LevelRange } from "./lexicons/com/cacheblasters/fm/world/area.defs
 
 export type AreaRecord = Omit<_AreaRecord, "$type"> & { $type?: string };
 
-export type ServerRecord = Omit<_ServerRecord, "$type" | "endpoint" | "xrpcEndpoint" | "createdAt"> & {
+export type ServerRecord = Omit<
+  _ServerRecord,
+  "$type" | "endpoint" | "xrpcEndpoint" | "createdAt"
+> & {
   $type?: string;
   endpoint: string;
   xrpcEndpoint?: string;
@@ -133,7 +163,10 @@ export type PortalRecord = Omit<_PortalRecord, "$type" | "direction"> & {
 
 // ── Federation ──
 
-export type FederationRegistration = Omit<_FederationRegistration, "$type" | "createdAt" | "updatedAt"> & {
+export type FederationRegistration = Omit<
+  _FederationRegistration,
+  "$type" | "createdAt" | "updatedAt"
+> & {
   $type?: string;
   createdAt: string;
   updatedAt?: string;
@@ -160,7 +193,10 @@ export interface DialogueResponse {
   next?: string;
 }
 
-export type NpcDefinition = Omit<_NpcDefinition, "$type" | "behavior" | "attributes" | "dialogue"> & {
+export type NpcDefinition = Omit<
+  _NpcDefinition,
+  "$type" | "behavior" | "attributes" | "dialogue"
+> & {
   $type?: string;
   behavior: NpcBehavior;
   attributes?: Attributes;
@@ -186,7 +222,10 @@ export type QuestDefinition = Omit<_QuestDefinition, "$type" | "objectives"> & {
 
 export type QuestObjectiveProgress = Omit<_QuestObjectiveProgress, "$type"> & { $type?: string };
 
-export type QuestProgress = Omit<_QuestProgress, "$type" | "status" | "acceptedAt" | "completedAt"> & {
+export type QuestProgress = Omit<
+  _QuestProgress,
+  "$type" | "status" | "acceptedAt" | "completedAt"
+> & {
   $type?: string;
   status: QuestStatus;
   acceptedAt: string;

@@ -65,7 +65,11 @@ function handleBuy(cmd: ParsedCommand, ctx: CommandContext): void {
   const itemName = cmd.args.join(" ");
 
   if (!itemName) {
-    sendNarrative(session, "Buy what? Specify an item name. Use 'shop' to see what's available.", "error");
+    sendNarrative(
+      session,
+      "Buy what? Specify an item name. Use 'shop' to see what's available.",
+      "error",
+    );
     return;
   }
 
@@ -91,7 +95,11 @@ function handleBuy(cmd: ParsedCommand, ctx: CommandContext): void {
   }
 
   if (!matchedId || !matchedDef) {
-    sendNarrative(session, `${npc.name} doesn't sell '${itemName}'. Use 'shop' to see available items.`, "error");
+    sendNarrative(
+      session,
+      `${npc.name} doesn't sell '${itemName}'. Use 'shop' to see available items.`,
+      "error",
+    );
     return;
   }
 
@@ -102,7 +110,11 @@ function handleBuy(cmd: ParsedCommand, ctx: CommandContext): void {
   }
 
   if (!session.spendGold(price)) {
-    sendNarrative(session, `You can't afford ${matchedDef.name} (costs ${price} gold, you have ${session.gold}).`, "error");
+    sendNarrative(
+      session,
+      `You can't afford ${matchedDef.name} (costs ${price} gold, you have ${session.gold}).`,
+      "error",
+    );
     return;
   }
 
@@ -114,7 +126,7 @@ function handleBuy(cmd: ParsedCommand, ctx: CommandContext): void {
   sendNarrative(
     session,
     `You buy ${matchedDef.name} from ${npc.name} for ${price} gold. (${session.gold} gold remaining)`,
-    "info"
+    "info",
   );
 
   sendCharacterAndInventory(session);
@@ -160,7 +172,7 @@ function handleSell(cmd: ParsedCommand, ctx: CommandContext): void {
   sendNarrative(
     session,
     `You sell ${item.name} to ${npc.name} for ${sellPrice} gold. (${session.gold} gold)`,
-    "info"
+    "info",
   );
 
   sendCharacterAndInventory(session);
@@ -168,18 +180,20 @@ function handleSell(cmd: ParsedCommand, ctx: CommandContext): void {
 
 function sendCharacterAndInventory(session: CharacterSession): void {
   const s = session.state;
-  session.send(encodeMessage({
-    type: "character_update",
-    hp: s.currentHp,
-    maxHp: s.maxHp,
-    mp: s.currentMp,
-    maxMp: s.maxMp,
-    ap: s.currentAp,
-    maxAp: s.maxAp,
-    gold: s.gold,
-    level: s.level,
-    xp: s.experience,
-    xpToNext: xpToNextLevel(s.level, s.experience),
-  }));
+  session.send(
+    encodeMessage({
+      type: "character_update",
+      hp: s.currentHp,
+      maxHp: s.maxHp,
+      mp: s.currentMp,
+      maxMp: s.maxMp,
+      ap: s.currentAp,
+      maxAp: s.maxAp,
+      gold: s.gold,
+      level: s.level,
+      xp: s.experience,
+      xpToNext: xpToNextLevel(s.level, s.experience),
+    }),
+  );
   session.send(encodeMessage({ type: "inventory_update", inventory: session.inventory }));
 }

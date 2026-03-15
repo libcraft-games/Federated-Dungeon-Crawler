@@ -53,7 +53,11 @@ function handleTake(cmd: ParsedCommand, ctx: CommandContext): void {
   // Check for untakeable items before removing
   const groundItem = room.findGroundItem(itemName);
   if (groundItem?.properties?.untakeable) {
-    sendNarrative(session, `You can't get ye ${groundItem.name.toLowerCase()}. It is firmly anchored to this plane of existence.`, "info");
+    sendNarrative(
+      session,
+      `You can't get ye ${groundItem.name.toLowerCase()}. It is firmly anchored to this plane of existence.`,
+      "info",
+    );
     return;
   }
 
@@ -67,7 +71,11 @@ function handleTake(cmd: ParsedCommand, ctx: CommandContext): void {
   session.attestations.recordItemGrant(item.definitionId);
 
   // Quest collect tracking
-  const collectUpdates = ctx.world.questManager.recordCollect(session.characterDid, item.definitionId, item.quantity);
+  const collectUpdates = ctx.world.questManager.recordCollect(
+    session.characterDid,
+    item.definitionId,
+    item.quantity,
+  );
   for (const questId of collectUpdates) {
     const payload = ctx.world.questManager.buildUpdatePayload(session.characterDid, questId);
     if (payload) session.send(encodeMessage(payload));
@@ -84,7 +92,7 @@ function handleTake(cmd: ParsedCommand, ctx: CommandContext): void {
       text: `${session.name} picks up ${item.name}${qty}.`,
       style: "info",
     },
-    session.sessionId
+    session.sessionId,
   );
 
   // Send updated inventory
@@ -123,7 +131,7 @@ function handleDrop(cmd: ParsedCommand, ctx: CommandContext): void {
       text: `${session.name} drops ${item.name}${qty}.`,
       style: "info",
     },
-    session.sessionId
+    session.sessionId,
   );
 
   // Send updated inventory
@@ -141,12 +149,10 @@ function handleExamine(cmd: ParsedCommand, ctx: CommandContext): void {
 
   // Check inventory first, then ground
   let item = session.findItem(itemName);
-  let location = "inventory";
 
   if (!item) {
     const room = world.getRoom(session.currentRoom);
     item = room?.findGroundItem(itemName);
-    location = "ground";
   }
 
   if (!item) {
@@ -167,14 +173,13 @@ function handleExamine(cmd: ParsedCommand, ctx: CommandContext): void {
   if (def.rarity) lines.push(`Rarity: ${def.rarity}`);
   if (def.weight) lines.push(`Weight: ${def.weight}`);
   if (def.value) lines.push(`Value: ${def.value} gold`);
-  if (def.levelRequired && def.levelRequired > 1) lines.push(`Requires level: ${def.levelRequired}`);
+  if (def.levelRequired && def.levelRequired > 1)
+    lines.push(`Requires level: ${def.levelRequired}`);
   if (def.tags?.length) lines.push(`Tags: ${def.tags.join(", ")}`);
 
   sendNarrative(session, lines.join("\n"), "info");
 }
 
 function sendInventoryUpdate(ctx: CommandContext): void {
-  ctx.session.send(
-    encodeMessage({ type: "inventory_update", inventory: ctx.session.inventory })
-  );
+  ctx.session.send(encodeMessage({ type: "inventory_update", inventory: ctx.session.inventory }));
 }

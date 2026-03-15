@@ -4,7 +4,13 @@ import { SessionManager } from "./server/session-manager.js";
 import { type SessionData } from "./entities/character-session.js";
 import { parseCommand } from "@realms/common";
 import { encodeMessage, decodeClientMessage, type ServerMessage } from "@realms/protocol";
-import { handleCommand, sendRoomState, sendMapUpdate, sendNarrative, type CommandContext } from "./commands/index.js";
+import {
+  handleCommand,
+  sendRoomState,
+  sendMapUpdate,
+  sendNarrative,
+  type CommandContext,
+} from "./commands/index.js";
 import type { CharacterProfile } from "@realms/lexicons";
 import { buildAttributes, computeDerivedStats, xpToNextLevel } from "@realms/common";
 import { BlueskyBridge } from "./bluesky/bridge.js";
@@ -28,7 +34,12 @@ const pdsClient = new PdsClient(serverIdentity);
 const DEV_MODE = process.env.DEV_MODE === "true";
 const portalHandler = new PortalHandler(serverIdentity, pdsClient, config.federation);
 const transferHandler = new TransferHandler(
-  serverIdentity, sessions, world, config.federation, config.atproto, config.name,
+  serverIdentity,
+  sessions,
+  world,
+  config.federation,
+  config.atproto,
+  config.name,
 );
 
 await world.initialize();
@@ -47,7 +58,11 @@ if (!DEV_MODE && config.atproto.serverPassword) {
 
     // Federation: publish registration and seed known servers
     const federation = new FederationManager(
-      serverIdentity, config.federation, config.atproto, config.name, config.description,
+      serverIdentity,
+      config.federation,
+      config.atproto,
+      config.name,
+      config.description,
     );
     await federation.publishRegistration(portalCount, 0);
     await federation.seedFromConfig();
@@ -77,11 +92,14 @@ function makeContext(sessionId: string): CommandContext | null {
   return { session, world, sessions, broadcast, bluesky, combat, portalHandler };
 }
 
-function buildCharacterProfile(name: string, classId: string = "warrior", raceId: string = "human"): CharacterProfile {
+function buildCharacterProfile(
+  name: string,
+  classId: string = "warrior",
+  raceId: string = "human",
+): CharacterProfile {
   const system = world.gameSystem;
   const attributes = buildAttributes(system, classId, raceId);
   const derived = computeDerivedStats(system.formulas, 1, attributes);
-
 
   return {
     name,
@@ -120,26 +138,30 @@ setInterval(() => {
     const expired = session.tickEffects();
     if (expired.length > 0) {
       const names = expired.join(", ");
-      session.send(encodeMessage({
-        type: "narrative",
-        text: `Effect${expired.length > 1 ? "s" : ""} worn off: ${names}`,
-        style: "info",
-      }));
+      session.send(
+        encodeMessage({
+          type: "narrative",
+          text: `Effect${expired.length > 1 ? "s" : ""} worn off: ${names}`,
+          style: "info",
+        }),
+      );
       // Send updated stats
       const s = session.state;
-      session.send(encodeMessage({
-        type: "character_update",
-        hp: s.currentHp,
-        maxHp: s.maxHp,
-        mp: s.currentMp,
-        maxMp: s.maxMp,
-        ap: s.currentAp,
-        maxAp: s.maxAp,
-        gold: s.gold,
-        level: s.level,
-        xp: s.experience,
-        xpToNext: xpToNextLevel(s.level, s.experience),
-      }));
+      session.send(
+        encodeMessage({
+          type: "character_update",
+          hp: s.currentHp,
+          maxHp: s.maxHp,
+          mp: s.currentMp,
+          maxMp: s.maxMp,
+          ap: s.currentAp,
+          maxAp: s.maxAp,
+          gold: s.gold,
+          level: s.level,
+          xp: s.experience,
+          xpToNext: xpToNextLevel(s.level, s.experience),
+        }),
+      );
     }
   }
 }, TICK_INTERVAL_MS);
@@ -176,12 +198,18 @@ const server = Bun.serve<SessionData>({
 
       if (DEV_MODE) {
         // Dev mode: create session on connect with query params
-        const name = url.searchParams.get("name") ?? `Adventurer_${Math.floor(Math.random() * 9999)}`;
+        const name =
+          url.searchParams.get("name") ?? `Adventurer_${Math.floor(Math.random() * 9999)}`;
         const classId = url.searchParams.get("class") ?? "warrior";
         const raceId = url.searchParams.get("race") ?? "human";
 
         const profile = buildCharacterProfile(name, classId, raceId);
-        const session = sessions.createSession(`dev:${name}`, profile, world.getDefaultSpawnRoom(), world.gameSystem.formulas);
+        const session = sessions.createSession(
+          `dev:${name}`,
+          profile,
+          world.getDefaultSpawnRoom(),
+          world.gameSystem.formulas,
+        );
 
         const upgraded = server.upgrade(req, { data: { sessionId: session.sessionId } });
         if (!upgraded) {
@@ -190,7 +218,10 @@ const server = Bun.serve<SessionData>({
         return undefined;
       }
 
-      return new Response("Invalid session. Authenticate via /xrpc/com.cacheblasters.fm.action.connect first.", { status: 401 });
+      return new Response(
+        "Invalid session. Authenticate via /xrpc/com.cacheblasters.fm.action.connect first.",
+        { status: 401 },
+      );
     }
 
     // ── OAuth routes ──
@@ -210,7 +241,10 @@ const server = Bun.serve<SessionData>({
         const authUrl = await oauthClient.authorize(handle);
         return Response.json({ url: authUrl.toString() });
       } catch (err) {
-        return Response.json({ error: err instanceof Error ? err.message : "OAuth failed" }, { status: 500 });
+        return Response.json(
+          { error: err instanceof Error ? err.message : "OAuth failed" },
+          { status: 500 },
+        );
       }
     }
 
@@ -224,7 +258,12 @@ const server = Bun.serve<SessionData>({
         const existingProfile = await pdsClient.loadCharacter(agent, did);
         if (existingProfile) {
           // Returning player — create game session
-          const gameSession = sessions.createSession(did, existingProfile, world.getDefaultSpawnRoom(), world.gameSystem.formulas);
+          const gameSession = sessions.createSession(
+            did,
+            existingProfile,
+            world.getDefaultSpawnRoom(),
+            world.gameSystem.formulas,
+          );
           return Response.json({
             sessionId: gameSession.sessionId,
             websocketUrl: `${config.atproto.publicUrl.replace(/^http/, "ws")}/ws?session=${gameSession.sessionId}`,
@@ -240,7 +279,10 @@ const server = Bun.serve<SessionData>({
           gameSystem: world.gameSystem,
         });
       } catch (err) {
-        return Response.json({ error: err instanceof Error ? err.message : "Callback failed" }, { status: 500 });
+        return Response.json(
+          { error: err instanceof Error ? err.message : "Callback failed" },
+          { status: 500 },
+        );
       }
     }
 
@@ -249,7 +291,7 @@ const server = Bun.serve<SessionData>({
     // Connect: authenticate and load or prompt character creation
     if (url.pathname === "/xrpc/com.cacheblasters.fm.action.connect" && req.method === "POST") {
       try {
-        const body = await req.json() as { did: string };
+        const body = (await req.json()) as { did: string };
         if (!body.did) {
           return Response.json({ error: "did is required" }, { status: 400 });
         }
@@ -257,12 +299,20 @@ const server = Bun.serve<SessionData>({
         // Try to restore OAuth session and load character
         const agent = await oauthClient.restore(body.did);
         if (!agent) {
-          return Response.json({ error: "No valid session. Please authenticate first." }, { status: 401 });
+          return Response.json(
+            { error: "No valid session. Please authenticate first." },
+            { status: 401 },
+          );
         }
 
         const profile = await pdsClient.loadCharacter(agent, body.did);
         if (profile) {
-          const gameSession = sessions.createSession(body.did, profile, world.getDefaultSpawnRoom(), world.gameSystem.formulas);
+          const gameSession = sessions.createSession(
+            body.did,
+            profile,
+            world.getDefaultSpawnRoom(),
+            world.gameSystem.formulas,
+          );
           return Response.json({
             sessionId: gameSession.sessionId,
             websocketUrl: `${config.atproto.publicUrl.replace(/^http/, "ws")}/ws?session=${gameSession.sessionId}`,
@@ -277,21 +327,38 @@ const server = Bun.serve<SessionData>({
           gameSystem: world.gameSystem,
         });
       } catch (err) {
-        return Response.json({ error: err instanceof Error ? err.message : "Connect failed" }, { status: 500 });
+        return Response.json(
+          { error: err instanceof Error ? err.message : "Connect failed" },
+          { status: 500 },
+        );
       }
     }
 
     // Create character: build a new character and write to PDS
-    if (url.pathname === "/xrpc/com.cacheblasters.fm.action.createCharacter" && req.method === "POST") {
+    if (
+      url.pathname === "/xrpc/com.cacheblasters.fm.action.createCharacter" &&
+      req.method === "POST"
+    ) {
       try {
-        const body = await req.json() as { did: string; name: string; classId: string; raceId: string };
+        const body = (await req.json()) as {
+          did: string;
+          name: string;
+          classId: string;
+          raceId: string;
+        };
         if (!body.did || !body.name || !body.classId || !body.raceId) {
-          return Response.json({ error: "did, name, classId, and raceId are required" }, { status: 400 });
+          return Response.json(
+            { error: "did, name, classId, and raceId are required" },
+            { status: 400 },
+          );
         }
 
         const agent = await oauthClient.restore(body.did);
         if (!agent) {
-          return Response.json({ error: "No valid session. Please authenticate first." }, { status: 401 });
+          return Response.json(
+            { error: "No valid session. Please authenticate first." },
+            { status: 401 },
+          );
         }
 
         // Build character profile using this server's game system
@@ -301,7 +368,12 @@ const server = Bun.serve<SessionData>({
         await pdsClient.saveCharacter(agent, body.did, profile);
 
         // Create game session
-        const gameSession = sessions.createSession(body.did, profile, world.getDefaultSpawnRoom(), world.gameSystem.formulas);
+        const gameSession = sessions.createSession(
+          body.did,
+          profile,
+          world.getDefaultSpawnRoom(),
+          world.gameSystem.formulas,
+        );
         return Response.json({
           sessionId: gameSession.sessionId,
           websocketUrl: `${config.atproto.publicUrl.replace(/^http/, "ws")}/ws?session=${gameSession.sessionId}`,
@@ -309,21 +381,34 @@ const server = Bun.serve<SessionData>({
           characterState: gameSession.state,
         });
       } catch (err) {
-        return Response.json({ error: err instanceof Error ? err.message : "Character creation failed" }, { status: 500 });
+        return Response.json(
+          { error: err instanceof Error ? err.message : "Character creation failed" },
+          { status: 500 },
+        );
       }
     }
 
     // Federation: receive character transfer from another server
-    if (url.pathname === "/xrpc/com.cacheblasters.fm.federation.transfer" && req.method === "POST") {
+    if (
+      url.pathname === "/xrpc/com.cacheblasters.fm.federation.transfer" &&
+      req.method === "POST"
+    ) {
       try {
-        const body = await req.json() as { token: string; character: Record<string, unknown>; attestations?: unknown[] };
+        const body = (await req.json()) as {
+          token: string;
+          character: Record<string, unknown>;
+          attestations?: unknown[];
+        };
         if (!body.token || !body.character) {
           return Response.json({ error: "token and character are required" }, { status: 400 });
         }
         const result = await transferHandler.handleTransfer(body);
         return Response.json(result);
       } catch (err) {
-        return Response.json({ error: err instanceof Error ? err.message : "Transfer failed" }, { status: 500 });
+        return Response.json(
+          { error: err instanceof Error ? err.message : "Transfer failed" },
+          { status: 500 },
+        );
       }
     }
 
@@ -331,9 +416,12 @@ const server = Bun.serve<SessionData>({
 
     if (url.pathname === "/auth/create-account" && req.method === "POST") {
       try {
-        const body = await req.json() as { handle: string; email: string; password: string };
+        const body = (await req.json()) as { handle: string; email: string; password: string };
         if (!body.handle || !body.email || !body.password) {
-          return Response.json({ error: "handle, email, and password are required" }, { status: 400 });
+          return Response.json(
+            { error: "handle, email, and password are required" },
+            { status: 400 },
+          );
         }
 
         // Resolve handle: if no dot, append the PDS hostname
@@ -341,21 +429,24 @@ const server = Bun.serve<SessionData>({
           ? body.handle
           : `${body.handle}.${config.atproto.pdsHostname}`;
 
-        const pdsRes = await fetch(`${config.atproto.pdsUrl}/xrpc/com.atproto.server.createAccount`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ handle, email: body.email, password: body.password }),
-        });
+        const pdsRes = await fetch(
+          `${config.atproto.pdsUrl}/xrpc/com.atproto.server.createAccount`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ handle, email: body.email, password: body.password }),
+          },
+        );
 
         if (!pdsRes.ok) {
-          const errData = await pdsRes.json().catch(() => ({})) as { message?: string };
+          const errData = (await pdsRes.json().catch(() => ({}))) as { message?: string };
           return Response.json(
             { error: errData.message ?? `Account creation failed (${pdsRes.status})` },
             { status: pdsRes.status },
           );
         }
 
-        const data = await pdsRes.json() as { did: string; handle: string };
+        const data = (await pdsRes.json()) as { did: string; handle: string };
         return Response.json({ did: data.did, handle: data.handle });
       } catch (err) {
         return Response.json(
@@ -420,7 +511,7 @@ const server = Bun.serve<SessionData>({
             entity: { id: session.sessionId, name: session.name, type: "player" },
             room: spawnRoom.id,
           },
-          session.sessionId
+          session.sessionId,
         );
       }
 
@@ -430,7 +521,7 @@ const server = Bun.serve<SessionData>({
           type: "welcome",
           sessionId: session.sessionId,
           serverName: config.name,
-        })
+        }),
       );
 
       // Post to Bluesky
@@ -445,27 +536,33 @@ const server = Bun.serve<SessionData>({
 
       // Send initial character stats + inventory
       const s = session.state;
-      session.send(encodeMessage({
-        type: "character_update",
-        hp: s.currentHp,
-        maxHp: s.maxHp,
-        mp: s.currentMp,
-        maxMp: s.maxMp,
-        ap: s.currentAp,
-        maxAp: s.maxAp,
-        gold: s.gold,
-        level: s.level,
-        xp: s.experience,
-        xpToNext: xpToNextLevel(s.level, s.experience),
-      }));
-      session.send(encodeMessage({
-        type: "inventory_update",
-        inventory: s.inventory,
-      }));
-      session.send(encodeMessage({
-        type: "equipment_update",
-        equipment: s.equipment,
-      }));
+      session.send(
+        encodeMessage({
+          type: "character_update",
+          hp: s.currentHp,
+          maxHp: s.maxHp,
+          mp: s.currentMp,
+          maxMp: s.maxMp,
+          ap: s.currentAp,
+          maxAp: s.maxAp,
+          gold: s.gold,
+          level: s.level,
+          xp: s.experience,
+          xpToNext: xpToNextLevel(s.level, s.experience),
+        }),
+      );
+      session.send(
+        encodeMessage({
+          type: "inventory_update",
+          inventory: s.inventory,
+        }),
+      );
+      session.send(
+        encodeMessage({
+          type: "equipment_update",
+          equipment: s.equipment,
+        }),
+      );
 
       // Send quest log
       const questLog = world.questManager.buildLogPayload(session.characterDid);
@@ -484,11 +581,13 @@ const server = Bun.serve<SessionData>({
         const parts: string[] = [];
         if (adaptation.class) parts.push(`class "${adaptation.class.original}"`);
         if (adaptation.race) parts.push(`race "${adaptation.race.original}"`);
-        session.send(encodeMessage({
-          type: "adaptation_required",
-          adaptation,
-          message: `This realm doesn't recognize your ${parts.join(" or ")}. Please choose a local equivalent.`,
-        }));
+        session.send(
+          encodeMessage({
+            type: "adaptation_required",
+            adaptation,
+            message: `This realm doesn't recognize your ${parts.join(" or ")}. Please choose a local equivalent.`,
+          }),
+        );
       }
     },
 
@@ -532,19 +631,21 @@ const server = Bun.serve<SessionData>({
           if (applied) {
             // Resend character state with updated class/race/stats
             const s = ctx.session.state;
-            ctx.session.send(encodeMessage({
-              type: "character_update",
-              hp: s.currentHp,
-              maxHp: s.maxHp,
-              mp: s.currentMp,
-              maxMp: s.maxMp,
-              ap: s.currentAp,
-              maxAp: s.maxAp,
-              gold: s.gold,
-              level: s.level,
-              xp: s.experience,
-              xpToNext: xpToNextLevel(s.level, s.experience),
-            }));
+            ctx.session.send(
+              encodeMessage({
+                type: "character_update",
+                hp: s.currentHp,
+                maxHp: s.maxHp,
+                mp: s.currentMp,
+                maxMp: s.maxMp,
+                ap: s.currentAp,
+                maxAp: s.maxAp,
+                gold: s.gold,
+                level: s.level,
+                xp: s.experience,
+                xpToNext: xpToNextLevel(s.level, s.experience),
+              }),
+            );
             sendNarrative(
               ctx.session,
               `Your form shifts to match this realm. You are now a ${s.race} ${s.class}.`,
@@ -596,22 +697,30 @@ const server = Bun.serve<SessionData>({
       });
 
       // Finalize attestations and store in character profile extensions
-      session.attestations.finalize().then((attestations) => {
-        if (attestations.length > 0) {
-          const s = session.state;
-          const serverExt = (s.extensions?.[serverIdentity.did] as { attestations?: unknown[] } | undefined) ?? {};
-          const existing = serverExt.attestations ?? [];
-          s.extensions = {
-            ...(s.extensions ?? {}),
-            [serverIdentity.did]: {
-              ...serverExt,
-              attestations: [...existing, ...attestations],
-            },
-          };
-        }
-      }).catch((err) => {
-        console.warn(`Failed to finalize attestations for ${session.name}:`, err instanceof Error ? err.message : err);
-      });
+      session.attestations
+        .finalize()
+        .then((attestations) => {
+          if (attestations.length > 0) {
+            const s = session.state;
+            const serverExt =
+              (s.extensions?.[serverIdentity.did] as { attestations?: unknown[] } | undefined) ??
+              {};
+            const existing = serverExt.attestations ?? [];
+            s.extensions = {
+              ...s.extensions,
+              [serverIdentity.did]: {
+                ...serverExt,
+                attestations: [...existing, ...attestations],
+              },
+            };
+          }
+        })
+        .catch((err) => {
+          console.warn(
+            `Failed to finalize attestations for ${session.name}:`,
+            err instanceof Error ? err.message : err,
+          );
+        });
 
       transferHandler.pendingAdaptations.delete(session.sessionId);
       sessions.removeSession(session.sessionId);

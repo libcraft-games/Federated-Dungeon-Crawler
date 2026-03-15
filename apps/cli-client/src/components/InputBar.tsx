@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState } from "react";
 import { Box, Text, useInput } from "ink";
 
 interface Props {
@@ -62,7 +62,9 @@ export function InputBar({ onSubmit }: Props) {
 
   return (
     <Box borderStyle="single" borderColor="green" paddingX={1}>
-      <Text color="green" bold>{"> "}</Text>
+      <Text color="green" bold>
+        {"> "}
+      </Text>
       <Text>{value}</Text>
       <Text color="gray">█</Text>
     </Box>

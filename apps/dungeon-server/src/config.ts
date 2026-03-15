@@ -1,4 +1,12 @@
-export type BlueskyPostType = "chat" | "shout" | "emote" | "event" | "narrative" | "movement" | "combat" | "system";
+export type BlueskyPostType =
+  | "chat"
+  | "shout"
+  | "emote"
+  | "event"
+  | "narrative"
+  | "movement"
+  | "combat"
+  | "system";
 
 export interface BlueskyConfig {
   enabled: boolean;
@@ -47,7 +55,8 @@ export function loadConfig(): ServerConfig {
     host: process.env.HOST ?? "0.0.0.0",
     tickRate: parseInt(process.env.TICK_RATE ?? "250", 10),
     defaultSpawnRoom: process.env.DEFAULT_SPAWN ?? "starter-town:town-square",
-    dataPath: process.env.DATA_PATH ?? decodeURIComponent(new URL("../data", import.meta.url).pathname),
+    dataPath:
+      process.env.DATA_PATH ?? decodeURIComponent(new URL("../data", import.meta.url).pathname),
     bluesky: {
       enabled: process.env.BSKY_ENABLED === "true",
       identifier: process.env.BSKY_IDENTIFIER ?? "",
@@ -62,7 +71,8 @@ export function loadConfig(): ServerConfig {
       pdsUrl: process.env.PDS_URL ?? "http://localhost:2583",
       pdsHostname: process.env.PDS_HOSTNAME ?? "localhost",
       serverDid: process.env.SERVER_DID ?? "",
-      serverHandle: process.env.SERVER_HANDLE ?? `server.${process.env.PDS_HOSTNAME ?? "localhost"}`,
+      serverHandle:
+        process.env.SERVER_HANDLE ?? `server.${process.env.PDS_HOSTNAME ?? "localhost"}`,
       serverPassword: process.env.SERVER_PASSWORD ?? "",
       publicUrl: process.env.PUBLIC_URL ?? `http://localhost:${process.env.PORT ?? "3000"}`,
     },
@@ -75,7 +85,10 @@ export function loadConfig(): ServerConfig {
 }
 
 function parsePostTypes(str: string): BlueskyPostType[] {
-  return str.split(",").map((s) => s.trim()).filter(Boolean) as BlueskyPostType[];
+  return str
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean) as BlueskyPostType[];
 }
 
 type TrustPolicy = "trust-all" | "trust-listed" | "trust-none" | "trust-level-cap";
@@ -86,5 +99,8 @@ function parseTrustPolicy(str: string): TrustPolicy {
 }
 
 function parseTrustedServers(str: string): string[] {
-  return str.split(",").map((s) => s.trim()).filter(Boolean);
+  return str
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
 }

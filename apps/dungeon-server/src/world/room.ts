@@ -1,5 +1,5 @@
 import type { RoomRecord, Direction, RoomExit } from "@realms/lexicons";
-import type { RoomState, EntityBrief, ItemBrief, ItemInstance } from "@realms/common";
+import type { RoomState, EntityBrief, ItemInstance } from "@realms/common";
 import { findExit, hasFlag } from "@realms/common";
 
 export class Room {
@@ -97,7 +97,7 @@ export class Room {
   findGroundItem(identifier: string): ItemInstance | undefined {
     const lower = identifier.toLowerCase();
     return this.groundItems.find(
-      (i) => i.instanceId === identifier || i.name.toLowerCase().includes(lower)
+      (i) => i.instanceId === identifier || i.name.toLowerCase().includes(lower),
     );
   }
 
@@ -124,7 +124,11 @@ export class Room {
       flags: this.flags,
       players: [...this.players.values()],
       npcs: [...this.npcs.values()],
-      items: this.groundItems.map((i) => ({ id: i.instanceId, name: i.name, quantity: i.quantity })),
+      items: this.groundItems.map((i) => ({
+        id: i.instanceId,
+        name: i.name,
+        quantity: i.quantity,
+      })),
     };
   }
 }

@@ -37,7 +37,7 @@ describe("oauth client metadata", () => {
   test("serves client metadata JSON", async () => {
     const res = await fetch(`http://127.0.0.1:${devPort}/oauth/client-metadata.json`);
     expect(res.ok).toBe(true);
-    const meta = await res.json() as Record<string, unknown>;
+    const meta = (await res.json()) as Record<string, unknown>;
     expect(meta.client_name).toBe("Federated Realms");
     expect(meta.grant_types).toEqual(["authorization_code", "refresh_token"]);
     expect(meta.dpop_bound_access_tokens).toBe(true);
@@ -47,13 +47,13 @@ describe("oauth client metadata", () => {
 
   test("client_id points to itself", async () => {
     const res = await fetch(`http://127.0.0.1:${devPort}/oauth/client-metadata.json`);
-    const meta = await res.json() as Record<string, unknown>;
+    const meta = (await res.json()) as Record<string, unknown>;
     expect(meta.client_id).toContain("/oauth/client-metadata.json");
   });
 
   test("redirect_uris includes localhost for CLI", async () => {
     const res = await fetch(`http://127.0.0.1:${devPort}/oauth/client-metadata.json`);
-    const meta = await res.json() as Record<string, unknown>;
+    const meta = (await res.json()) as Record<string, unknown>;
     const uris = meta.redirect_uris as string[];
     expect(uris.some((u) => u.startsWith("http://127.0.0.1"))).toBe(true);
   });
@@ -65,7 +65,7 @@ describe("auth endpoints", () => {
   test("/auth/login requires handle param", async () => {
     const res = await fetch(`http://127.0.0.1:${devPort}/auth/login`);
     expect(res.status).toBe(400);
-    const data = await res.json() as Record<string, unknown>;
+    const data = (await res.json()) as Record<string, unknown>;
     expect(data.error).toContain("handle");
   });
 
@@ -73,7 +73,7 @@ describe("auth endpoints", () => {
     const res = await fetch(`http://127.0.0.1:${devPort}/auth/login?handle=nonexistent.invalid`);
     // Should fail because OAuth client isn't initialized (no PDS configured)
     expect(res.status).toBe(500);
-    const data = await res.json() as Record<string, unknown>;
+    const data = (await res.json()) as Record<string, unknown>;
     expect(data.error).toBeTruthy();
   });
 });
@@ -87,7 +87,7 @@ describe("XRPC action.connect", () => {
       { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) },
     );
     expect(res.status).toBe(400);
-    const data = await res.json() as Record<string, unknown>;
+    const data = (await res.json()) as Record<string, unknown>;
     expect(data.error).toContain("did");
   });
 
@@ -101,7 +101,7 @@ describe("XRPC action.connect", () => {
       },
     );
     expect(res.status).toBe(401);
-    const data = await res.json() as Record<string, unknown>;
+    const data = (await res.json()) as Record<string, unknown>;
     expect(data.error).toContain("session");
   });
 });
@@ -117,7 +117,7 @@ describe("XRPC action.createCharacter", () => {
       },
     );
     expect(res.status).toBe(400);
-    const data = await res.json() as Record<string, unknown>;
+    const data = (await res.json()) as Record<string, unknown>;
     expect(data.error).toContain("required");
   });
 
@@ -127,7 +127,12 @@ describe("XRPC action.createCharacter", () => {
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ did: "did:plc:fake", name: "Hero", classId: "warrior", raceId: "human" }),
+        body: JSON.stringify({
+          did: "did:plc:fake",
+          name: "Hero",
+          classId: "warrior",
+          raceId: "human",
+        }),
       },
     );
     expect(res.status).toBe(401);
@@ -147,7 +152,7 @@ describe("XRPC federation.transfer", () => {
       },
     );
     expect(res.status).toBe(400);
-    const data = await res.json() as Record<string, unknown>;
+    const data = (await res.json()) as Record<string, unknown>;
     expect(data.error).toContain("required");
   });
 
@@ -159,12 +164,20 @@ describe("XRPC federation.transfer", () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           token: "invalid.jwt.token",
-          character: { name: "Hacker", class: "warrior", race: "human", level: 1, experience: 0, attributes: {}, createdAt: new Date().toISOString() },
+          character: {
+            name: "Hacker",
+            class: "warrior",
+            race: "human",
+            level: 1,
+            experience: 0,
+            attributes: {},
+            createdAt: new Date().toISOString(),
+          },
         }),
       },
     );
     expect(res.ok).toBe(true);
-    const data = await res.json() as Record<string, unknown>;
+    const data = (await res.json()) as Record<string, unknown>;
     expect(data.accepted).toBe(false);
     expect(data.reason).toContain("Invalid transfer token");
   });
@@ -176,7 +189,7 @@ describe("auth enforcement (no dev mode)", () => {
   test("health endpoint still works", async () => {
     const res = await fetch(`http://127.0.0.1:${authPort}/health`);
     expect(res.ok).toBe(true);
-    const data = await res.json() as Record<string, unknown>;
+    const data = (await res.json()) as Record<string, unknown>;
     expect(data.status).toBe("ok");
   });
 
@@ -188,7 +201,7 @@ describe("auth enforcement (no dev mode)", () => {
   test("system endpoint still works", async () => {
     const res = await fetch(`http://127.0.0.1:${authPort}/system`);
     expect(res.ok).toBe(true);
-    const data = await res.json() as Record<string, unknown>;
+    const data = (await res.json()) as Record<string, unknown>;
     expect(data.classes).toBeDefined();
   });
 
@@ -263,7 +276,17 @@ describe("transfer handler validation", () => {
     // because it can't be verified without the signing key
     const fakeJwt = [
       btoa(JSON.stringify({ alg: "ES256K", typ: "JWT" })),
-      btoa(JSON.stringify({ iss: "did:plc:source", sub: "did:plc:player", aud: "did:plc:target", exp: 0, iat: 0, characterHash: "abc", targetRoom: "room-1" })),
+      btoa(
+        JSON.stringify({
+          iss: "did:plc:source",
+          sub: "did:plc:player",
+          aud: "did:plc:target",
+          exp: 0,
+          iat: 0,
+          characterHash: "abc",
+          targetRoom: "room-1",
+        }),
+      ),
       "fakesignature",
     ].join(".");
 
@@ -274,12 +297,20 @@ describe("transfer handler validation", () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           token: fakeJwt,
-          character: { name: "Intruder", class: "warrior", race: "human", level: 99, experience: 0, attributes: {}, createdAt: new Date().toISOString() },
+          character: {
+            name: "Intruder",
+            class: "warrior",
+            race: "human",
+            level: 99,
+            experience: 0,
+            attributes: {},
+            createdAt: new Date().toISOString(),
+          },
         }),
       },
     );
 
-    const data = await res.json() as Record<string, unknown>;
+    const data = (await res.json()) as Record<string, unknown>;
     expect(data.accepted).toBe(false);
   });
 
@@ -470,11 +501,11 @@ describe("attestation tracker", () => {
 // ─── Portal Target Parsing ──────────────────────────────────
 
 describe("portal target parsing", () => {
-  const handler = new PortalHandler(
-    { did: "did:plc:local" } as any,
-    {} as any,
-    { trustPolicy: "trust-all", trustedServers: [], maxAcceptedLevel: 50 },
-  );
+  const handler = new PortalHandler({ did: "did:plc:local" } as any, {} as any, {
+    trustPolicy: "trust-all",
+    trustedServers: [],
+    maxAcceptedLevel: 50,
+  });
 
   test("parses did:plc portal target", () => {
     const result = handler.parsePortalTarget("did:plc:abc123xyz:arrival-hall");
@@ -496,7 +527,9 @@ describe("portal target parsing", () => {
   });
 
   test("identifies portal exits", () => {
-    expect(handler.isPortalExit({ direction: "north", target: "did:plc:x:room", portal: true })).toBe(true);
+    expect(
+      handler.isPortalExit({ direction: "north", target: "did:plc:x:room", portal: true }),
+    ).toBe(true);
     expect(handler.isPortalExit({ direction: "north", target: "room-id" })).toBe(false);
   });
 });

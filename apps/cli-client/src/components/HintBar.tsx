@@ -10,22 +10,30 @@ interface Props {
 function Hint({ label, keys }: { label: string; keys: string }) {
   return (
     <Text>
-      <Text color="yellow" bold>{keys}</Text>
+      <Text color="yellow" bold>
+        {keys}
+      </Text>
       <Text color="gray"> {label}</Text>
     </Text>
   );
 }
 
 function Sep() {
-  return <Text color="gray" dimColor> | </Text>;
+  return (
+    <Text color="gray" dimColor>
+      {" "}
+      |{" "}
+    </Text>
+  );
 }
 
 export function HintBar({ infoPanelOpen, quests }: Props) {
   const activeQuest = quests?.[0];
-  const currentObj = activeQuest?.objectives.find(o => !o.done);
-  const questHint = activeQuest && currentObj
-    ? `${activeQuest.questName}: ${currentObj.description}${currentObj.required > 1 ? ` (${currentObj.current}/${currentObj.required})` : ""}`
-    : null;
+  const currentObj = activeQuest?.objectives.find((o) => !o.done);
+  const questHint =
+    activeQuest && currentObj
+      ? `${activeQuest.questName}: ${currentObj.description}${currentObj.required > 1 ? ` (${currentObj.current}/${currentObj.required})` : ""}`
+      : null;
 
   return (
     <Box paddingX={1} justifyContent="center" gap={0}>

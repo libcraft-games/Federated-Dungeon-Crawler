@@ -50,9 +50,7 @@ export function AccountSetup({ onComplete }: Props) {
     ...(hasProfile
       ? [{ label: `Continue as ${savedProfile!.handle}`, value: "saved" as const }]
       : []),
-    ...(DEV_MODE
-      ? [{ label: "Quick connect (dev mode)", value: "dev" as const }]
-      : []),
+    ...(DEV_MODE ? [{ label: "Quick connect (dev mode)", value: "dev" as const }] : []),
   ];
 
   useInput((input, key) => {
@@ -153,16 +151,17 @@ export function AccountSetup({ onComplete }: Props) {
 
     let baseUrl = address;
     if (!baseUrl.startsWith("http")) {
-      baseUrl = baseUrl.includes("localhost") || baseUrl.match(/:\d+$/)
-        ? `http://${baseUrl}`
-        : `https://${baseUrl}`;
+      baseUrl =
+        baseUrl.includes("localhost") || baseUrl.match(/:\d+$/)
+          ? `http://${baseUrl}`
+          : `https://${baseUrl}`;
     }
     baseUrl = baseUrl.replace(/\/+$/, "");
 
     try {
       const res = await fetch(`${baseUrl}/info`);
       if (!res.ok) throw new Error(`Server returned ${res.status}`);
-      const info = await res.json() as {
+      const info = (await res.json()) as {
         name: string;
         description: string;
         players: number;
@@ -171,7 +170,12 @@ export function AccountSetup({ onComplete }: Props) {
       };
 
       setSignupServerUrl(baseUrl);
-      setServerInfo({ name: info.name, description: info.description, players: info.players, rooms: info.rooms });
+      setServerInfo({
+        name: info.name,
+        description: info.description,
+        players: info.players,
+        rooms: info.rooms,
+      });
       setPdsHostname(info.pdsHostname ?? "");
       setInputValue("");
       setPhase("signup-handle");
@@ -197,11 +201,11 @@ export function AccountSetup({ onComplete }: Props) {
       });
 
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({})) as { error?: string };
+        const errData = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(errData.error ?? `Account creation failed (${res.status})`);
       }
 
-      const data = await res.json() as { did: string; handle: string };
+      const data = (await res.json()) as { did: string; handle: string };
 
       onComplete({
         mode: "oauth",
@@ -222,7 +226,9 @@ export function AccountSetup({ onComplete }: Props) {
   if (phase === "menu") {
     return (
       <Box flexDirection="column" paddingX={2} paddingY={1}>
-        <Text color="cyan" bold>Account Setup</Text>
+        <Text color="cyan" bold>
+          Account Setup
+        </Text>
         <Box height={1} />
 
         <Text>How would you like to connect?</Text>
@@ -238,7 +244,9 @@ export function AccountSetup({ onComplete }: Props) {
         ))}
 
         <Box height={1} />
-        <Text color="gray" dimColor>Use arrow keys to select, Enter to confirm</Text>
+        <Text color="gray" dimColor>
+          Use arrow keys to select, Enter to confirm
+        </Text>
       </Box>
     );
   }
@@ -246,14 +254,18 @@ export function AccountSetup({ onComplete }: Props) {
   if (phase === "signin") {
     return (
       <Box flexDirection="column" paddingX={2} paddingY={1}>
-        <Text color="cyan" bold>Sign In</Text>
+        <Text color="cyan" bold>
+          Sign In
+        </Text>
         <Box height={1} />
 
         <Text>Enter your AT Protocol handle or DID:</Text>
         <Box height={1} />
 
         <Box>
-          <Text color="green" bold>{"> "}</Text>
+          <Text color="green" bold>
+            {"> "}
+          </Text>
           <Text>{inputValue}</Text>
           <Text color="gray">{"█"}</Text>
         </Box>
@@ -264,7 +276,9 @@ export function AccountSetup({ onComplete }: Props) {
         </Text>
         {error ? <Text color="red">{error}</Text> : null}
         <Box height={1} />
-        <Text color="gray" dimColor>Esc to go back</Text>
+        <Text color="gray" dimColor>
+          Esc to go back
+        </Text>
       </Box>
     );
   }
@@ -272,14 +286,18 @@ export function AccountSetup({ onComplete }: Props) {
   if (phase === "signup-server") {
     return (
       <Box flexDirection="column" paddingX={2} paddingY={1}>
-        <Text color="cyan" bold>Create Account</Text>
+        <Text color="cyan" bold>
+          Create Account
+        </Text>
         <Box height={1} />
 
         <Text>Enter the game server address:</Text>
         <Box height={1} />
 
         <Box>
-          <Text color="green" bold>{"> "}</Text>
+          <Text color="green" bold>
+            {"> "}
+          </Text>
           <Text>{inputValue}</Text>
           <Text color="gray">{"█"}</Text>
         </Box>
@@ -290,7 +308,9 @@ export function AccountSetup({ onComplete }: Props) {
         </Text>
         {error ? <Text color="red">{error}</Text> : null}
         <Box height={1} />
-        <Text color="gray" dimColor>Esc to go back</Text>
+        <Text color="gray" dimColor>
+          Esc to go back
+        </Text>
       </Box>
     );
   }
@@ -298,7 +318,9 @@ export function AccountSetup({ onComplete }: Props) {
   if (phase === "signup-connecting") {
     return (
       <Box flexDirection="column" paddingX={2} paddingY={1}>
-        <Text color="cyan" bold>Create Account</Text>
+        <Text color="cyan" bold>
+          Create Account
+        </Text>
         <Box height={1} />
         <Text color="yellow">Connecting to server...</Text>
       </Box>
@@ -308,25 +330,36 @@ export function AccountSetup({ onComplete }: Props) {
   if (phase === "signup-handle") {
     return (
       <Box flexDirection="column" paddingX={2} paddingY={1}>
-        <Text color="cyan" bold>Create Account</Text>
-        <Text color="gray" dimColor>Server: {serverInfo?.name ?? signupServerUrl}</Text>
+        <Text color="cyan" bold>
+          Create Account
+        </Text>
+        <Text color="gray" dimColor>
+          Server: {serverInfo?.name ?? signupServerUrl}
+        </Text>
         <Box height={1} />
 
         <Text>Choose a handle:</Text>
         <Box height={1} />
 
         <Box>
-          <Text color="green" bold>{"> "}</Text>
+          <Text color="green" bold>
+            {"> "}
+          </Text>
           <Text>{inputValue}</Text>
           <Text color="gray">{"█"}</Text>
         </Box>
 
         {inputValue && !inputValue.includes(".") && pdsHostname ? (
-          <Text color="gray" dimColor>  {inputValue}.{pdsHostname}</Text>
+          <Text color="gray" dimColor>
+            {" "}
+            {inputValue}.{pdsHostname}
+          </Text>
         ) : null}
 
         <Box height={1} />
-        <Text color="gray" dimColor>Esc to go back</Text>
+        <Text color="gray" dimColor>
+          Esc to go back
+        </Text>
       </Box>
     );
   }
@@ -334,21 +367,29 @@ export function AccountSetup({ onComplete }: Props) {
   if (phase === "signup-email") {
     return (
       <Box flexDirection="column" paddingX={2} paddingY={1}>
-        <Text color="cyan" bold>Create Account</Text>
-        <Text color="gray" dimColor>Server: {serverInfo?.name ?? signupServerUrl} | Handle: {signupHandle}</Text>
+        <Text color="cyan" bold>
+          Create Account
+        </Text>
+        <Text color="gray" dimColor>
+          Server: {serverInfo?.name ?? signupServerUrl} | Handle: {signupHandle}
+        </Text>
         <Box height={1} />
 
         <Text>Enter your email address:</Text>
         <Box height={1} />
 
         <Box>
-          <Text color="green" bold>{"> "}</Text>
+          <Text color="green" bold>
+            {"> "}
+          </Text>
           <Text>{inputValue}</Text>
           <Text color="gray">{"█"}</Text>
         </Box>
 
         <Box height={1} />
-        <Text color="gray" dimColor>Esc to go back</Text>
+        <Text color="gray" dimColor>
+          Esc to go back
+        </Text>
       </Box>
     );
   }
@@ -357,15 +398,21 @@ export function AccountSetup({ onComplete }: Props) {
     const masked = "\u2022".repeat(inputValue.length);
     return (
       <Box flexDirection="column" paddingX={2} paddingY={1}>
-        <Text color="cyan" bold>Create Account</Text>
-        <Text color="gray" dimColor>Server: {serverInfo?.name ?? signupServerUrl} | Handle: {signupHandle}</Text>
+        <Text color="cyan" bold>
+          Create Account
+        </Text>
+        <Text color="gray" dimColor>
+          Server: {serverInfo?.name ?? signupServerUrl} | Handle: {signupHandle}
+        </Text>
         <Box height={1} />
 
         <Text>Choose a password:</Text>
         <Box height={1} />
 
         <Box>
-          <Text color="green" bold>{"> "}</Text>
+          <Text color="green" bold>
+            {"> "}
+          </Text>
           <Text>{masked}</Text>
           <Text color="gray">{"█"}</Text>
         </Box>
@@ -377,7 +424,9 @@ export function AccountSetup({ onComplete }: Props) {
           </>
         ) : null}
         <Box height={1} />
-        <Text color="gray" dimColor>Esc to go back</Text>
+        <Text color="gray" dimColor>
+          Esc to go back
+        </Text>
       </Box>
     );
   }
@@ -385,7 +434,9 @@ export function AccountSetup({ onComplete }: Props) {
   if (phase === "signup-creating") {
     return (
       <Box flexDirection="column" paddingX={2} paddingY={1}>
-        <Text color="cyan" bold>Create Account</Text>
+        <Text color="cyan" bold>
+          Create Account
+        </Text>
         <Box height={1} />
         <Text color="yellow">Creating account...</Text>
       </Box>

@@ -56,7 +56,10 @@ export class FederationManager {
       });
       console.log("   Published federation registration to PDS");
     } catch (err) {
-      console.warn("   Failed to publish federation registration:", err instanceof Error ? err.message : err);
+      console.warn(
+        "   Failed to publish federation registration:",
+        err instanceof Error ? err.message : err,
+      );
     }
   }
 
@@ -147,7 +150,8 @@ export class FederationManager {
 
     const results = await Promise.allSettled(promises);
     const resolved = results.filter(
-      (r): r is PromiseFulfilledResult<KnownServer | null> => r.status === "fulfilled" && r.value !== null,
+      (r): r is PromiseFulfilledResult<KnownServer | null> =>
+        r.status === "fulfilled" && r.value !== null,
     );
 
     if (resolved.length > 0) {
@@ -172,16 +176,23 @@ export class FederationManager {
 
       if (!didDoc) return null;
 
-      const service = (didDoc.service as Array<{ id: string; type: string; serviceEndpoint: string }>)
-        ?.find((s) => s.type === "AtprotoPersonalDataServer");
+      const service = (
+        didDoc.service as Array<{ id: string; type: string; serviceEndpoint: string }>
+      )?.find((s) => s.type === "AtprotoPersonalDataServer");
       return service?.serviceEndpoint ?? null;
     } catch (err) {
-      console.warn(`   Failed to resolve PDS for ${did}:`, err instanceof Error ? err.message : err);
+      console.warn(
+        `   Failed to resolve PDS for ${did}:`,
+        err instanceof Error ? err.message : err,
+      );
       return null;
     }
   }
 
-  private async fetchRegistrationRecord(did: string, pdsEndpoint: string): Promise<KnownServer | null> {
+  private async fetchRegistrationRecord(
+    did: string,
+    pdsEndpoint: string,
+  ): Promise<KnownServer | null> {
     try {
       const url = `${pdsEndpoint}/xrpc/com.atproto.repo.getRecord?repo=${encodeURIComponent(did)}&collection=${NSID.FederationRegistration}&rkey=self`;
       const res = await fetch(url);
@@ -209,7 +220,10 @@ export class FederationManager {
         lastSeen: Date.now(),
       };
     } catch (err) {
-      console.warn(`   Failed to fetch registration for ${did}:`, err instanceof Error ? err.message : err);
+      console.warn(
+        `   Failed to fetch registration for ${did}:`,
+        err instanceof Error ? err.message : err,
+      );
       return null;
     }
   }
@@ -238,7 +252,10 @@ export class FederationManager {
         lastSeen: Date.now(),
       };
     } catch (err) {
-      console.warn(`   Failed to fetch server record for ${did}:`, err instanceof Error ? err.message : err);
+      console.warn(
+        `   Failed to fetch server record for ${did}:`,
+        err instanceof Error ? err.message : err,
+      );
       return null;
     }
   }

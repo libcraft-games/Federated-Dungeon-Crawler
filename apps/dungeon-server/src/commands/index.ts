@@ -13,7 +13,13 @@ import { handleCombat } from "./combat.js";
 import { handleEquipment } from "./equipment.js";
 import { handleMerchant } from "./merchant.js";
 import { handleMap, generateMapData } from "./map.js";
-import { handleQuest, handleQuestList, handleAcceptQuest, handleAbandonQuest, handleTurnIn } from "./quest.js";
+import {
+  handleQuest,
+  handleQuestList,
+  handleAcceptQuest,
+  handleAbandonQuest,
+  handleTurnIn,
+} from "./quest.js";
 import { handleCrafting } from "./crafting.js";
 import { encodeMessage, type ServerMessage } from "@realms/protocol";
 import { getCommandHelp, xpToNextLevel } from "@realms/common";
@@ -34,9 +40,24 @@ export function handleCommand(cmd: ParsedCommand, ctx: CommandContext): void {
   // Block most actions during combat (except combat commands, look, inventory, equipment, stats)
   if (session.inCombat) {
     const allowedInCombat = new Set([
-      "attack", "kill", "defend", "flee", "retreat", "use", "cast", "spells",
-      "look", "inventory", "equipment", "stats", "help", "map", "",
-      "quest", "quests", "log",
+      "attack",
+      "kill",
+      "defend",
+      "flee",
+      "retreat",
+      "use",
+      "cast",
+      "spells",
+      "look",
+      "inventory",
+      "equipment",
+      "stats",
+      "help",
+      "map",
+      "",
+      "quest",
+      "quests",
+      "log",
     ]);
     if (!allowedInCombat.has(cmd.verb)) {
       if (cmd.verb === "go") {
@@ -149,7 +170,11 @@ export function handleCommand(cmd: ParsedCommand, ctx: CommandContext): void {
       break;
 
     default:
-      sendNarrative(session, `Unknown command: ${cmd.verb}. Type 'help' for a list of commands.`, "error");
+      sendNarrative(
+        session,
+        `Unknown command: ${cmd.verb}. Type 'help' for a list of commands.`,
+        "error",
+      );
       break;
   }
 }
@@ -165,7 +190,9 @@ function handleWho(ctx: CommandContext): void {
   for (const s of online) {
     const room = ctx.world.getRoom(s.currentRoom);
     const combatStr = s.inCombat ? " [COMBAT]" : "";
-    lines.push(`  ${s.name} - Level ${s.state.level} ${s.state.race} ${s.state.class} (${room?.title ?? "unknown"})${combatStr}`);
+    lines.push(
+      `  ${s.name} - Level ${s.state.level} ${s.state.race} ${s.state.class} (${room?.title ?? "unknown"})${combatStr}`,
+    );
   }
   sendNarrative(ctx.session, lines.join("\n"), "system");
 }
@@ -175,8 +202,12 @@ function handleStats(ctx: CommandContext): void {
   const system = ctx.world.gameSystem;
 
   const lines = [`${s.name} - Level ${s.level} ${s.race} ${s.class}`];
-  lines.push(`HP: ${s.currentHp}/${s.maxHp}  MP: ${s.currentMp}/${s.maxMp}  AP: ${s.currentAp}/${s.maxAp}`);
-  lines.push(`Gold: ${s.gold}  XP: ${s.experience}  (${xpToNextLevel(s.level, s.experience)} to next level)`);
+  lines.push(
+    `HP: ${s.currentHp}/${s.maxHp}  MP: ${s.currentMp}/${s.maxMp}  AP: ${s.currentAp}/${s.maxAp}`,
+  );
+  lines.push(
+    `Gold: ${s.gold}  XP: ${s.experience}  (${xpToNextLevel(s.level, s.experience)} to next level)`,
+  );
   lines.push("");
   lines.push("Attributes:");
   for (const [id, value] of Object.entries(s.attributes)) {
@@ -191,7 +222,7 @@ function handleStats(ctx: CommandContext): void {
 export function sendNarrative(
   session: CharacterSession,
   text: string,
-  style: "info" | "error" | "combat" | "system" | "chat" = "info"
+  style: "info" | "error" | "combat" | "system" | "chat" = "info",
 ): void {
   session.send(encodeMessage({ type: "narrative", text, style }));
 }
@@ -208,12 +239,14 @@ export function sendRoomState(session: CharacterSession, ctx: CommandContext): v
 export function sendMapUpdate(session: CharacterSession, ctx: CommandContext): void {
   const data = generateMapData(session, ctx.world);
   if (data) {
-    session.send(encodeMessage({
-      type: "map_update",
-      grid: data.grid,
-      cursorRow: data.cursorRow,
-      cursorCol: data.cursorCol,
-      legend: data.legend,
-    }));
+    session.send(
+      encodeMessage({
+        type: "map_update",
+        grid: data.grid,
+        cursorRow: data.cursorRow,
+        cursorCol: data.cursorCol,
+        legend: data.legend,
+      }),
+    );
   }
 }
