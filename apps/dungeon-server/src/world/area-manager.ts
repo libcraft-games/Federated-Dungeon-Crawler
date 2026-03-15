@@ -6,6 +6,7 @@ import { Room } from "./room.js";
 import { createItemInstance, type ItemRegistry } from "@realms/common";
 import { NpcManager, type LootEntry } from "../entities/npc-manager.js";
 import { QuestManager } from "../systems/quest-manager.js";
+import { CraftingSystem, type GatherYield } from "../systems/crafting-system.js";
 
 interface AreaManifest {
   id: string;
@@ -110,16 +111,64 @@ interface QuestsFile {
   quests: QuestDef[];
 }
 
+interface RecipeIngredientYaml {
+  itemId: string;
+  count: number;
+}
+
+interface RecipeOutputYaml {
+  itemId: string;
+  count: number;
+}
+
+interface RecipeDef {
+  id: string;
+  name: string;
+  description?: string;
+  station?: string;
+  levelRequired?: number;
+  ingredients: RecipeIngredientYaml[];
+  output: RecipeOutputYaml;
+  successChance?: number;
+  tags?: string[];
+}
+
+interface RecipesFile {
+  recipes: RecipeDef[];
+}
+
+interface GatherYieldYaml {
+  itemId: string;
+  chance: number;
+  min: number;
+  max: number;
+}
+
+interface GatherNodeYaml {
+  id: string;
+  name: string;
+  description: string;
+  room: string;
+  respawnSeconds: number;
+  yields: GatherYieldYaml[];
+}
+
+interface GatheringFile {
+  nodes: GatherNodeYaml[];
+}
+
 export class AreaManager {
   private rooms = new Map<string, Room>();
   private areas = new Map<string, AreaManifest>();
   private itemDefinitions: ItemRegistry = new Map();
   private npcManager: NpcManager;
   private questManager: QuestManager;
+  private craftingSystem: CraftingSystem;
 
-  constructor(npcManager: NpcManager, questManager: QuestManager) {
+  constructor(npcManager: NpcManager, questManager: QuestManager, craftingSystem: CraftingSystem) {
     this.npcManager = npcManager;
     this.questManager = questManager;
+    this.craftingSystem = craftingSystem;
   }
 
   async loadFromDirectory(basePath: string): Promise<void> {
@@ -310,6 +359,70 @@ export class AreaManager {
       }
 
       console.log(`  Quests: ${questCount} definitions loaded`);
+    }
+
+    // Load recipes
+    const recipesFile = Bun.file(join(areaPath, "recipes.yml"));
+    if (await recipesFile.exists()) {
+      const recipesText = await recipesFile.text();
+      const recipesData: RecipesFile = parseYaml(recipesText);
+      let recipeCount = 0;
+
+      for (const r of recipesData.recipes) {
+        const recipeId = `${areaId}:${r.id}`;
+        const prefixId = (id: string) => (id.includes(":") ? id : `${areaId}:${id}`);
+
+        this.craftingSystem.registerRecipe(recipeId, {
+          name: r.name,
+          description: r.description,
+          station: r.station,
+          levelRequired: r.levelRequired,
+          ingredients: r.ingredients.map(ing => ({
+            itemId: prefixId(ing.itemId),
+            count: ing.count,
+          })),
+          output: {
+            itemId: prefixId(r.output.itemId),
+            count: r.output.count,
+          },
+          successChance: r.successChance,
+          tags: r.tags,
+        });
+        recipeCount++;
+      }
+
+      console.log(`  Recipes: ${recipeCount} definitions loaded`);
+    }
+
+    // Load gathering nodes
+    const gatheringFile = Bun.file(join(areaPath, "gathering.yml"));
+    if (await gatheringFile.exists()) {
+      const gatheringText = await gatheringFile.text();
+      const gatheringData: GatheringFile = parseYaml(gatheringText);
+      let nodeCount = 0;
+
+      for (const n of gatheringData.nodes) {
+        const prefixId = (id: string) => (id.includes(":") ? id : `${areaId}:${id}`);
+        const nodeId = `${areaId}:${n.id}`;
+        const roomId = `${areaId}:${n.room}`;
+
+        this.craftingSystem.registerGatheringNode({
+          id: nodeId,
+          name: n.name,
+          description: n.description,
+          roomId,
+          respawnSeconds: n.respawnSeconds,
+          yields: n.yields.map(y => ({
+            itemId: prefixId(y.itemId),
+            chance: y.chance,
+            min: y.min,
+            max: y.max,
+          })),
+        });
+        nodeCount++;
+      }
+
+      console.log(`  Gathering nodes: ${nodeCount} loaded`);
     }
 
     console.log(`Loaded area: ${manifest.title} (${this.getRoomCountForArea(areaId)} rooms)`);

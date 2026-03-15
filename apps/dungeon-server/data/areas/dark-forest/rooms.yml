@@ -5,7 +5,10 @@
     and towering pines crowd together, their branches interlocking overhead
     to form a natural archway. The light dims noticeably as you peer into the
     forest. Animal tracks crisscross the muddy ground, some disturbingly large.
+    A ranger's campfire crackles beside the treeline, a welcome sight for those
+    heading into the dark.
   coordinates: { x: 1, y: -2, z: 0 }
+  flags: [station:campfire]
   exits:
     - direction: west
       target: starter-town:crossroads
