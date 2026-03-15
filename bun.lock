@@ -35,12 +35,14 @@
       "version": "0.1.0",
       "dependencies": {
         "@atproto/api": "^0.15.0",
+        "@atproto/crypto": "^0.4.5",
         "@atproto/xrpc-server": "^0.8.0",
         "@realms/atproto": "workspace:*",
         "@realms/common": "workspace:*",
         "@realms/lexicons": "workspace:*",
         "@realms/protocol": "workspace:*",
         "express": "^4.21.0",
+        "jose": "^6.2.1",
         "yaml": "^2.7.0",
       },
       "devDependencies": {
@@ -448,6 +450,8 @@
     "is-in-ci": ["is-in-ci@1.0.0", "", { "bin": { "is-in-ci": "cli.js" } }, "sha512-eUuAjybVTHMYWm/U+vBO1sY/JOCgoPCXRxzdju0K+K0BiGW0SChEL1MLC0PoCIR1OlPo5YAp8HuQoUlsWEICwg=="],
 
     "iso-datestring-validator": ["iso-datestring-validator@2.2.2", "", {}, "sha512-yLEMkBbLZTlVQqOnQ4FiMujR6T4DEcCb1xizmvXS+OxuhwcbtynoosRzdMA69zZCShCNAbi+gJ71FxZBBXx1SA=="],
+
+    "jose": ["jose@6.2.1", "", {}, "sha512-jUaKr1yrbfaImV7R2TN/b3IcZzsw38/chqMpo2XJ7i2F8AfM/lA4G1goC3JVEwg0H7UldTmSt3P68nt31W7/mw=="],
 
     "js-tokens": ["js-tokens@4.0.0", "", {}, "sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ=="],
 
