@@ -4,5 +4,6 @@
 
 export * as area from './world/area.js'
 export * as flag from './world/flag.js'
+export * as portal from './world/portal.js'
 export * as room from './world/room.js'
 export * as server from './world/server.js'
