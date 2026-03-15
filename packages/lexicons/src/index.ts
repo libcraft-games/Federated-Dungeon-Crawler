@@ -37,6 +37,8 @@ import type { Main as _NpcDefinition } from "./lexicons/com/cacheblasters/fm/npc
 import type { Main as _QuestDefinition, Objective as _QuestObjective, Rewards as _QuestRewards } from "./lexicons/com/cacheblasters/fm/quest/definition.defs.js";
 import type { Main as _QuestProgress, ObjectiveProgress as _QuestObjectiveProgress } from "./lexicons/com/cacheblasters/fm/quest/progress.defs.js";
 import type { Main as _RecipeDef, Ingredient as _RecipeIngredient, Output as _RecipeOutput } from "./lexicons/com/cacheblasters/fm/craft/recipe.defs.js";
+import type { Main as _FederationRegistration, LevelRange as _FedLevelRange } from "./lexicons/com/cacheblasters/fm/federation/registration.defs.js";
+import type { Main as _PortalRecord } from "./lexicons/com/cacheblasters/fm/world/portal.defs.js";
 
 // ── Character ──
 
@@ -124,6 +126,19 @@ export type FlagEffect = Omit<_FlagEffect, "$type"> & { $type?: string };
 
 export type FlagRecord = Omit<_FlagRecord, "$type"> & { $type?: string };
 
+export type PortalRecord = Omit<_PortalRecord, "$type" | "direction"> & {
+  $type?: string;
+  direction: Direction;
+};
+
+// ── Federation ──
+
+export type FederationRegistration = Omit<_FederationRegistration, "$type" | "createdAt" | "updatedAt"> & {
+  $type?: string;
+  createdAt: string;
+  updatedAt?: string;
+};
+
 // ── Items ──
 
 export type ItemDefinition = Omit<_ItemDefinition, "$type" | "properties"> & {
@@ -210,6 +225,7 @@ export const NSID = {
   WorldArea: "com.cacheblasters.fm.world.area",
   WorldRoom: "com.cacheblasters.fm.world.room",
   WorldFlag: "com.cacheblasters.fm.world.flag",
+  WorldPortal: "com.cacheblasters.fm.world.portal",
 
   // Items
   ItemDefinition: "com.cacheblasters.fm.item.definition",
@@ -223,6 +239,10 @@ export const NSID = {
 
   // Crafting
   CraftRecipe: "com.cacheblasters.fm.craft.recipe",
+
+  // Federation
+  FederationRegistration: "com.cacheblasters.fm.federation.registration",
+  FederationTransfer: "com.cacheblasters.fm.federation.transfer",
 
   // Actions
   ActionConnect: "com.cacheblasters.fm.action.connect",
