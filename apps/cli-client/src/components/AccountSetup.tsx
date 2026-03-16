@@ -21,6 +21,7 @@ export interface AccountResult {
   handle: string;
   did?: string;
   pdsUrl?: string;
+  password?: string;
   /** If set, skip ServerSelect — the server is already known */
   serverUrl?: string;
   serverInfo?: { name: string; description: string; players: number; rooms: number };
@@ -211,6 +212,7 @@ export function AccountSetup({ onComplete }: Props) {
         mode: "oauth",
         handle: data.handle,
         did: data.did,
+        password,
         serverUrl: signupServerUrl,
         serverInfo,
       });

@@ -14,7 +14,7 @@
     "@realms/protocol": "workspace:*"
   },
   "devDependencies": {
-    "@types/react": "^19.0.0"
+    "@types/react": "^18.3.0"
   },
   "peerDependencies": {
     "react": ">=18"

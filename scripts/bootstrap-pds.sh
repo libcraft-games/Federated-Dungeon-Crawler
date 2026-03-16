@@ -75,7 +75,7 @@ if [[ -f "$ENV_FILE" ]]; then
     echo ""
     warn ".env already exists."
     read -rp "$(echo -e "${YELLOW}?${NC} Overwrite? (y/N): ")" overwrite
-    if [[ "${overwrite,,}" != "y" ]]; then
+    if [[ "$(echo "$overwrite" | tr '[:upper:]' '[:lower:]')" != "y" ]]; then
       info "Keeping existing .env. To start fresh, delete it first."
       exit 0
     fi
@@ -95,7 +95,13 @@ PDS_PORT=$(prompt_or_default "PDS_PORT" "PDS external port" "2583")
 SERVER_PORT=$(prompt_or_default "PORT" "Game server port" "3000")
 SERVER_NAME=$(prompt_or_default "SERVER_NAME" "Server name" "Federated Realms")
 SERVER_DESCRIPTION=$(prompt_or_default "SERVER_DESCRIPTION" "Server description" "A mysterious dungeon awaits...")
-SERVER_HANDLE=$(prompt_or_default "SERVER_HANDLE" "Server AT Proto handle" "server.${PDS_HOSTNAME}")
+# PDS uses .test domain when hostname is localhost
+if [[ "$PDS_HOSTNAME" == "localhost" ]]; then
+  DEFAULT_HANDLE="dungeon-server.test"
+else
+  DEFAULT_HANDLE="server.${PDS_HOSTNAME}"
+fi
+SERVER_HANDLE=$(prompt_or_default "SERVER_HANDLE" "Server AT Proto handle" "$DEFAULT_HANDLE")
 DEFAULT_SPAWN=$(prompt_or_default "DEFAULT_SPAWN" "Default spawn room" "starter-town:town-square")
 
 # Determine public URL
@@ -114,6 +120,7 @@ info "Generating secrets..."
 PDS_JWT_SECRET=$(generate_secret)
 PDS_ADMIN_PASSWORD=$(generate_secret)
 SERVER_PASSWORD=$(generate_secret)
+PDS_ROTATION_KEY=$(openssl ecparam -name secp256k1 -genkey -noout 2>/dev/null | openssl ec -outform DER 2>/dev/null | tail -c 32 | xxd -p -c 32 2>/dev/null || openssl rand -hex 32)
 
 ok "Secrets generated"
 
@@ -136,6 +143,11 @@ PDS_HOSTNAME=${PDS_HOSTNAME}
 PDS_PORT=${PDS_PORT}
 PDS_JWT_SECRET=${PDS_JWT_SECRET}
 PDS_ADMIN_PASSWORD=${PDS_ADMIN_PASSWORD}
+PDS_ROTATION_KEY=${PDS_ROTATION_KEY}
+
+# PDS Email (required by PDS, use dummy values for local dev)
+PDS_EMAIL_SMTP_URL=smtp://fake:25
+PDS_EMAIL_FROM_ADDRESS=noreply@${PDS_HOSTNAME}
 
 # AT Proto — Server Identity
 PDS_URL=http://localhost:${PDS_PORT}
@@ -190,17 +202,21 @@ ok "PDS is healthy"
 
 info "Creating server account: ${SERVER_HANDLE}"
 
-# Use the PDS admin API to create an invite code first (if needed), then create account
-CREATE_RESPONSE=$(curl -sf -X POST "${PDS_INTERNAL_URL}/xrpc/com.atproto.server.createAccount" \
+# Create account via PDS API
+CREATE_RESPONSE=$(curl -s -X POST "${PDS_INTERNAL_URL}/xrpc/com.atproto.server.createAccount" \
   -H "Content-Type: application/json" \
   -d "{
     \"handle\": \"${SERVER_HANDLE}\",
+    \"email\": \"server@example.com\",
     \"password\": \"${SERVER_PASSWORD}\"
-  }" 2>&1) || {
+  }" 2>&1)
+
+# Check if account creation failed
+if echo "$CREATE_RESPONSE" | grep -q '"error"'; then
   # Check if it's a "handle taken" error (server was already bootstrapped)
-  if echo "$CREATE_RESPONSE" | grep -qi "handle.*taken\|already.*taken"; then
+  if echo "$CREATE_RESPONSE" | grep -qi "handle.*taken\|already.*taken\|HandleNotAvailable"; then
     warn "Server account already exists — logging in to retrieve DID..."
-    LOGIN_RESPONSE=$(curl -sf -X POST "${PDS_INTERNAL_URL}/xrpc/com.atproto.server.createSession" \
+    LOGIN_RESPONSE=$(curl -s -X POST "${PDS_INTERNAL_URL}/xrpc/com.atproto.server.createSession" \
       -H "Content-Type: application/json" \
       -d "{
         \"identifier\": \"${SERVER_HANDLE}\",
@@ -214,7 +230,7 @@ CREATE_RESPONSE=$(curl -sf -X POST "${PDS_INTERNAL_URL}/xrpc/com.atproto.server.
     err "You can try creating the account manually and setting SERVER_DID in .env"
     exit 1
   fi
-}
+fi
 
 # Extract DID from creation response if we haven't already
 if [[ -z "${SERVER_DID:-}" ]]; then
@@ -240,13 +256,18 @@ if [[ "$USE_DEFAULTS" == true ]]; then
 else
   echo ""
   read -rp "$(echo -e "${CYAN}?${NC} Create a test player account? (Y/n): ")" create_player_input
-  if [[ "${create_player_input,,}" != "n" ]]; then
+  if [[ "$(echo "$create_player_input" | tr '[:upper:]' '[:lower:]')" != "n" ]]; then
     CREATE_PLAYER=true
   fi
 fi
 
 if [[ "$CREATE_PLAYER" == true ]]; then
-  PLAYER_HANDLE=$(prompt_or_default "PLAYER_HANDLE" "Test player handle" "testplayer.${PDS_HOSTNAME}")
+  if [[ "$PDS_HOSTNAME" == "localhost" ]]; then
+    DEFAULT_PLAYER_HANDLE="testplayer.test"
+  else
+    DEFAULT_PLAYER_HANDLE="testplayer.${PDS_HOSTNAME}"
+  fi
+  PLAYER_HANDLE=$(prompt_or_default "PLAYER_HANDLE" "Test player handle" "$DEFAULT_PLAYER_HANDLE")
   PLAYER_PASSWORD=$(prompt_or_default "PLAYER_PASSWORD" "Test player password" "password")
   PLAYER_EMAIL=$(prompt_or_default "PLAYER_EMAIL" "Test player email" "test@example.com")
 

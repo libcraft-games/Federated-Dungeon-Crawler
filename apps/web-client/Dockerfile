@@ -1,7 +1,7 @@
-FROM oven/bun:1 AS base
+FROM oven/bun:1 AS build
 WORKDIR /app
 
-# Install dependencies first (cache layer)
+# Install dependencies (cache layer)
 COPY package.json bun.lock ./
 COPY packages/lexicons/package.json packages/lexicons/
 COPY packages/common/package.json packages/common/
@@ -17,22 +17,21 @@ RUN bun install --frozen-lockfile
 # Copy source
 COPY tsconfig.json ./
 COPY packages/ packages/
-COPY apps/dungeon-server/ apps/dungeon-server/
+COPY apps/web-client/ apps/web-client/
 
-# Runtime
+# Build static assets
+RUN cd apps/web-client && bun run build
+
+# Serve with lightweight static server
 FROM oven/bun:1-slim
 WORKDIR /app
 
-COPY --from=base /app /app
+COPY --from=build /app/apps/web-client/dist ./dist
+COPY --from=build /app/apps/web-client/serve.ts ./serve.ts
 
-ENV PORT=3000
-ENV HOST=0.0.0.0
-ENV SERVER_NAME="Federated Realms"
-ENV DATA_PATH=/app/apps/dungeon-server/data
+ENV PORT=8080
+ENV API_URL=http://dungeon-server:3000
 
-EXPOSE 3000
+EXPOSE 8080
 
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
-  CMD bun -e "fetch('http://localhost:3000/health').then(r=>r.ok?process.exit(0):process.exit(1)).catch(()=>process.exit(1))"
-
-CMD ["bun", "run", "apps/dungeon-server/src/index.ts"]
+CMD ["bun", "run", "serve.ts"]

@@ -1,7 +1,7 @@
 import { useCallback, useState, useEffect } from "react";
 import { WsClient } from "./connection/ws-client.js";
 import { useGameState } from "./hooks/use-game-state.js";
-import { SPLASH_ART, SPLASH_TITLE, SPLASH_SUBTITLE } from "@realms/client-common";
+import { SPLASH_ART, SPLASH_TITLE, SPLASH_SUBTITLE, SPLASH_BYLINE } from "@realms/client-common";
 import { saveProfile, loadProfile } from "./connection/profile-storage.js";
 import { StatusBar } from "./components/StatusBar.js";
 import { RoomPanel } from "./components/RoomPanel.js";
@@ -116,6 +116,7 @@ export function App() {
         <pre className="splash-art">{SPLASH_ART.join("\n")}</pre>
         <div className="splash-title">{SPLASH_TITLE}</div>
         <div className="splash-subtitle">{SPLASH_SUBTITLE}</div>
+        <div className="dim">{SPLASH_BYLINE}</div>
         <div style={{ display: "flex", gap: "12px" }}>
           <button className="page-button page-button-primary" onClick={() => setPhase("account")}>
             Enter the Realm

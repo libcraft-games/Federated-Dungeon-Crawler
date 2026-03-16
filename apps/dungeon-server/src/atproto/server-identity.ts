@@ -44,10 +44,15 @@ export class ServerIdentity {
   ): Promise<void> {
     this.agent = new AtpAgent({ service: config.pdsUrl });
 
+    // PDS uses .test as handle domain when hostname is localhost
+    const handle = config.serverHandle.endsWith(".localhost")
+      ? config.serverHandle.replace(/\.localhost$/, ".test")
+      : config.serverHandle;
+
     if (config.serverDid) {
       // Existing server identity — log in
       await this.agent.login({
-        identifier: config.serverHandle,
+        identifier: handle,
         password: config.serverPassword,
       });
       this.did = config.serverDid;
@@ -57,7 +62,8 @@ export class ServerIdentity {
       console.log("   Creating server account on PDS...");
       try {
         const result = await this.agent.createAccount({
-          handle: config.serverHandle,
+          handle,
+          email: "server@example.com",
           password: config.serverPassword,
         });
         this.did = result.data.did;
@@ -69,7 +75,7 @@ export class ServerIdentity {
         if (message.includes("handle already taken") || message.includes("Handle already taken")) {
           console.log("   Server account already exists, logging in...");
           await this.agent.login({
-            identifier: config.serverHandle,
+            identifier: handle,
             password: config.serverPassword,
           });
           this.did = this.agent.session?.did ?? "";
@@ -81,8 +87,14 @@ export class ServerIdentity {
       }
     }
 
-    // Generate or load signing key for attestations and transfer JWTs
-    await this.initSigningKey();
+    // Generate signing key for attestations and transfer JWTs
+    // Non-fatal: signing key is only needed for federation features
+    try {
+      await this.initSigningKey();
+    } catch (err) {
+      console.warn("   Signing key init failed (federation features disabled):",
+        err instanceof Error ? err.message : err);
+    }
 
     // Publish server metadata record
     await this.publishServerRecord(config, serverName, serverDescription);

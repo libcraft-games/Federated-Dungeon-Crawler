@@ -33,6 +33,28 @@ const oauthClient = new GameOAuthClient();
 const pdsClient = new PdsClient(serverIdentity);
 
 const DEV_MODE = process.env.DEV_MODE === "true";
+
+// Pending OAuth logins — maps ticket → result for CLI polling flow
+interface PendingLogin {
+  status: "pending" | "complete" | "error";
+  createdAt: number;
+  sessionId?: string;
+  websocketUrl?: string;
+  did?: string;
+  needsCharacter?: boolean;
+  gameSystem?: unknown;
+  error?: string;
+}
+const pendingLogins = new Map<string, PendingLogin>();
+
+// Clean up stale pending logins every 5 minutes
+setInterval(() => {
+  const fiveMinAgo = Date.now() - 5 * 60_000;
+  for (const [ticket, login] of pendingLogins) {
+    if (login.createdAt < fiveMinAgo) pendingLogins.delete(ticket);
+  }
+}, 5 * 60_000);
+
 let federation: FederationManager | null = null;
 let chatRelay: ChatRelayService | null = null;
 const portalHandler = new PortalHandler(serverIdentity, pdsClient, config.federation);
@@ -77,6 +99,13 @@ if (!DEV_MODE && config.atproto.serverPassword) {
     console.warn("   AT Proto initialization failed:", err instanceof Error ? err.message : err);
     console.warn("   Running without AT Proto auth (set DEV_MODE=true to suppress)");
   }
+}
+
+function authSuccessHtml(message: string): string {
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Federated Realms</title>
+<style>body{background:#1a1a2e;color:#e0e0e0;font-family:monospace;display:flex;justify-content:center;align-items:center;height:100vh;margin:0}
+.box{text-align:center;padding:2rem;border:1px solid #4a4a6a;border-radius:8px}h1{color:#7fdbca;margin-bottom:1rem}p{color:#c3c3c3}</style>
+</head><body><div class="box"><h1>Federated Realms</h1><p>${message}</p></div></body></html>`;
 }
 
 function broadcast(roomId: string, msg: ServerMessage, excludeSessionId?: string): void {
@@ -269,7 +298,10 @@ const server = Bun.serve<SessionData>({
         }
         try {
           const authUrl = await oauthClient.authorize(handle);
-          return Response.json({ url: authUrl.toString() });
+          // Extract state from auth URL to use as polling ticket
+          const ticket = new URL(authUrl).searchParams.get("state") ?? crypto.randomUUID();
+          pendingLogins.set(ticket, { status: "pending", createdAt: Date.now() });
+          return Response.json({ url: authUrl.toString(), ticket });
         } catch (err) {
           return Response.json(
             { error: err instanceof Error ? err.message : "OAuth failed" },
@@ -278,8 +310,37 @@ const server = Bun.serve<SessionData>({
         }
       }
 
+      // Poll for OAuth result (CLI flow)
+      if (url.pathname === "/auth/poll" && req.method === "GET") {
+        const ticket = url.searchParams.get("ticket");
+        if (!ticket) {
+          return Response.json({ error: "ticket parameter required" }, { status: 400 });
+        }
+        const login = pendingLogins.get(ticket);
+        if (!login) {
+          return Response.json({ error: "Unknown or expired ticket" }, { status: 404 });
+        }
+        if (login.status === "pending") {
+          return Response.json({ status: "pending" });
+        }
+        // Return result and clean up
+        pendingLogins.delete(ticket);
+        if (login.status === "error") {
+          return Response.json({ status: "error", error: login.error }, { status: 500 });
+        }
+        return Response.json({
+          status: "complete",
+          sessionId: login.sessionId,
+          websocketUrl: login.websocketUrl,
+          did: login.did,
+          needsCharacter: login.needsCharacter,
+          gameSystem: login.gameSystem,
+        });
+      }
+
       // OAuth callback
       if (url.pathname === "/oauth/callback") {
+        const stateParam = url.searchParams.get("state") ?? "";
         try {
           const { session: oauthSession, agent } = await oauthClient.callback(url.searchParams);
           const did = oauthSession.did;
@@ -294,25 +355,62 @@ const server = Bun.serve<SessionData>({
               world.getDefaultSpawnRoom(),
               world.gameSystem.formulas,
             );
-            return Response.json({
+            const result = {
               sessionId: gameSession.sessionId,
               websocketUrl: `${config.atproto.publicUrl.replace(/^http/, "ws")}/ws?session=${gameSession.sessionId}`,
               spawnRoom: gameSession.currentRoom,
               characterState: gameSession.state,
-            });
+            };
+
+            // If this came from a CLI polling flow, store result
+            if (pendingLogins.has(stateParam)) {
+              pendingLogins.set(stateParam, {
+                status: "complete",
+                createdAt: Date.now(),
+                sessionId: result.sessionId,
+                websocketUrl: result.websocketUrl,
+                did,
+              });
+              return new Response(authSuccessHtml("Authorization successful! You can return to your terminal."), {
+                headers: { "Content-Type": "text/html" },
+              });
+            }
+
+            return Response.json(result);
           }
 
           // New player — needs character creation
+          if (pendingLogins.has(stateParam)) {
+            pendingLogins.set(stateParam, {
+              status: "complete",
+              createdAt: Date.now(),
+              did,
+              needsCharacter: true,
+              gameSystem: world.gameSystem,
+            });
+            return new Response(authSuccessHtml("Authorization successful! Return to your terminal to create your character."), {
+              headers: { "Content-Type": "text/html" },
+            });
+          }
+
           return Response.json({
             needsCharacter: true,
             did,
             gameSystem: world.gameSystem,
           });
         } catch (err) {
-          return Response.json(
-            { error: err instanceof Error ? err.message : "Callback failed" },
-            { status: 500 },
-          );
+          const errorMsg = err instanceof Error ? err.message : "Callback failed";
+          if (pendingLogins.has(stateParam)) {
+            pendingLogins.set(stateParam, {
+              status: "error",
+              createdAt: Date.now(),
+              error: errorMsg,
+            });
+            return new Response(authSuccessHtml("Authentication failed. Return to your terminal."), {
+              headers: { "Content-Type": "text/html" },
+            });
+          }
+          return Response.json({ error: errorMsg }, { status: 500 });
         }
       }
 
@@ -486,6 +584,74 @@ const server = Bun.serve<SessionData>({
         return Response.json({ found: false });
       }
 
+      // ── Password-based session (for signup flow / co-located PDS) ──
+
+      if (url.pathname === "/auth/session" && req.method === "POST") {
+        try {
+          const body = (await req.json()) as {
+            handle: string;
+            password: string;
+            name?: string;
+            classId?: string;
+            raceId?: string;
+          };
+          if (!body.handle || !body.password) {
+            return Response.json(
+              { error: "handle and password are required" },
+              { status: 400 },
+            );
+          }
+
+          // Authenticate against the co-located PDS
+          const { AtpAgent } = await import("@atproto/api");
+          const agent = new AtpAgent({ service: config.atproto.pdsUrl });
+          try {
+            await agent.login({ identifier: body.handle, password: body.password });
+          } catch {
+            return Response.json({ error: "Invalid handle or password" }, { status: 401 });
+          }
+
+          const did = agent.session?.did ?? "";
+          if (!did) {
+            return Response.json({ error: "Login failed" }, { status: 401 });
+          }
+
+          // Try to load existing character from PDS
+          let profile = await pdsClient.loadCharacter(agent, did);
+
+          // If name/class/race provided and no existing character, create one
+          if (!profile && body.name && body.classId && body.raceId) {
+            profile = buildCharacterProfile(body.name, body.classId, body.raceId);
+            await pdsClient.saveCharacter(agent, did, profile);
+          }
+
+          if (!profile) {
+            return Response.json({
+              needsCharacter: true,
+              did,
+              gameSystem: world.gameSystem,
+            });
+          }
+
+          const gameSession = sessions.createSession(
+            did,
+            profile,
+            world.getDefaultSpawnRoom(),
+            world.gameSystem.formulas,
+          );
+          return Response.json({
+            sessionId: gameSession.sessionId,
+            websocketUrl: `${config.atproto.publicUrl.replace(/^http/, "ws")}/ws?session=${gameSession.sessionId}`,
+            did,
+          });
+        } catch (err) {
+          return Response.json(
+            { error: err instanceof Error ? err.message : "Session creation failed" },
+            { status: 500 },
+          );
+        }
+      }
+
       // ── Account creation (proxied to co-located PDS) ──
 
       if (url.pathname === "/auth/create-account" && req.method === "POST") {
@@ -498,10 +664,14 @@ const server = Bun.serve<SessionData>({
             );
           }
 
-          // Resolve handle: if no dot, append the PDS hostname
+          // Resolve handle: if no dot, append the PDS handle domain
+          // PDS uses .test when hostname is localhost
+          const handleDomain = config.atproto.pdsHostname === "localhost"
+            ? "test"
+            : config.atproto.pdsHostname;
           const handle = body.handle.includes(".")
             ? body.handle
-            : `${body.handle}.${config.atproto.pdsHostname}`;
+            : `${body.handle}.${handleDomain}`;
 
           const pdsRes = await fetch(
             `${config.atproto.pdsUrl}/xrpc/com.atproto.server.createAccount`,
@@ -544,13 +714,17 @@ const server = Bun.serve<SessionData>({
 
       // Server info
       if (url.pathname === "/info") {
+        // PDS uses .test as handle domain when hostname is localhost
+        const handleDomain = config.atproto.pdsHostname === "localhost"
+          ? "test"
+          : config.atproto.pdsHostname;
         return Response.json({
           name: config.name,
           description: config.description,
           players: sessions.getOnlineCount(),
           rooms: world.areaManager.getAllRooms().size,
           serverDid: serverIdentity.did || undefined,
-          pdsHostname: config.atproto.pdsHostname,
+          pdsHostname: handleDomain,
         });
       }
 

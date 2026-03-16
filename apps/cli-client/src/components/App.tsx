@@ -13,9 +13,10 @@ import { CharacterCreate } from "./CharacterCreate.js";
 import { SplashScreen } from "./SplashScreen.js";
 import { AccountSetup, type AccountResult } from "./AccountSetup.js";
 import { ServerSelect } from "./ServerSelect.js";
+import { OAuthFlow, type OAuthResult } from "./OAuthFlow.js";
 import { saveProfile, loadProfile } from "../connection/saved-profile.js";
 
-type AppPhase = "splash" | "account" | "server" | "create" | "play";
+type AppPhase = "splash" | "account" | "server" | "authenticate" | "create" | "play";
 
 interface SystemData {
   classes: Record<
@@ -62,6 +63,10 @@ export function App() {
   const [playerName, setPlayerName] = useState("");
   const [finalClass, setFinalClass] = useState("warrior");
   const [finalRace, setFinalRace] = useState("human");
+
+  // OAuth result (session from auth flow)
+  const [authSessionId, setAuthSessionId] = useState("");
+  const [authDid, setAuthDid] = useState("");
 
   // Connection
   const [client, setClient] = useState<WsClient | null>(null);
@@ -121,7 +126,13 @@ export function App() {
         });
       }
 
-      // Fetch system data for character creation
+      // OAuth mode: go to authentication phase
+      if (account?.mode === "oauth") {
+        setPhase("authenticate");
+        return;
+      }
+
+      // Dev mode: fetch system data for character creation
       fetch(`${url}/system`)
         .then((res) => res.json())
         .then((data) => {
@@ -132,7 +143,6 @@ export function App() {
           setPhase("create");
         })
         .catch(() => {
-          // If system fetch fails, skip creation and go straight to play
           if (account?.mode === "dev") {
             setPlayerName(account.handle);
           }
@@ -141,6 +151,32 @@ export function App() {
     },
     [account],
   );
+
+  const handleOAuthComplete = useCallback((result: OAuthResult) => {
+    if (result.sessionId) {
+      // Returning player — connect directly
+      setAuthSessionId(result.sessionId);
+      if (result.did) setAuthDid(result.did);
+      setPhase("play");
+    } else if (result.needsCharacter) {
+      // New player — needs character creation
+      if (result.did) setAuthDid(result.did);
+      // Preserve password for /auth/session call after character creation
+      if (result.password && account) {
+        setAccount((prev) => prev ? { ...prev, password: result.password } : prev);
+      }
+      if (result.gameSystem) {
+        setSystem(result.gameSystem as SystemData);
+      } else {
+        // Fetch system data if not provided
+        fetch(`${serverUrl}/system`)
+          .then((res) => res.json())
+          .then((data) => setSystem(data as SystemData))
+          .catch(() => {});
+      }
+      setPhase("create");
+    }
+  }, [account, serverUrl]);
 
   const handleCreateComplete = useCallback((chosenClass: string, chosenRace: string) => {
     setFinalClass(chosenClass);
@@ -155,7 +191,58 @@ export function App() {
 
     const c = new WsClient();
 
-    if (account?.mode === "dev" && serverUrl) {
+    if (account?.mode === "oauth" && authSessionId && serverUrl) {
+      // OAuth mode: connect with session from auth flow
+      const wsUrl = serverUrl.replace(/^http/, "ws") + "/ws";
+      c.connectWithSession({ url: wsUrl, sessionId: authSessionId });
+    } else if (account?.mode === "oauth" && account.password && serverUrl) {
+      // Signup flow: authenticate with password and create character + session
+      (async () => {
+        try {
+          const res = await fetch(`${serverUrl}/auth/session`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              handle: account.handle,
+              password: account.password,
+              name: playerName || account.handle.split(".")[0],
+              classId: finalClass,
+              raceId: finalRace,
+            }),
+          });
+          if (!res.ok) {
+            const err = (await res.json().catch(() => ({}))) as { error?: string };
+            throw new Error(err.error ?? `Session failed (${res.status})`);
+          }
+          const data = (await res.json()) as { sessionId: string };
+          const wsUrl = serverUrl.replace(/^http/, "ws") + "/ws";
+          c.connectWithSession({ url: wsUrl, sessionId: data.sessionId });
+        } catch (err) {
+          console.error("Session creation failed:", err);
+        }
+      })();
+    } else if (account?.mode === "oauth" && authDid && serverUrl) {
+      // OAuth sign-in flow: new character needed after OAuth
+      (async () => {
+        try {
+          const res = await fetch(`${serverUrl}/xrpc/com.cacheblasters.fm.action.createCharacter`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              did: authDid,
+              name: playerName || account.handle,
+              classId: finalClass,
+              raceId: finalRace,
+            }),
+          });
+          if (!res.ok) throw new Error("Character creation failed");
+          const data = (await res.json()) as { sessionId: string; websocketUrl: string };
+          c.connectWithSession({ url: data.websocketUrl.split("?")[0], sessionId: data.sessionId });
+        } catch {
+          console.error("Character creation via XRPC failed");
+        }
+      })();
+    } else if (account?.mode === "dev" && serverUrl) {
       // Dev mode: connect with query params
       const url = new URL(serverUrl);
       c.connect({
@@ -168,11 +255,8 @@ export function App() {
       });
     }
 
-    // OAuth mode: would use connectWithSession here after XRPC handshake
-    // For now, dev mode is the only supported path
-
     setClient(c);
-  }, [phase, client, account, serverUrl, playerName, finalClass, finalRace]);
+  }, [phase, client, account, serverUrl, playerName, finalClass, finalRace, authSessionId, authDid]);
 
   // ── Render phases ──
 
@@ -187,6 +271,16 @@ export function App() {
   if (phase === "server") {
     const saved = loadProfile();
     return <ServerSelect savedProfile={saved} onConnect={handleServerConnect} />;
+  }
+
+  if (phase === "authenticate" && account && serverUrl) {
+    return (
+      <OAuthFlow
+        handle={account.handle}
+        serverUrl={serverUrl}
+        onComplete={handleOAuthComplete}
+      />
+    );
   }
 
   if (phase === "create" && system) {
