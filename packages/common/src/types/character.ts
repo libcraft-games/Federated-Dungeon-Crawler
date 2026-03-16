@@ -70,9 +70,16 @@ export function evaluateFormula(expression: string, variables: Record<string, nu
     .replace(/\bmax\b/g, "Math.max")
     .replace(/\babs\b/g, "Math.abs");
 
-  // Validate: after variable substitution and math function replacement,
-  // only allow digits, operators, parens, commas, whitespace, and Math.*
-  // Reject any other identifiers (prevents access to process, globalThis, etc.)
+  // Validate: reject any Math.* calls beyond the allowed set
+  const mathCalls = expr.match(/Math\.(\w+)/g) ?? [];
+  const allowedMath = new Set(["Math.floor", "Math.ceil", "Math.min", "Math.max", "Math.abs"]);
+  for (const call of mathCalls) {
+    if (!allowedMath.has(call)) {
+      throw new Error(`Function not allowed in formula: ${call} (expression: ${expression})`);
+    }
+  }
+
+  // After stripping allowed Math calls, only allow digits, operators, parens, commas, whitespace
   const sanitized = expr.replace(/Math\.(floor|ceil|min|max|abs)/g, "0");
   if (!/^[\d\s+\-*/().,]*$/.test(sanitized)) {
     throw new Error(`Invalid formula expression: ${expression}`);

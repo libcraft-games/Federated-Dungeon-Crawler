@@ -503,6 +503,12 @@ const server = Bun.serve<SessionData>({
               { status: 400 },
             );
           }
+          if (body.name.length > 32 || body.classId.length > 64 || body.raceId.length > 64) {
+            return Response.json(
+              { error: "Field length exceeds maximum allowed" },
+              { status: 400 },
+            );
+          }
 
           const agent = await oauthClient.restore(body.did);
           if (!agent) {
