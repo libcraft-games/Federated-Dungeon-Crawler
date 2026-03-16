@@ -14,7 +14,7 @@ services:
       - PDS_PLC_ROTATION_KEY_K256_PRIVATE_KEY_HEX=${PDS_ROTATION_KEY:-}
       - PDS_DID_PLC_URL=${PDS_PLC_URL:-https://plc.directory}
       - PDS_INVITE_REQUIRED=false
-      - PDS_DEV_MODE=true
+      - PDS_DEV_MODE=${PDS_DEV_MODE:-false}
       - PDS_EMAIL_SMTP_URL=${PDS_EMAIL_SMTP_URL:-smtp://fake:25}
       - PDS_EMAIL_FROM_ADDRESS=${PDS_EMAIL_FROM_ADDRESS:-noreply@${PDS_HOSTNAME:-localhost}}
       - LOG_ENABLED=true

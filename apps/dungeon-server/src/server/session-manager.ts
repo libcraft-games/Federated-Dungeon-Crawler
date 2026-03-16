@@ -3,10 +3,13 @@ import { CharacterSession, type SessionData } from "../entities/character-sessio
 import type { ServerWebSocket } from "bun";
 import type { ServerIdentity } from "../atproto/server-identity.js";
 
+const SESSION_IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+
 export class SessionManager {
   private sessions = new Map<string, CharacterSession>();
   private didToSession = new Map<string, string>();
   private serverIdentity?: ServerIdentity;
+  private lastActivity = new Map<string, number>();
 
   /** Set once during startup so all sessions get attestation tracking */
   setServerIdentity(identity: ServerIdentity): void {
@@ -90,5 +93,23 @@ export class SessionManager {
 
   getOnlineCount(): number {
     return this.sessions.size;
+  }
+
+  /** Record activity for idle timeout tracking */
+  touch(sessionId: string): void {
+    this.lastActivity.set(sessionId, Date.now());
+  }
+
+  /** Get sessions that have been idle longer than the timeout */
+  getIdleSessions(): CharacterSession[] {
+    const cutoff = Date.now() - SESSION_IDLE_TIMEOUT_MS;
+    const idle: CharacterSession[] = [];
+    for (const [sessionId, session] of this.sessions) {
+      const lastActive = this.lastActivity.get(sessionId) ?? 0;
+      if (lastActive < cutoff) {
+        idle.push(session);
+      }
+    }
+    return idle;
   }
 }

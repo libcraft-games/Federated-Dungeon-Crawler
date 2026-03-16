@@ -26,12 +26,16 @@ RUN cd apps/web-client && bun run build
 FROM oven/bun:1-slim
 WORKDIR /app
 
-COPY --from=build /app/apps/web-client/dist ./dist
-COPY --from=build /app/apps/web-client/serve.ts ./serve.ts
+RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
+
+COPY --from=build --chown=appuser:appgroup /app/apps/web-client/dist ./dist
+COPY --from=build --chown=appuser:appgroup /app/apps/web-client/serve.ts ./serve.ts
 
 ENV PORT=8080
 ENV API_URL=http://dungeon-server:3000
 
 EXPOSE 8080
+
+USER appuser
 
 CMD ["bun", "run", "serve.ts"]

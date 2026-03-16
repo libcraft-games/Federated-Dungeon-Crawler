@@ -19,9 +19,9 @@ export function loadProfile(): SavedProfile | null {
 
 export function saveProfile(profile: SavedProfile): void {
   if (!existsSync(PROFILE_DIR)) {
-    mkdirSync(PROFILE_DIR, { recursive: true });
+    mkdirSync(PROFILE_DIR, { recursive: true, mode: 0o700 });
   }
-  writeFileSync(PROFILE_PATH, JSON.stringify(profile, null, 2));
+  writeFileSync(PROFILE_PATH, JSON.stringify(profile, null, 2), { mode: 0o600 });
 }
 
 export function clearProfile(): void {

@@ -71,18 +71,16 @@ export class TransferHandler {
     const sourceServerKey = await this.resolveSourceSigningKey(input);
     let payload;
 
-    if (sourceServerKey) {
-      // Verify JWT with the source server's published public key
-      payload = await this.serverIdentity.verifyRemoteTransferToken(
-        input.token,
-        this.serverIdentity.did,
-        sourceServerKey,
-      );
-    } else {
-      // Fall back to decoding without cryptographic verification
-      // (source server may not have published a signing key yet)
-      payload = await this.serverIdentity.verifyTransferToken(input.token, this.serverIdentity.did);
+    if (!sourceServerKey) {
+      return { accepted: false, reason: "Source server signing key not found — cannot verify transfer" };
     }
+
+    // Verify JWT with the source server's published public key
+    payload = await this.serverIdentity.verifyRemoteTransferToken(
+      input.token,
+      this.serverIdentity.did,
+      sourceServerKey,
+    );
 
     if (!payload) {
       return { accepted: false, reason: "Invalid transfer token" };

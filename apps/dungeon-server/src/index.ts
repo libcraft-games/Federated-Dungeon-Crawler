@@ -23,8 +23,15 @@ import { TransferHandler } from "./federation/transfer-handler.js";
 import { WorldPublisher } from "./atproto/world-publisher.js";
 import { FederationManager } from "./federation/federation-manager.js";
 import { ChatRelayService } from "./federation/chat-relay.js";
+import { RateLimiter } from "./server/rate-limiter.js";
 
 const config = loadConfig();
+
+// Rate limiters
+const authLimiter = new RateLimiter(10, 60_000);     // 10 auth attempts per minute per IP
+const accountLimiter = new RateLimiter(3, 60_000);    // 3 account creations per minute per IP
+const commandLimiter = new RateLimiter(30, 1_000);    // 30 commands per second per session
+const MAX_WS_MESSAGE_SIZE = 4096;                      // 4KB max WebSocket message
 const world = new WorldManager(config);
 const sessions = new SessionManager();
 const bluesky = new BlueskyBridge(config.bluesky);
@@ -221,6 +228,22 @@ setInterval(() => {
     session.attestations.flush();
   }
 }, ATTESTATION_FLUSH_MS);
+
+// ── Idle Session Cleanup ──
+// Disconnect sessions idle for 30+ minutes
+setInterval(() => {
+  for (const session of sessions.getIdleSessions()) {
+    if (session.ws) {
+      session.send(encodeMessage({
+        type: "narrative",
+        text: "Disconnected due to inactivity.",
+        style: "error",
+      }));
+      session.ws.close(1000, "Idle timeout");
+    }
+    sessions.removeSession(session.sessionId);
+  }
+}, 60_000); // Check every minute
 
 const server = Bun.serve<SessionData>({
   port: config.port,
@@ -550,8 +573,19 @@ const server = Bun.serve<SessionData>({
             message: string;
             sourceServer: string;
           };
-          if (!body.senderName || !body.recipientName || !body.message) {
+          if (!body.senderName || !body.recipientName || !body.message || !body.sourceServer) {
             return Response.json({ delivered: false, reason: "Missing fields" }, { status: 400 });
+          }
+          // Validate message length
+          if (body.message.length > 1000 || body.senderName.length > 100) {
+            return Response.json({ delivered: false, reason: "Message too long" }, { status: 400 });
+          }
+          // Verify source server is a known federated server
+          if (federation) {
+            const known = await federation.resolveServer(body.sourceServer);
+            if (!known) {
+              return Response.json({ delivered: false, reason: "Unknown source server" }, { status: 403 });
+            }
           }
           const target = sessions.findByName(body.recipientName);
           if (!target) {
@@ -574,7 +608,7 @@ const server = Bun.serve<SessionData>({
       // Chat locate: check if a player is online on this server
       if (url.pathname === "/xrpc/com.cacheblasters.fm.chat.locatePlayer" && req.method === "GET") {
         const name = url.searchParams.get("name");
-        if (!name) {
+        if (!name || name.length > 100) {
           return Response.json({ found: false });
         }
         const target = sessions.findByName(name);
@@ -587,6 +621,13 @@ const server = Bun.serve<SessionData>({
       // ── Password-based session (for signup flow / co-located PDS) ──
 
       if (url.pathname === "/auth/session" && req.method === "POST") {
+        const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+        if (!authLimiter.check(clientIp)) {
+          return Response.json(
+            { error: "Too many login attempts. Try again later." },
+            { status: 429 },
+          );
+        }
         try {
           const body = (await req.json()) as {
             handle: string;
@@ -684,11 +725,24 @@ const server = Bun.serve<SessionData>({
       // ── Account creation (proxied to co-located PDS) ──
 
       if (url.pathname === "/auth/create-account" && req.method === "POST") {
+        const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+        if (!accountLimiter.check(clientIp)) {
+          return Response.json(
+            { error: "Too many account creation attempts. Try again later." },
+            { status: 429 },
+          );
+        }
         try {
           const body = (await req.json()) as { handle: string; email: string; password: string };
           if (!body.handle || !body.email || !body.password) {
             return Response.json(
               { error: "handle, email, and password are required" },
+              { status: 400 },
+            );
+          }
+          if (body.handle.length > 256 || body.email.length > 256 || body.password.length > 256) {
+            return Response.json(
+              { error: "Input fields exceed maximum length" },
               { status: 400 },
             );
           }
@@ -885,6 +939,16 @@ const server = Bun.serve<SessionData>({
 
     message(ws: import("bun").ServerWebSocket<SessionData>, message: string | Buffer) {
       const data = typeof message === "string" ? message : message.toString();
+
+      // Reject oversized messages
+      if (data.length > MAX_WS_MESSAGE_SIZE) return;
+
+      // Rate limit commands per session
+      if (!commandLimiter.check(ws.data.sessionId)) return;
+
+      // Track activity for idle timeout
+      sessions.touch(ws.data.sessionId);
+
       const clientMsg = decodeClientMessage(data);
 
       if (!clientMsg) return;
