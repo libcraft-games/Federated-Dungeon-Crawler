@@ -99,7 +99,7 @@ SERVER_DESCRIPTION=$(prompt_or_default "SERVER_DESCRIPTION" "Server description"
 if [[ "$PDS_HOSTNAME" == "localhost" ]]; then
   DEFAULT_HANDLE="dungeon-server.test"
 else
-  DEFAULT_HANDLE="server.${PDS_HOSTNAME}"
+  DEFAULT_HANDLE="gameserver.${PDS_HOSTNAME}"
 fi
 SERVER_HANDLE=$(prompt_or_default "SERVER_HANDLE" "Server AT Proto handle" "$DEFAULT_HANDLE")
 DEFAULT_SPAWN=$(prompt_or_default "DEFAULT_SPAWN" "Default spawn room" "starter-town:town-square")
