@@ -96,7 +96,7 @@ if (!DEV_MODE && config.atproto.serverPassword) {
     // Cross-server chat relay
     chatRelay = new ChatRelayService(serverIdentity, federation, sessions);
   } catch (err) {
-    console.warn("   AT Proto initialization failed:", err instanceof Error ? err.message : err);
+    console.warn("   AT Proto initialization failed:", err instanceof Error ? err.stack ?? err.message : err);
     console.warn("   Running without AT Proto auth (set DEV_MODE=true to suppress)");
   }
 }
@@ -602,9 +602,38 @@ const server = Bun.serve<SessionData>({
             );
           }
 
-          // Authenticate against the co-located PDS
+          // Resolve the handle to find the correct PDS service URL
           const { AtpAgent } = await import("@atproto/api");
-          const agent = new AtpAgent({ service: config.atproto.pdsUrl });
+          let serviceUrl = config.atproto.pdsUrl; // default to local PDS
+
+          try {
+            // Try to resolve the handle's DID document to find their PDS
+            const resolveAgent = new AtpAgent({ service: "https://bsky.social" });
+            const resolved = await resolveAgent.resolveHandle({ handle: body.handle });
+            if (resolved.data?.did) {
+              // Look up the DID document to find PDS service endpoint
+              const didDoc = await fetch(
+                resolved.data.did.startsWith("did:plc:")
+                  ? `https://plc.directory/${resolved.data.did}`
+                  : `https://${body.handle}/.well-known/did.json`,
+              );
+              if (didDoc.ok) {
+                const doc = (await didDoc.json()) as {
+                  service?: Array<{ id: string; type: string; serviceEndpoint: string }>;
+                };
+                const pdsService = doc.service?.find(
+                  (s) => s.id === "#atproto_pds" || s.type === "AtprotoPersonalDataServer",
+                );
+                if (pdsService?.serviceEndpoint) {
+                  serviceUrl = pdsService.serviceEndpoint;
+                }
+              }
+            }
+          } catch {
+            // Handle resolution failed — fall back to local PDS
+          }
+
+          const agent = new AtpAgent({ service: serviceUrl });
           try {
             await agent.login({ identifier: body.handle, password: body.password });
           } catch {
