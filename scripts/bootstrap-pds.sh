@@ -108,7 +108,7 @@ DEFAULT_SPAWN=$(prompt_or_default "DEFAULT_SPAWN" "Default spawn room" "starter-
 if [[ "$PDS_HOSTNAME" == "localhost" ]]; then
   DEFAULT_PUBLIC_URL="http://localhost:${SERVER_PORT}"
 else
-  DEFAULT_PUBLIC_URL="https://${PDS_HOSTNAME}:${SERVER_PORT}"
+  DEFAULT_PUBLIC_URL="https://${PDS_HOSTNAME}"
 fi
 PUBLIC_URL=$(prompt_or_default "PUBLIC_URL" "Public URL (for OAuth callbacks)" "$DEFAULT_PUBLIC_URL")
 
@@ -123,6 +123,13 @@ SERVER_PASSWORD=$(generate_secret)
 PDS_ROTATION_KEY=$(openssl ecparam -name secp256k1 -genkey -noout 2>/dev/null | openssl ec -outform DER 2>/dev/null | tail -c 32 | xxd -p -c 32 2>/dev/null || openssl rand -hex 32)
 
 ok "Secrets generated"
+
+# Compute PDS_URL
+if [[ "$PDS_HOSTNAME" == "localhost" ]]; then
+  PDS_URL="http://localhost:${PDS_PORT}"
+else
+  PDS_URL="https://${PDS_HOSTNAME}"
+fi
 
 # ── Write .env ──
 
@@ -150,7 +157,7 @@ PDS_EMAIL_SMTP_URL=smtp://fake:25
 PDS_EMAIL_FROM_ADDRESS=noreply@${PDS_HOSTNAME}
 
 # AT Proto — Server Identity
-PDS_URL=http://localhost:${PDS_PORT}
+PDS_URL=${PDS_URL}
 SERVER_HANDLE=${SERVER_HANDLE}
 SERVER_PASSWORD=${SERVER_PASSWORD}
 SERVER_DID=
