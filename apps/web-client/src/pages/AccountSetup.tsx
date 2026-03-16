@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent, type FormEvent } from "react";
+import { useState, useEffect, useRef, type KeyboardEvent } from "react";
 import { loadProfile, type SavedProfile } from "../connection/profile-storage.js";
 import "./pages.css";
 
@@ -34,6 +34,9 @@ export function AccountSetup({ onComplete }: Props) {
   const [phase, setPhase] = useState<SetupPhase>("menu");
   const [inputValue, setInputValue] = useState("");
   const [error, setError] = useState("");
+
+  const currentOrigin = window.location.origin;
+  const signupAutoTried = useRef(false);
 
   // Signup state
   const [signupServerUrl, setSignupServerUrl] = useState("");
@@ -198,8 +201,13 @@ export function AccountSetup({ onComplete }: Props) {
           <button
             className="account-menu-item"
             onClick={() => {
-              setInputValue("");
-              setPhase("signup-server");
+              // Auto-connect to current origin if on a real domain
+              if (currentOrigin && !currentOrigin.includes("localhost:5173")) {
+                connectToServer(currentOrigin);
+              } else {
+                setInputValue("");
+                setPhase("signup-server");
+              }
             }}
           >
             <span style={{ color: "var(--color-cyan)" }}>Create account</span>
@@ -275,14 +283,14 @@ export function AccountSetup({ onComplete }: Props) {
             onKeyDown={handleInputKeyDown}
             autoFocus
             spellCheck={false}
-            placeholder="realms.example.com or localhost:3333"
+            placeholder={currentOrigin}
           />
           <button className="page-button page-button-primary" onClick={submitCurrentPhase}>
             Connect
           </button>
         </div>
 
-        <p className="dim">e.g. realms.example.com or localhost:3333</p>
+        <p className="dim">e.g. {currentOrigin} or another-realm.example.com</p>
         {error && <p style={{ color: "var(--color-red)" }}>{error}</p>}
         <button className="page-button" onClick={goBack}>Back</button>
       </div>
