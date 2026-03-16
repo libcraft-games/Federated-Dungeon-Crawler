@@ -4,6 +4,7 @@ import {
   buildSlotAliases,
   getEquippedDefense,
   getWeaponDamage,
+  xpToNextLevel,
 } from "@realms/common";
 import type { EquipmentConfig } from "@realms/common";
 import { encodeMessage } from "@realms/protocol";
@@ -153,6 +154,9 @@ function showEquipment(ctx: CommandContext): void {
       const props: string[] = [];
       if (item.properties?.damage) props.push(`damage: ${item.properties.damage}`);
       if (item.properties?.defense) props.push(`defense: ${item.properties.defense}`);
+      if (item.properties?.bonus_hp) props.push(`+${item.properties.bonus_hp} HP`);
+      if (item.properties?.bonus_mp) props.push(`+${item.properties.bonus_mp} MP`);
+      if (item.properties?.bonus_ap) props.push(`+${item.properties.bonus_ap} AP`);
       const propStr = props.length > 0 ? ` (${props.join(", ")})` : "";
       lines.push(`  ${label}: ${item.name}${propStr}`);
     } else {
@@ -177,6 +181,22 @@ function showEquipment(ctx: CommandContext): void {
 }
 
 function sendUpdates(ctx: CommandContext): void {
+  const s = ctx.session.state;
   ctx.session.send(encodeMessage({ type: "inventory_update", inventory: ctx.session.inventory }));
   ctx.session.send(encodeMessage({ type: "equipment_update", equipment: ctx.session.equipment }));
+  ctx.session.send(
+    encodeMessage({
+      type: "character_update",
+      hp: s.currentHp,
+      maxHp: s.maxHp,
+      mp: s.currentMp,
+      maxMp: s.maxMp,
+      ap: s.currentAp,
+      maxAp: s.maxAp,
+      gold: s.gold,
+      level: s.level,
+      xp: s.experience,
+      xpToNext: xpToNextLevel(s.level, s.experience),
+    }),
+  );
 }

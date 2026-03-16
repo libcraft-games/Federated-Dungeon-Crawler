@@ -141,6 +141,7 @@ export class CharacterSession {
   equip(slot: string, item: ItemInstance): ItemInstance | undefined {
     const previous = this.state.equipment[slot];
     this.state.equipment[slot] = item;
+    this.recalculateDerived();
     return previous;
   }
 
@@ -148,6 +149,7 @@ export class CharacterSession {
     const item = this.state.equipment[slot];
     if (item) {
       delete this.state.equipment[slot];
+      this.recalculateDerived();
     }
     return item;
   }
@@ -234,9 +236,24 @@ export class CharacterSession {
 
   private recalculateDerived(): void {
     const derived = computeDerivedStats(this.formulas, this.state.level, this.state.attributes);
-    this.state.maxHp = derived.maxHp ?? this.state.maxHp;
-    this.state.maxMp = derived.maxMp ?? this.state.maxMp;
-    this.state.maxAp = derived.maxAp ?? this.state.maxAp;
+    const bonuses = this.getEquipmentBonuses();
+    this.state.maxHp = (derived.maxHp ?? this.state.maxHp) + (bonuses.hp ?? 0);
+    this.state.maxMp = (derived.maxMp ?? this.state.maxMp) + (bonuses.mp ?? 0);
+    this.state.maxAp = (derived.maxAp ?? this.state.maxAp) + (bonuses.ap ?? 0);
+    // Clamp current values to new max
+    this.state.currentHp = Math.min(this.state.currentHp, this.state.maxHp);
+    this.state.currentMp = Math.min(this.state.currentMp, this.state.maxMp);
+  }
+
+  /** Sum bonus_hp / bonus_mp / bonus_ap from all equipped items */
+  private getEquipmentBonuses(): { hp: number; mp: number; ap: number } {
+    let hp = 0, mp = 0, ap = 0;
+    for (const item of Object.values(this.state.equipment)) {
+      if (typeof item.properties?.bonus_hp === "number") hp += item.properties.bonus_hp;
+      if (typeof item.properties?.bonus_mp === "number") mp += item.properties.bonus_mp;
+      if (typeof item.properties?.bonus_ap === "number") ap += item.properties.bonus_ap;
+    }
+    return { hp, mp, ap };
   }
 
   /** Process active effect ticks. Returns names of expired effects. */
