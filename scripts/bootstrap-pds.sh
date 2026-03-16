@@ -229,7 +229,7 @@ if echo "$CREATE_RESPONSE" | grep -q '"error"'; then
         \"identifier\": \"${SERVER_HANDLE}\",
         \"password\": \"${SERVER_PASSWORD}\"
       }")
-    SERVER_DID=$(echo "$LOGIN_RESPONSE" | grep -o '"did":"[^"]*"' | head -1 | cut -d'"' -f4)
+    SERVER_DID=$(echo "$LOGIN_RESPONSE" | grep -o '"did" *: *"[^"]*"' | head -1 | sed 's/.*"did" *: *"//;s/"//')
   else
     err "Failed to create server account:"
     echo "$CREATE_RESPONSE"
@@ -241,11 +241,12 @@ fi
 
 # Extract DID from creation response if we haven't already
 if [[ -z "${SERVER_DID:-}" ]]; then
-  SERVER_DID=$(echo "$CREATE_RESPONSE" | grep -o '"did":"[^"]*"' | head -1 | cut -d'"' -f4)
+  SERVER_DID=$(echo "$CREATE_RESPONSE" | grep -o '"did" *: *"[^"]*"' | head -1 | sed 's/.*"did" *: *"//;s/"//')
 fi
 
 if [[ -z "$SERVER_DID" ]]; then
-  err "Could not extract server DID from response"
+  err "Could not extract server DID from response:"
+  echo "$CREATE_RESPONSE"
   exit 1
 fi
 
@@ -294,7 +295,7 @@ if [[ "$CREATE_PLAYER" == true ]]; then
     fi
   }
 
-  PLAYER_DID=$(echo "${PLAYER_RESPONSE:-}" | grep -o '"did":"[^"]*"' | head -1 | cut -d'"' -f4 || true)
+  PLAYER_DID=$(echo "${PLAYER_RESPONSE:-}" | grep -o '"did" *: *"[^"]*"' | head -1 | sed 's/.*"did" *: *"//;s/"//' || true)
   if [[ -n "$PLAYER_DID" ]]; then
     ok "Test player DID: ${PLAYER_DID}"
   fi
