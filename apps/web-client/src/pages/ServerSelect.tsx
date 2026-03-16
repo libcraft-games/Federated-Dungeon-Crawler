@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from "react";
+import { useState, useEffect, useRef, type KeyboardEvent } from "react";
 import type { SavedProfile } from "../connection/profile-storage.js";
 import "./pages.css";
 
@@ -15,16 +15,34 @@ interface Props {
 }
 
 export function ServerSelect({ savedProfile, onConnect }: Props) {
-  const [inputValue, setInputValue] = useState(savedProfile?.lastServer ?? "");
+  const currentOrigin = window.location.origin;
+  const defaultServer = savedProfile?.lastServer ?? currentOrigin;
+  const [inputValue, setInputValue] = useState(defaultServer);
   const [status, setStatus] = useState<"input" | "connecting" | "error">("input");
   const [error, setError] = useState("");
+  const autoTried = useRef(false);
+
+  // Auto-connect to current origin on mount
+  useEffect(() => {
+    if (autoTried.current) return;
+    autoTried.current = true;
+
+    // If we have a saved server or we're hosted on a real domain, try auto-connecting
+    const target = savedProfile?.lastServer ?? currentOrigin;
+    if (target && target !== "http://localhost" && !target.includes("localhost:5173")) {
+      connectToServer(target);
+    }
+  }, []);
 
   async function connectToServer(url: string) {
     setStatus("connecting");
 
     let baseUrl = url;
     if (!baseUrl.startsWith("http")) {
-      baseUrl = `http://${baseUrl}`;
+      baseUrl =
+        baseUrl.includes("localhost") || baseUrl.match(/:\d+$/)
+          ? `http://${baseUrl}`
+          : `https://${baseUrl}`;
     }
     baseUrl = baseUrl.replace(/\/+$/, "");
 
@@ -50,7 +68,7 @@ export function ServerSelect({ savedProfile, onConnect }: Props) {
     return (
       <div className="page-container">
         <h2 style={{ color: "var(--color-cyan)" }}>Server Connection</h2>
-        <p style={{ color: "var(--color-yellow)" }}>Connecting to {inputValue}...</p>
+        <p style={{ color: "var(--color-yellow)" }}>Connecting to {inputValue || currentOrigin}...</p>
       </div>
     );
   }
@@ -70,7 +88,7 @@ export function ServerSelect({ savedProfile, onConnect }: Props) {
           onKeyDown={handleKeyDown}
           autoFocus
           spellCheck={false}
-          placeholder="localhost:3000"
+          placeholder={currentOrigin}
         />
         <button
           className="page-button"
@@ -91,7 +109,7 @@ export function ServerSelect({ savedProfile, onConnect }: Props) {
           </p>
         </div>
       ) : (
-        <p className="dim">e.g. localhost:3000 or my-realm.example.com</p>
+        <p className="dim">e.g. {currentOrigin} or another-realm.example.com</p>
       )}
     </div>
   );
