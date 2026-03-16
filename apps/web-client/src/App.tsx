@@ -417,6 +417,7 @@ function GameView({ client, name }: { client: WsClient; name: string }) {
         infoPanelOpen={infoPanelOpen}
         quests={state.quests}
         onToggleInfo={() => setInfoPanelOpen((prev) => !prev)}
+        onCommand={handleCommand}
       />
     </div>
   );

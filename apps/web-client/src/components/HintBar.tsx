@@ -5,9 +5,10 @@ interface Props {
   infoPanelOpen?: boolean;
   quests?: QuestEntry[];
   onToggleInfo?: () => void;
+  onCommand?: (cmd: string) => void;
 }
 
-export function HintBar({ infoPanelOpen, quests, onToggleInfo }: Props) {
+export function HintBar({ infoPanelOpen, quests, onToggleInfo, onCommand }: Props) {
   const activeQuest = quests?.[0];
   const currentObj = activeQuest?.objectives.find((o) => !o.done);
   const questHint =
@@ -22,20 +23,15 @@ export function HintBar({ infoPanelOpen, quests, onToggleInfo }: Props) {
         <span className="dim">{infoPanelOpen ? " Close Panel" : " Info Panel"}</span>
       </span>
       <span className="hint-sep">|</span>
-      <span className="hint">
-        <span className="hint-key">\u2191/\u2193</span>
-        <span className="dim"> History</span>
-      </span>
-      <span className="hint-sep">|</span>
-      <span className="hint">
+      <span className="hint" onClick={() => onCommand?.("map")}>
         <span className="hint-key">map</span>
       </span>
       <span className="hint-sep">|</span>
-      <span className="hint">
+      <span className="hint" onClick={() => onCommand?.("look")}>
         <span className="hint-key">look</span>
       </span>
       <span className="hint-sep">|</span>
-      <span className="hint">
+      <span className="hint" onClick={() => onCommand?.("help")}>
         <span className="hint-key">help</span>
       </span>
       {questHint && (
