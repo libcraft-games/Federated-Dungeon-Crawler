@@ -218,18 +218,28 @@ CREATE_RESPONSE=$(curl -s -X POST "${PDS_INTERNAL_URL}/xrpc/com.atproto.server.c
     \"password\": \"${SERVER_PASSWORD}\"
   }" 2>&1)
 
+# Extract DID from JSON (safe under set -e)
+extract_did() {
+  echo "$1" | grep -o '"did" *: *"[^"]*"' | head -1 | sed 's/.*"did" *: *"//;s/"//' || echo ""
+}
+
+info "PDS response: ${CREATE_RESPONSE}"
+
 # Check if account creation failed
 if echo "$CREATE_RESPONSE" | grep -q '"error"'; then
+  warn "Create error: ${CREATE_RESPONSE}"
+
   # Check if it's a "handle taken" error (server was already bootstrapped)
   if echo "$CREATE_RESPONSE" | grep -qi "handle.*taken\|already.*taken\|HandleNotAvailable"; then
-    warn "Server account already exists — logging in to retrieve DID..."
+    warn "Server account may already exist — logging in to retrieve DID..."
     LOGIN_RESPONSE=$(curl -s -X POST "${PDS_INTERNAL_URL}/xrpc/com.atproto.server.createSession" \
       -H "Content-Type: application/json" \
       -d "{
         \"identifier\": \"${SERVER_HANDLE}\",
         \"password\": \"${SERVER_PASSWORD}\"
       }")
-    SERVER_DID=$(echo "$LOGIN_RESPONSE" | grep -o '"did" *: *"[^"]*"' | head -1 | sed 's/.*"did" *: *"//;s/"//')
+    info "Login response: ${LOGIN_RESPONSE}"
+    SERVER_DID=$(extract_did "$LOGIN_RESPONSE")
   else
     err "Failed to create server account:"
     echo "$CREATE_RESPONSE"
@@ -237,16 +247,12 @@ if echo "$CREATE_RESPONSE" | grep -q '"error"'; then
     err "You can try creating the account manually and setting SERVER_DID in .env"
     exit 1
   fi
+else
+  SERVER_DID=$(extract_did "$CREATE_RESPONSE")
 fi
 
-# Extract DID from creation response if we haven't already
 if [[ -z "${SERVER_DID:-}" ]]; then
-  SERVER_DID=$(echo "$CREATE_RESPONSE" | grep -o '"did" *: *"[^"]*"' | head -1 | sed 's/.*"did" *: *"//;s/"//')
-fi
-
-if [[ -z "$SERVER_DID" ]]; then
-  err "Could not extract server DID from response:"
-  echo "$CREATE_RESPONSE"
+  err "Could not extract server DID"
   exit 1
 fi
 
