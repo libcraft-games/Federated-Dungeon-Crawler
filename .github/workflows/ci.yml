@@ -68,4 +68,4 @@ jobs:
         run: docker build -t federated-realms .
 
       - name: Build web-client image
-        run: docker build -t federated-realms-web apps/web-client/
+        run: docker build -t federated-realms-web -f apps/web-client/Dockerfile .
