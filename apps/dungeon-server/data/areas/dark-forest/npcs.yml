@@ -22,6 +22,9 @@ definitions:
       - "   _\\\\()//_   "
       - "  / //  \\\\ \\  "
       - "  | |\\__/| |  "
+    gold:
+      min: 1
+      max: 4
     loot:
       - itemId: spider-silk
         chance: 60
@@ -55,12 +58,112 @@ definitions:
       int: 3
       wis: 12
       cha: 4
+    gold:
+      min: 2
+      max: 6
     loot:
+      - itemId: wolf-pelt
+        chance: 70
+        minQuantity: 1
+        maxQuantity: 1
       - itemId: forest-cloak
         chance: 15
         minQuantity: 1
         maxQuantity: 1
     tags: [beast, wolf, hostile]
+
+  - id: ranger-faela
+    name: Ranger Faela
+    description: >
+      A lean woman in a weathered green cloak, her dark hair pinned back with a
+      carved bone clasp. A short bow rests across her shoulders and a battered
+      pack leans against the tree beside her. She looks you up and down with
+      calm, appraising eyes.
+    behavior: static
+    level: 5
+    dialogue:
+      greeting:
+        text: >
+          Hold there. You've got the look of someone heading into the forest
+          for the first time. Smart to pause here — rushing in unprepared is
+          how people end up in webs or worse. I'm Faela. I patrol this edge.
+          What brings you to the Dark Forest?
+        responses:
+          - text: I'm looking for adventure.
+            next: adventure
+          - text: Can you teach me about crafting?
+            next: crafting
+          - text: What dangers lie ahead?
+            next: dangers
+      adventure:
+        text: >
+          Ha. Adventure. Well, you'll find plenty of that — spiders in the
+          hollow, wolves deeper in, and things stranger still if you go far
+          enough. Just make sure you can keep yourself alive out there.
+          There's a campfire here — use it before you head in.
+        responses:
+          - text: Tell me about crafting.
+            next: crafting
+          - text: What should I watch out for?
+            next: dangers
+          - text: Thanks. I'll be careful.
+            next: farewell
+      crafting:
+        text: >
+          Wilderness survival is half steel, half ingenuity. The forest gives
+          you what you need if you know how to use it. Spider silk makes strong
+          bandages — weave three bundles and you've got something that heals
+          better than a tavern rag. Wolves drop pelts; combine one with a
+          glowing mushroom over that campfire and you've got a stew that'll
+          set you right after a hard fight. Use 'recipes' to see what you can
+          make, and 'craft <name>' to try.
+        responses:
+          - text: What about gathering?
+            next: gathering
+          - text: Where do I find the ingredients?
+            next: ingredients
+          - text: That's very helpful, thanks.
+            next: farewell
+      gathering:
+        text: >
+          The mushroom grove to the north is full of Luminaris caps — the
+          glowing ones. Use 'gather' when you're in a room with harvestable
+          resources. Nodes take time to replenish, so don't strip a spot
+          bare and expect it to stay bare forever.
+        responses:
+          - text: What about spider silk?
+            next: ingredients
+          - text: Good to know. Thanks.
+            next: farewell
+      ingredients:
+        text: >
+          Silk comes off the spiders in the hollow to the east — you'll
+          need to kill them. Wolves run the forest path and the deep forest.
+          Mushrooms grow naturally in the grove to the north; you can gather
+          them without fighting anything. Start there if you're not ready
+          for a scrap.
+        responses:
+          - text: Perfect. I'll give it a try.
+            next: farewell
+          - text: Tell me more about crafting.
+            next: crafting
+      dangers:
+        text: >
+          Spiders in the hollow are venomous — grab an antidote from the
+          curiosity shop in town before you go that way. Wolves hunt in pairs
+          on the forest path. Deep in the heart, the darkness is thick enough
+          to slow you down, so bring a torch if you have one. And whatever
+          you do, don't eat the purple mushrooms.
+        responses:
+          - text: Noted. Can you teach me about crafting?
+            next: crafting
+          - text: Thanks for the warning.
+            next: farewell
+      farewell:
+        text: >
+          Stay sharp. The forest doesn't forgive carelessness — but it rewards
+          those who learn its rhythms. Come back if you need anything.
+    tags: [ranger, trainer, crafting]
 
   - id: hermit-gatherer
     name: Old Morel
@@ -125,6 +228,10 @@ definitions:
     tags: [hermit, gatherer]
 
 spawns:
+  - room: forest-edge
+    npcs:
+      - id: ranger-faela
+
   - room: spider-hollow
     npcs:
       - id: forest-spider

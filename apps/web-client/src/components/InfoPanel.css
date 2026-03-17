@@ -1,0 +1,62 @@
+.info-panel {
+  display: flex;
+  flex-shrink: 0;
+  gap: 0;
+  overflow: hidden;
+}
+
+.info-column {
+  flex: 0 0 auto;
+  min-width: 140px;
+  max-width: 220px;
+  overflow: hidden;
+}
+
+.info-column-grow {
+  flex: 1 1 auto;
+  max-width: none;
+}
+
+.info-divider {
+  width: 1px;
+  background: var(--border);
+  margin: 0 12px;
+  align-self: stretch;
+}
+
+.stat-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stat-label {
+  width: 24px;
+  flex-shrink: 0;
+}
+
+.info-bar {
+  width: 80px;
+  height: 8px;
+  background: var(--bg-secondary);
+  border-radius: 2px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.info-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.2s ease;
+}
+
+.minimap {
+  color: var(--color-cyan);
+  line-height: 1.2;
+  font-size: 12px;
+}
+
+.player-name {
+  color: var(--color-green);
+  font-weight: bold;
+}

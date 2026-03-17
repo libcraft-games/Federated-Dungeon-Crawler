@@ -13,13 +13,16 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@realms/lexicons": "workspace:*",
-    "@realms/common": "workspace:*",
-    "@realms/atproto": "workspace:*",
-    "@realms/protocol": "workspace:*",
     "@atproto/api": "^0.15.0",
+    "@atproto/crypto": "^0.4.5",
+    "@atproto/oauth-client-node": "^0.3.17",
     "@atproto/xrpc-server": "^0.8.0",
+    "@realms/atproto": "workspace:*",
+    "@realms/common": "workspace:*",
+    "@realms/lexicons": "workspace:*",
+    "@realms/protocol": "workspace:*",
     "express": "^4.21.0",
+    "jose": "^6.2.1",
     "yaml": "^2.7.0"
   },
   "devDependencies": {

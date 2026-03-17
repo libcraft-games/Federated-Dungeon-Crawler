@@ -1,4 +1,4 @@
-import type { RoomState, EntityBrief, ItemBrief, ItemInstance } from "@realms/common";
+import type { RoomState, EntityBrief, ItemInstance } from "@realms/common";
 
 // ── Shared combat types ──
 
@@ -12,12 +12,26 @@ export interface CombatantInfo {
   art?: string[];
 }
 
+// ── Shared adaptation types ──
+
+export interface AdaptationOption {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export interface AdaptationRequired {
+  class?: { original: string; options: AdaptationOption[] };
+  race?: { original: string; options: AdaptationOption[] };
+}
+
 // Client -> Server messages
 export type ClientMessage =
   | { type: "command"; id: string; command: string; args: string[] }
   | { type: "move"; id: string; direction: string }
   | { type: "chat"; channel: string; message: string }
   | { type: "interact"; id: string; targetId: string; action: string }
+  | { type: "adaptation_response"; classId?: string; raceId?: string }
   | { type: "ping" };
 
 // Server -> Client messages
@@ -32,6 +46,7 @@ export type ServerMessage =
   | { type: "pong"; serverTime: number }
   | { type: "welcome"; sessionId: string; serverName: string }
   | { type: "inventory_update"; inventory: ItemInstance[] }
+  | { type: "equipment_update"; equipment: Record<string, ItemInstance> }
   | {
       type: "character_update";
       hp: number;
@@ -40,6 +55,7 @@ export type ServerMessage =
       maxMp: number;
       ap: number;
       maxAp: number;
+      gold: number;
       level: number;
       xp: number;
       xpToNext: number;
@@ -48,7 +64,45 @@ export type ServerMessage =
   | { type: "combat_update"; combatants: CombatantInfo[]; targetId: string }
   | { type: "combat_end"; reason: "victory" | "flee" | "death" }
   | { type: "level_up"; level: number; message: string }
-  | { type: "map_update"; grid: string[]; cursorRow: number; cursorCol: number; legend: string[] };
+  | { type: "map_update"; grid: string[]; cursorRow: number; cursorCol: number; legend: string[] }
+  | {
+      type: "quest_update";
+      questId: string;
+      questName: string;
+      status: "active" | "completed" | "failed";
+      objectives: { description: string; current: number; required: number; done: boolean }[];
+      rewards?: { xp?: number; gold?: number; items?: string[] };
+    }
+  | {
+      type: "quest_log";
+      quests: Array<{
+        questId: string;
+        questName: string;
+        status: "active" | "completed" | "failed";
+        objectives: { description: string; current: number; required: number; done: boolean }[];
+      }>;
+    }
+  | {
+      type: "portal_offer";
+      targetServer: { name: string; did: string; endpoint: string };
+      sessionId: string;
+      websocketUrl: string;
+    }
+  | {
+      type: "adaptation_required";
+      adaptation: AdaptationRequired;
+      message: string;
+    }
+  | {
+      type: "mailbox";
+      messages: Array<{
+        senderName: string;
+        senderDid: string;
+        message: string;
+        sourceServer: string;
+        sentAt: string;
+      }>;
+    };
 
 export function encodeMessage(msg: ClientMessage | ServerMessage): string {
   return JSON.stringify(msg);

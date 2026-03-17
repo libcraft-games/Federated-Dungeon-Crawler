@@ -13,10 +13,9 @@
  */
 
 import type { CharacterSession } from "../entities/character-session.js";
-import type { NpcManager } from "../entities/npc-manager.js";
 import type { WorldManager } from "../world/world-manager.js";
 import type { SessionManager } from "../server/session-manager.js";
-import type { NpcInstance, ItemInstance } from "@realms/common";
+import type { NpcInstance } from "@realms/common";
 import type { ServerMessage } from "@realms/protocol";
 import {
   resolvePlayerAttack,
@@ -50,13 +49,15 @@ export class CombatSystem {
 
   /** Get all NPCs in combat state in the player's room */
   private getCombatNpcs(session: CharacterSession): NpcInstance[] {
-    return this.ctx.world.npcManager.getAllInRoom(session.currentRoom)
+    return this.ctx.world.npcManager
+      .getAllInRoom(session.currentRoom)
       .filter((npc) => npc.state === "combat");
   }
 
   /** Set all idle hostile NPCs in the room to combat state */
   private engageAllHostiles(session: CharacterSession): void {
-    const hostiles = this.ctx.world.npcManager.getAllInRoom(session.currentRoom)
+    const hostiles = this.ctx.world.npcManager
+      .getAllInRoom(session.currentRoom)
       .filter((npc) => npc.behavior === "hostile" && npc.state === "idle");
     for (const npc of hostiles) {
       npc.state = "combat";
@@ -81,7 +82,7 @@ export class CombatSystem {
         npc.level,
         npc.name,
         session.state.attributes,
-        session.state.equipment
+        session.state.equipment,
       );
 
       if (npcAttack.hit) {
@@ -89,8 +90,11 @@ export class CombatSystem {
       }
 
       const narrative = formatAttackResult(
-        npc.name, session.name, npcAttack,
-        session.state.currentHp, session.state.maxHp
+        npc.name,
+        session.name,
+        npcAttack,
+        session.state.currentHp,
+        session.state.maxHp,
       );
 
       if (allLines.length > 0) allLines.push("");
@@ -142,11 +146,13 @@ export class CombatSystem {
     // Engage ALL hostile NPCs in the room
     this.engageAllHostiles(session);
 
-    session.send(encodeMessage({
-      type: "combat_start",
-      target: npc.name,
-      combatants: this.buildCombatantInfo(session),
-    }));
+    session.send(
+      encodeMessage({
+        type: "combat_start",
+        target: npc.name,
+        combatants: this.buildCombatantInfo(session),
+      }),
+    );
 
     const lines: string[] = [];
     const combatNpcs = this.getCombatNpcs(session);
@@ -164,8 +170,12 @@ export class CombatSystem {
     this.sendCombat(session, lines.join("\n"));
     broadcast(
       session.currentRoom,
-      { type: "narrative", text: `${combatNpcs.map((n) => n.name).join(" and ")} attacks ${session.name}!`, style: "combat" },
-      session.sessionId
+      {
+        type: "narrative",
+        text: `${combatNpcs.map((n) => n.name).join(" and ")} attacks ${session.name}!`,
+        style: "combat",
+      },
+      session.sessionId,
     );
     this.sendCharacterUpdate(session);
     this.sendCombatUpdate(session);
@@ -221,15 +231,21 @@ export class CombatSystem {
       session.refreshAp();
       // Engage all hostile NPCs in the room
       this.engageAllHostiles(session);
-      session.send(encodeMessage({
-        type: "combat_start",
-        target: npc.name,
-        combatants: this.buildCombatantInfo(session),
-      }));
+      session.send(
+        encodeMessage({
+          type: "combat_start",
+          target: npc.name,
+          combatants: this.buildCombatantInfo(session),
+        }),
+      );
       broadcast(
         room.id,
-        { type: "narrative", text: `${session.name} engages ${npc.name} in combat!`, style: "combat" },
-        session.sessionId
+        {
+          type: "narrative",
+          text: `${session.name} engages ${npc.name} in combat!`,
+          style: "combat",
+        },
+        session.sessionId,
       );
     } else {
       // Refresh AP at the start of each round
@@ -242,7 +258,10 @@ export class CombatSystem {
 
     // Check AP
     if (!session.spendAp(AP_COST.attack)) {
-      this.sendCombat(session, `Not enough AP to attack. Need ${AP_COST.attack}, have ${session.state.currentAp}.`);
+      this.sendCombat(
+        session,
+        `Not enough AP to attack. Need ${AP_COST.attack}, have ${session.state.currentAp}.`,
+      );
       return;
     }
 
@@ -256,16 +275,14 @@ export class CombatSystem {
       session.state.attributes,
       session.state.equipment,
       npc.attributes,
-      npc.level
+      npc.level,
     );
 
     if (attackResult.hit) {
       world.npcManager.damageNpc(npc.instanceId, attackResult.damage);
     }
 
-    lines.push(formatAttackResult(
-      session.name, npc.name, attackResult, npc.currentHp, npc.maxHp
-    ));
+    lines.push(formatAttackResult(session.name, npc.name, attackResult, npc.currentHp, npc.maxHp));
 
     // Check if NPC died
     if (npc.currentHp <= 0) {
@@ -281,7 +298,11 @@ export class CombatSystem {
       }
 
       this.sendCombat(session, lines.join("\n"));
-      broadcast(room.id, { type: "narrative", text: lines.join("\n"), style: "combat" }, session.sessionId);
+      broadcast(
+        room.id,
+        { type: "narrative", text: lines.join("\n"), style: "combat" },
+        session.sessionId,
+      );
       this.sendCombatUpdate(session);
 
       if (session.isDead) {
@@ -297,7 +318,11 @@ export class CombatSystem {
 
     // Send combined narrative
     this.sendCombat(session, lines.join("\n"));
-    broadcast(room.id, { type: "narrative", text: lines.join("\n"), style: "combat" }, session.sessionId);
+    broadcast(
+      room.id,
+      { type: "narrative", text: lines.join("\n"), style: "combat" },
+      session.sessionId,
+    );
     this.sendCharacterUpdate(session);
     this.sendCombatUpdate(session);
 
@@ -331,7 +356,10 @@ export class CombatSystem {
     // Refresh AP at start of round, then spend
     session.refreshAp();
     if (!session.spendAp(AP_COST.defend)) {
-      this.sendCombat(session, `Not enough AP to defend. Need ${AP_COST.defend}, have ${session.state.currentAp}.`);
+      this.sendCombat(
+        session,
+        `Not enough AP to defend. Need ${AP_COST.defend}, have ${session.state.currentAp}.`,
+      );
       return;
     }
 
@@ -363,11 +391,14 @@ export class CombatSystem {
     // Refresh AP at start of round, then spend
     session.refreshAp();
     if (!session.spendAp(AP_COST.flee)) {
-      this.sendCombat(session, `Not enough AP to flee. Need ${AP_COST.flee}, have ${session.state.currentAp}.`);
+      this.sendCombat(
+        session,
+        `Not enough AP to flee. Need ${AP_COST.flee}, have ${session.state.currentAp}.`,
+      );
       return;
     }
 
-    const { world, broadcast } = this.ctx;
+    const { broadcast } = this.ctx;
     const dex = session.state.attributes.dex ?? 10;
 
     // Flee DC is based on the highest-level combatant
@@ -380,7 +411,7 @@ export class CombatSystem {
       broadcast(
         session.currentRoom,
         { type: "narrative", text: `${session.name} flees from combat!`, style: "combat" },
-        session.sessionId
+        session.sessionId,
       );
 
       // All NPCs return to idle
@@ -403,7 +434,8 @@ export class CombatSystem {
       this.sendCombatUpdate(session);
 
       if (session.isDead) {
-        const killer = combatNpcs[0] ?? this.ctx.world.npcManager.getInstance(session.combatTarget!)!;
+        const killer =
+          combatNpcs[0] ?? this.ctx.world.npcManager.getInstance(session.combatTarget!)!;
         this.handlePlayerDeath(session, killer);
       }
     }
@@ -427,7 +459,10 @@ export class CombatSystem {
     if (session.inCombat) {
       session.refreshAp();
       if (!session.spendAp(AP_COST.useItem)) {
-        this.sendCombat(session, `Not enough AP to use an item. Need ${AP_COST.useItem}, have ${session.state.currentAp}.`);
+        this.sendCombat(
+          session,
+          `Not enough AP to use an item. Need ${AP_COST.useItem}, have ${session.state.currentAp}.`,
+        );
         return;
       }
     }
@@ -441,13 +476,17 @@ export class CombatSystem {
       session.heal(props.healAmount);
       const healed = session.state.currentHp - oldHp;
       session.removeItem(itemName, 1);
-      lines.push(`You use ${item.name}, restoring ${healed} HP. (HP: ${session.state.currentHp}/${session.state.maxHp})`);
+      lines.push(
+        `You use ${item.name}, restoring ${healed} HP. (HP: ${session.state.currentHp}/${session.state.maxHp})`,
+      );
     } else if (props.effect === "restore_mp" && typeof props.manaAmount === "number") {
       const oldMp = session.state.currentMp;
       session.restoreMana(props.manaAmount);
       const restored = session.state.currentMp - oldMp;
       session.removeItem(itemName, 1);
-      lines.push(`You use ${item.name}, restoring ${restored} MP. (MP: ${session.state.currentMp}/${session.state.maxMp})`);
+      lines.push(
+        `You use ${item.name}, restoring ${restored} MP. (MP: ${session.state.currentMp}/${session.state.maxMp})`,
+      );
     } else {
       lines.push(`You use ${item.name}. Nothing seems to happen.`);
       session.removeItem(itemName, 1);
@@ -467,24 +506,28 @@ export class CombatSystem {
     if (session.inCombat) this.sendCombatUpdate(session);
 
     if (session.isDead && session.inCombat) {
-      const killer = this.getCombatNpcs(session)[0]
-        ?? this.ctx.world.npcManager.getInstance(session.combatTarget!)!;
+      const killer =
+        this.getCombatNpcs(session)[0] ??
+        this.ctx.world.npcManager.getInstance(session.combatTarget!)!;
       this.handlePlayerDeath(session, killer);
     }
   }
 
   /** Player casts a spell (in or out of combat) */
   castSpell(session: CharacterSession, spellName: string, targetName?: string): void {
-    const { world, broadcast } = this.ctx;
+    const { world } = this.ctx;
     const system = world.gameSystem;
 
     // Find the spell
     const lower = spellName.toLowerCase();
     const spellEntry = Object.entries(system.spells).find(
-      ([id, def]) => id.toLowerCase() === lower || def.name.toLowerCase() === lower
+      ([id, def]) => id.toLowerCase() === lower || def.name.toLowerCase() === lower,
     );
     if (!spellEntry) {
-      this.sendCombat(session, `Unknown spell: ${spellName}. Type 'spells' to see your spell list.`);
+      this.sendCombat(
+        session,
+        `Unknown spell: ${spellName}. Type 'spells' to see your spell list.`,
+      );
       return;
     }
     const [spellId, spell] = spellEntry;
@@ -504,7 +547,10 @@ export class CombatSystem {
 
     // Check MP
     if (session.state.currentMp < spell.mpCost) {
-      this.sendCombat(session, `Not enough mana. ${spell.name} costs ${spell.mpCost} MP (you have ${session.state.currentMp}).`);
+      this.sendCombat(
+        session,
+        `Not enough mana. ${spell.name} costs ${spell.mpCost} MP (you have ${session.state.currentMp}).`,
+      );
       return;
     }
 
@@ -513,7 +559,10 @@ export class CombatSystem {
     if (session.inCombat) {
       session.refreshAp();
       if (!session.spendAp(apCost)) {
-        this.sendCombat(session, `Not enough AP to cast ${spell.name}. Need ${apCost}, have ${session.state.currentAp}.`);
+        this.sendCombat(
+          session,
+          `Not enough AP to cast ${spell.name}. Need ${apCost}, have ${session.state.currentAp}.`,
+        );
         return;
       }
     }
@@ -536,14 +585,19 @@ export class CombatSystem {
     const lines: string[] = [];
 
     if (spell.effect === "heal") {
-      const oldHp = session.state.currentHp;
       session.heal(result.amount);
-      const healed = session.state.currentHp - oldHp;
-      lines.push(formatSpellResult(
-        session.name, session.name, result,
-        session.state.currentHp, session.state.maxHp
-      ));
-      lines.push(`  (${spell.mpCost} MP spent, ${session.state.currentMp}/${session.state.maxMp} remaining)`);
+      lines.push(
+        formatSpellResult(
+          session.name,
+          session.name,
+          result,
+          session.state.currentHp,
+          session.state.maxHp,
+        ),
+      );
+      lines.push(
+        `  (${spell.mpCost} MP spent, ${session.state.currentMp}/${session.state.maxMp} remaining)`,
+      );
     } else if (spell.effect === "buff") {
       // Simple buff: +magnitude to str for 5 ticks
       lines.push(`${session.name} casts ${spell.name}! A surge of power flows through you.`);
@@ -573,8 +627,9 @@ export class CombatSystem {
     if (session.inCombat) this.sendCombatUpdate(session);
 
     if (session.isDead && session.inCombat) {
-      const killer = this.getCombatNpcs(session)[0]
-        ?? this.ctx.world.npcManager.getInstance(session.combatTarget!)!;
+      const killer =
+        this.getCombatNpcs(session)[0] ??
+        this.ctx.world.npcManager.getInstance(session.combatTarget!)!;
       this.handlePlayerDeath(session, killer);
     }
   }
@@ -620,15 +675,21 @@ export class CombatSystem {
       session.combatTarget = npc.instanceId;
       npc.state = "combat";
       this.engageAllHostiles(session);
-      session.send(encodeMessage({
-        type: "combat_start",
-        target: npc.name,
-        combatants: this.buildCombatantInfo(session),
-      }));
+      session.send(
+        encodeMessage({
+          type: "combat_start",
+          target: npc.name,
+          combatants: this.buildCombatantInfo(session),
+        }),
+      );
       broadcast(
         room.id,
-        { type: "narrative", text: `${session.name} engages ${npc.name} in combat!`, style: "combat" },
-        session.sessionId
+        {
+          type: "narrative",
+          text: `${session.name} engages ${npc.name} in combat!`,
+          style: "combat",
+        },
+        session.sessionId,
       );
     } else if (session.combatTarget !== npc.instanceId) {
       session.combatTarget = npc.instanceId;
@@ -641,22 +702,17 @@ export class CombatSystem {
     session.state.currentMp -= spell.mpCost;
 
     // Resolve spell attack
-    const result = resolveSpellAttack(
-      spell,
-      session.state.attributes,
-      npc.attributes,
-      npc.level
-    );
+    const result = resolveSpellAttack(spell, session.state.attributes, npc.attributes, npc.level);
 
     if (result.success) {
       world.npcManager.damageNpc(npc.instanceId, result.amount);
     }
 
     const lines: string[] = [];
-    lines.push(formatSpellResult(
-      session.name, npc.name, result, npc.currentHp, npc.maxHp
-    ));
-    lines.push(`  (${spell.mpCost} MP spent, ${session.state.currentMp}/${session.state.maxMp} remaining)`);
+    lines.push(formatSpellResult(session.name, npc.name, result, npc.currentHp, npc.maxHp));
+    lines.push(
+      `  (${spell.mpCost} MP spent, ${session.state.currentMp}/${session.state.maxMp} remaining)`,
+    );
 
     // Check if NPC died
     if (npc.currentHp <= 0) {
@@ -672,7 +728,11 @@ export class CombatSystem {
       }
 
       this.sendCombat(session, lines.join("\n"));
-      broadcast(room.id, { type: "narrative", text: lines.join("\n"), style: "combat" }, session.sessionId);
+      broadcast(
+        room.id,
+        { type: "narrative", text: lines.join("\n"), style: "combat" },
+        session.sessionId,
+      );
       this.sendCombatUpdate(session);
 
       if (session.isDead) {
@@ -687,7 +747,11 @@ export class CombatSystem {
     lines.push("", ...retaliationLines);
 
     this.sendCombat(session, lines.join("\n"));
-    broadcast(room.id, { type: "narrative", text: lines.join("\n"), style: "combat" }, session.sessionId);
+    broadcast(
+      room.id,
+      { type: "narrative", text: lines.join("\n"), style: "combat" },
+      session.sessionId,
+    );
     this.sendCharacterUpdate(session);
     this.sendCombatUpdate(session);
 
@@ -719,6 +783,13 @@ export class CombatSystem {
       }
     }
 
+    // Award gold
+    const goldDrop = world.npcManager.generateGoldDrop(npc.definitionId);
+    if (goldDrop > 0) {
+      session.addGold(goldDrop);
+      lines.push(`You loot ${goldDrop} gold.`);
+    }
+
     // Award XP
     const xp = calculateXpReward(npc.level, session.state.level);
     const newLevel = session.addXp(xp);
@@ -731,8 +802,12 @@ export class CombatSystem {
       if (room) {
         this.ctx.broadcast(
           room.id,
-          { type: "narrative", text: `${session.name} has reached level ${newLevel}!`, style: "system" },
-          session.sessionId
+          {
+            type: "narrative",
+            text: `${session.name} has reached level ${newLevel}!`,
+            style: "system",
+          },
+          session.sessionId,
         );
       }
     }
@@ -740,6 +815,16 @@ export class CombatSystem {
     // Kill the NPC (removes from room, queues respawn)
     if (room) {
       world.npcManager.killNpc(npc.instanceId, room);
+    }
+
+    // Quest kill tracking
+    const killUpdates = this.ctx.world.questManager.recordKill(
+      session.characterDid,
+      npc.definitionId,
+    );
+    for (const questId of killUpdates) {
+      const payload = this.ctx.world.questManager.buildUpdatePayload(session.characterDid, questId);
+      if (payload) session.send(encodeMessage(payload));
     }
 
     // Check if other NPCs are still fighting
@@ -766,8 +851,12 @@ export class CombatSystem {
     this.sendCombat(session, "You have been defeated! The world goes dark...");
     broadcast(
       session.currentRoom,
-      { type: "narrative", text: `${session.name} has been defeated by ${npc.name}!`, style: "combat" },
-      session.sessionId
+      {
+        type: "narrative",
+        text: `${session.name} has been defeated by ${npc.name}!`,
+        style: "combat",
+      },
+      session.sessionId,
     );
 
     // Remove from current room
@@ -799,7 +888,7 @@ export class CombatSystem {
           entity: { id: session.sessionId, name: session.name, type: "player" },
           room: newRoom.id,
         },
-        session.sessionId
+        session.sessionId,
       );
     }
 
@@ -812,7 +901,10 @@ export class CombatSystem {
       session.send(encodeMessage({ type: "room_state", room: newRoom.toState() }));
     }
 
-    this.sendCombat(session, `You awaken at ${newRoom?.title ?? "the town square"}, battered but alive.`);
+    this.sendCombat(
+      session,
+      `You awaken at ${newRoom?.title ?? "the town square"}, battered but alive.`,
+    );
   }
 
   // ── Messaging helpers ──
@@ -827,18 +919,21 @@ export class CombatSystem {
 
   private sendCharacterUpdate(session: CharacterSession): void {
     const s = session.state;
-    session.send(encodeMessage({
-      type: "character_update",
-      hp: s.currentHp,
-      maxHp: s.maxHp,
-      mp: s.currentMp,
-      maxMp: s.maxMp,
-      ap: s.currentAp,
-      maxAp: s.maxAp,
-      level: s.level,
-      xp: s.experience,
-      xpToNext: xpToNextLevel(s.level, s.experience),
-    }));
+    session.send(
+      encodeMessage({
+        type: "character_update",
+        hp: s.currentHp,
+        maxHp: s.maxHp,
+        mp: s.currentMp,
+        maxMp: s.maxMp,
+        ap: s.currentAp,
+        maxAp: s.maxAp,
+        gold: s.gold,
+        level: s.level,
+        xp: s.experience,
+        xpToNext: xpToNextLevel(s.level, s.experience),
+      }),
+    );
   }
 
   private sendInventoryUpdate(session: CharacterSession): void {
@@ -867,10 +962,12 @@ export class CombatSystem {
   private sendCombatUpdate(session: CharacterSession): void {
     const combatants = this.buildCombatantInfo(session);
     if (combatants.length === 0) return;
-    session.send(encodeMessage({
-      type: "combat_update",
-      combatants,
-      targetId: session.combatTarget ?? combatants[0].id,
-    }));
+    session.send(
+      encodeMessage({
+        type: "combat_update",
+        combatants,
+        targetId: session.combatTarget ?? combatants[0].id,
+      }),
+    );
   }
 }

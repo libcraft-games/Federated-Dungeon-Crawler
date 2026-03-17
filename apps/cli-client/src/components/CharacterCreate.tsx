@@ -66,23 +66,19 @@ export function CharacterCreate({ classes, races, playerName, onComplete }: Prop
 
       <Box marginTop={1}>
         <Text color="gray">Name: </Text>
-        <Text color="green" bold>{playerName}</Text>
+        <Text color="green" bold>
+          {playerName}
+        </Text>
       </Box>
 
-      {phase === "class" && (
-        <ClassSelect classes={classes} index={classIndex} />
-      )}
+      {phase === "class" && <ClassSelect classes={classes} index={classIndex} />}
 
       {phase === "race" && (
         <RaceSelect races={races} index={raceIndex} selectedClass={selectedClass!} />
       )}
 
       {phase === "confirm" && (
-        <ConfirmScreen
-          playerName={playerName}
-          cls={classes[classIndex]}
-          race={races[raceIndex]}
-        />
+        <ConfirmScreen playerName={playerName} cls={classes[classIndex]} race={races[raceIndex]} />
       )}
     </Box>
   );
@@ -93,15 +89,17 @@ function ClassSelect({ classes, index }: { classes: ClassInfo[]; index: number }
 
   return (
     <Box flexDirection="column" marginTop={1}>
-      <Text color="cyan" bold>Choose your class:</Text>
-      <Text color="gray" dimColor>{"(↑/↓ to select, Enter to confirm)"}</Text>
+      <Text color="cyan" bold>
+        Choose your class:
+      </Text>
+      <Text color="gray" dimColor>
+        {"(↑/↓ to select, Enter to confirm)"}
+      </Text>
 
       <Box marginTop={1} flexDirection="column">
         {classes.map((cls, i) => (
           <Box key={cls.id}>
-            <Text color={i === index ? "yellow" : "gray"}>
-              {i === index ? " ► " : "   "}
-            </Text>
+            <Text color={i === index ? "yellow" : "gray"}>{i === index ? " ► " : "   "}</Text>
             <Text color={i === index ? "white" : "gray"} bold={i === index}>
               {cls.name}
             </Text>
@@ -109,8 +107,16 @@ function ClassSelect({ classes, index }: { classes: ClassInfo[]; index: number }
         ))}
       </Box>
 
-      <Box marginTop={1} flexDirection="column" borderStyle="single" borderColor="gray" paddingX={1}>
-        <Text color="white" bold>{selected.name}</Text>
+      <Box
+        marginTop={1}
+        flexDirection="column"
+        borderStyle="single"
+        borderColor="gray"
+        paddingX={1}
+      >
+        <Text color="white" bold>
+          {selected.name}
+        </Text>
         <Text color="gray">{selected.description}</Text>
         {selected.attributeBonuses && (
           <Box marginTop={1}>
@@ -139,25 +145,37 @@ function ClassSelect({ classes, index }: { classes: ClassInfo[]; index: number }
   );
 }
 
-function RaceSelect({ races, index, selectedClass }: { races: RaceInfo[]; index: number; selectedClass: ClassInfo }) {
+function RaceSelect({
+  races,
+  index,
+  selectedClass,
+}: {
+  races: RaceInfo[];
+  index: number;
+  selectedClass: ClassInfo;
+}) {
   const selected = races[index];
 
   return (
     <Box flexDirection="column" marginTop={1}>
       <Box>
         <Text color="gray">Class: </Text>
-        <Text color="yellow" bold>{selectedClass.name}</Text>
+        <Text color="yellow" bold>
+          {selectedClass.name}
+        </Text>
       </Box>
 
-      <Text color="cyan" bold>Choose your race:</Text>
-      <Text color="gray" dimColor>{"(↑/↓ to select, Enter to confirm, Esc to go back)"}</Text>
+      <Text color="cyan" bold>
+        Choose your race:
+      </Text>
+      <Text color="gray" dimColor>
+        {"(↑/↓ to select, Enter to confirm, Esc to go back)"}
+      </Text>
 
       <Box marginTop={1} flexDirection="column">
         {races.map((race, i) => (
           <Box key={race.id}>
-            <Text color={i === index ? "yellow" : "gray"}>
-              {i === index ? " ► " : "   "}
-            </Text>
+            <Text color={i === index ? "yellow" : "gray"}>{i === index ? " ► " : "   "}</Text>
             <Text color={i === index ? "white" : "gray"} bold={i === index}>
               {race.name}
             </Text>
@@ -165,8 +183,16 @@ function RaceSelect({ races, index, selectedClass }: { races: RaceInfo[]; index:
         ))}
       </Box>
 
-      <Box marginTop={1} flexDirection="column" borderStyle="single" borderColor="gray" paddingX={1}>
-        <Text color="white" bold>{selected.name}</Text>
+      <Box
+        marginTop={1}
+        flexDirection="column"
+        borderStyle="single"
+        borderColor="gray"
+        paddingX={1}
+      >
+        <Text color="white" bold>
+          {selected.name}
+        </Text>
         <Text color="gray">{selected.description}</Text>
         {selected.attributeBonuses && (
           <Box marginTop={1}>
@@ -183,7 +209,15 @@ function RaceSelect({ races, index, selectedClass }: { races: RaceInfo[]; index:
   );
 }
 
-function ConfirmScreen({ playerName, cls, race }: { playerName: string; cls: ClassInfo; race: RaceInfo }) {
+function ConfirmScreen({
+  playerName,
+  cls,
+  race,
+}: {
+  playerName: string;
+  cls: ClassInfo;
+  race: RaceInfo;
+}) {
   // Merge bonuses for preview
   const combined: Record<string, number> = {};
   for (const [attr, val] of Object.entries(cls.attributeBonuses ?? {})) {
@@ -195,11 +229,23 @@ function ConfirmScreen({ playerName, cls, race }: { playerName: string; cls: Cla
 
   return (
     <Box flexDirection="column" marginTop={1}>
-      <Text color="cyan" bold>Confirm your character:</Text>
-      <Text color="gray" dimColor>{"(Enter to begin, Esc to go back)"}</Text>
+      <Text color="cyan" bold>
+        Confirm your character:
+      </Text>
+      <Text color="gray" dimColor>
+        {"(Enter to begin, Esc to go back)"}
+      </Text>
 
-      <Box marginTop={1} flexDirection="column" borderStyle="single" borderColor="yellow" paddingX={1}>
-        <Text color="white" bold>{playerName}</Text>
+      <Box
+        marginTop={1}
+        flexDirection="column"
+        borderStyle="single"
+        borderColor="yellow"
+        paddingX={1}
+      >
+        <Text color="white" bold>
+          {playerName}
+        </Text>
         <Box>
           <Text color="gray">Class: </Text>
           <Text color="yellow">{cls.name}</Text>
@@ -223,7 +269,9 @@ function ConfirmScreen({ playerName, cls, race }: { playerName: string; cls: Cla
       </Box>
 
       <Box marginTop={1}>
-        <Text color="green" bold>{"Press Enter to enter the realm..."}</Text>
+        <Text color="green" bold>
+          {"Press Enter to enter the realm..."}
+        </Text>
       </Box>
     </Box>
   );

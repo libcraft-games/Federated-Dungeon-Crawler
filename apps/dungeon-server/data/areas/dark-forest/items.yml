@@ -96,11 +96,73 @@ definitions:
       effect: cure_poison
     tags: [potion, antidote]
 
+  - id: wolf-pelt
+    name: Wolf Pelt
+    type: material
+    description: >
+      A coarse grey pelt stripped from a forest wolf. It's still warm and
+      smells of pine and musk. Useful for crafting and lining winter gear.
+    weight: 1
+    value: 10
+    rarity: common
+    stackable: true
+    maxStack: 10
+    properties:
+      craftingMaterial: true
+    tags: [material, crafting, pelt]
+
+  - id: silk-bandage
+    name: Silk Bandage
+    type: consumable
+    description: >
+      Crude bandages woven from spider silk. Tougher than linen and surprisingly
+      absorbent. They sting going on, but wounds close faster.
+    weight: 0.2
+    value: 12
+    rarity: common
+    stackable: true
+    maxStack: 10
+    properties:
+      healAmount: 15
+      effect: restore_hp
+    tags: [bandage, healing, crafted]
+
+  - id: wolf-stew
+    name: Wolf Stew
+    type: consumable
+    description: >
+      A hearty stew of wolf meat and luminous mushrooms, slow-cooked over a
+      campfire. Rich and gamey, it fills you with warmth and vitality.
+    weight: 0.5
+    value: 20
+    rarity: uncommon
+    stackable: true
+    maxStack: 5
+    properties:
+      healAmount: 30
+      effect: restore_hp
+    tags: [food, healing, crafted]
+
+  - id: dreamcap-mushroom
+    name: Dreamcap Mushroom
+    type: material
+    description: >
+      A rare mushroom with a deep purple cap dusted with silver spots. It glows faintly
+      in the dark and smells of sweet earth. Old Morel would pay handsomely for these.
+    weight: 0
+    value: 25
+    rarity: rare
+    stackable: true
+    maxStack: 10
+    properties:
+      craftingMaterial: true
+    tags: [mushroom, rare, crafting]
+
 spawns:
   - room: forest-edge
     items:
       - id: gnarled-staff
-        quantity: 1
+        quantity: 2
 
   - room: mushroom-grove
     items:
@@ -125,3 +187,13 @@ spawns:
     items:
       - id: antidote
         quantity: 2
+
+  - room: mushroom-grove
+    items:
+      - id: dreamcap-mushroom
+        quantity: 2
+
+  - room: deep-forest
+    items:
+      - id: dreamcap-mushroom
+        quantity: 1

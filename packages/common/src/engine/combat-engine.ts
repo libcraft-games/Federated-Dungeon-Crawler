@@ -1,4 +1,10 @@
-import type { Attributes, ItemProperties, ItemTypeDef, EquipSlotDef, SpellDef } from "@realms/lexicons";
+import type {
+  Attributes,
+  ItemProperties,
+  ItemTypeDef,
+  EquipSlotDef,
+  SpellDef,
+} from "@realms/lexicons";
 import type { ItemInstance } from "../types/item.js";
 
 /** Subset of GameSystem needed for equipment resolution */
@@ -56,7 +62,7 @@ export function getEquipSlot(
   config: EquipmentConfig,
   type: string,
   properties?: ItemProperties,
-  tags?: string[]
+  tags?: string[],
 ): string | null {
   const typeDef = config.itemTypes[type];
 
@@ -150,13 +156,13 @@ export function resolvePlayerAttack(
   playerAttrs: Attributes,
   playerEquipment: Record<string, ItemInstance>,
   npcAttrs: Attributes | undefined,
-  npcLevel: number
+  _npcLevel: number,
 ): AttackResult {
   const roll = rollD20();
   const critical = roll === 20;
 
   // Attack bonus: use higher of str/dex modifier (finesse-style)
-  // In the future we could have weapon-specific bonuses 
+  // In the future we could have weapon-specific bonuses
   // (e.g. bows use dex, heavy weapons use str, maybe even some weapons using other attributes),
   // but for now we just take the best of both.
   const strMod = attrMod(getAttr(playerAttrs, "str"));
@@ -197,7 +203,7 @@ export function resolveNpcAttack(
   npcLevel: number,
   npcName: string,
   playerAttrs: Attributes,
-  playerEquipment: Record<string, ItemInstance>
+  playerEquipment: Record<string, ItemInstance>,
 ): AttackResult {
   const roll = rollD20();
   const critical = roll === 20;
@@ -315,7 +321,7 @@ export function resolveSpellAttack(
   spell: SpellDef,
   casterAttrs: Attributes,
   targetAttrs: Attributes | undefined,
-  targetLevel: number
+  _targetLevel: number,
 ): SpellResult {
   const roll = rollD20();
   const critical = roll === 20;
@@ -358,10 +364,7 @@ export function resolveSpellAttack(
  * Resolve a self-targeted spell (heal, buff). Always succeeds.
  * Amount = power + dice + attribute mod.
  */
-export function resolveSpellSelf(
-  spell: SpellDef,
-  casterAttrs: Attributes
-): SpellResult {
+export function resolveSpellSelf(spell: SpellDef, casterAttrs: Attributes): SpellResult {
   const castMod = attrMod(getAttr(casterAttrs, spell.attribute));
 
   let amount = spell.power + castMod;
@@ -389,7 +392,7 @@ export function formatSpellResult(
   targetName: string,
   result: SpellResult,
   targetHp: number,
-  targetMaxHp: number
+  targetMaxHp: number,
 ): string {
   const lines: string[] = [];
 
@@ -409,7 +412,7 @@ export function formatSpellResult(
   }
 
   lines.push(
-    `  Roll: ${result.roll} + ${result.spellBonus} = ${result.totalRoll} vs AC ${result.defense} — ${result.success ? "Hit!" : "Miss!"}`
+    `  Roll: ${result.roll} + ${result.spellBonus} = ${result.totalRoll} vs AC ${result.defense} — ${result.success ? "Hit!" : "Miss!"}`,
   );
 
   if (result.success) {
@@ -426,7 +429,7 @@ export function formatAttackResult(
   targetName: string,
   result: AttackResult,
   targetHp: number,
-  targetMaxHp: number
+  targetMaxHp: number,
 ): string {
   const lines: string[] = [];
 
@@ -439,7 +442,7 @@ export function formatAttackResult(
   }
 
   lines.push(
-    `  Roll: ${result.roll} + ${result.attackBonus} = ${result.totalAttack} vs AC ${result.defense} — ${result.hit ? "Hit!" : "Miss!"}`
+    `  Roll: ${result.roll} + ${result.attackBonus} = ${result.totalAttack} vs AC ${result.defense} — ${result.hit ? "Hit!" : "Miss!"}`,
   );
 
   if (result.hit) {

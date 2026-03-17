@@ -20,6 +20,11 @@
             "type": "unknown",
             "description": "Map of attribute ID -> bonus value added to race/default base"
           },
+          "spells": {
+            "type": "array",
+            "description": "Spell IDs this class has access to",
+            "items": { "type": "string" }
+          },
           "tags": {
             "type": "array",
             "items": { "type": "string" },

@@ -23,7 +23,11 @@ import type { EquipmentConfig } from "./combat-engine.ts";
 
 const config: EquipmentConfig = {
   equipSlots: {
-    mainHand: { name: "Main Hand", category: "weapon", aliases: ["weapon", "main hand", "mainhand"] },
+    mainHand: {
+      name: "Main Hand",
+      category: "weapon",
+      aliases: ["weapon", "main hand", "mainhand"],
+    },
     offHand: { name: "Off Hand", category: "weapon", aliases: ["shield", "off hand", "offhand"] },
     head: { name: "Head", category: "armor", aliases: ["helmet", "hat", "helm"] },
     body: { name: "Body", category: "armor", aliases: ["armor", "chest", "torso"] },
@@ -32,7 +36,12 @@ const config: EquipmentConfig = {
   },
   itemTypes: {
     weapon: { name: "Weapon", equippable: true, defaultSlot: "mainHand" },
-    armor: { name: "Armor", equippable: true, defaultSlot: "body", equipSlots: ["head", "body", "feet", "offHand"] },
+    armor: {
+      name: "Armor",
+      equippable: true,
+      defaultSlot: "body",
+      equipSlots: ["head", "body", "feet", "offHand"],
+    },
     accessory: { name: "Accessory", equippable: true, defaultSlot: "ring", equipSlots: ["ring"] },
     consumable: { name: "Consumable", stackable: true },
     material: { name: "Material", stackable: true },
@@ -126,25 +135,53 @@ describe("equipment helpers", () => {
 
   test("getEquippedDefense sums all armor", () => {
     const eq = {
-      head: { instanceId: "1", definitionId: "cap", name: "Cap", quantity: 1, properties: { defense: 1 } },
-      body: { instanceId: "2", definitionId: "armor", name: "Armor", quantity: 1, properties: { defense: 3 } },
-      mainHand: { instanceId: "3", definitionId: "sword", name: "Sword", quantity: 1, properties: { damage: 5 } },
+      head: {
+        instanceId: "1",
+        definitionId: "cap",
+        name: "Cap",
+        quantity: 1,
+        properties: { defense: 1 },
+      },
+      body: {
+        instanceId: "2",
+        definitionId: "armor",
+        name: "Armor",
+        quantity: 1,
+        properties: { defense: 3 },
+      },
+      mainHand: {
+        instanceId: "3",
+        definitionId: "sword",
+        name: "Sword",
+        quantity: 1,
+        properties: { damage: 5 },
+      },
     };
     expect(getEquippedDefense(eq)).toBe(4); // 1 + 3
   });
 
   test("getWeaponDamage returns weapon damage or 1 for fists", () => {
     expect(getWeaponDamage({})).toBe(1); // unarmed
-    expect(getWeaponDamage({
-      mainHand: { instanceId: "1", definitionId: "s", name: "Sword", quantity: 1, properties: { damage: 5 } },
-    })).toBe(5);
+    expect(
+      getWeaponDamage({
+        mainHand: {
+          instanceId: "1",
+          definitionId: "s",
+          name: "Sword",
+          quantity: 1,
+          properties: { damage: 5 },
+        },
+      }),
+    ).toBe(5);
   });
 
   test("getWeaponName returns weapon name or fists", () => {
     expect(getWeaponName({})).toBe("fists");
-    expect(getWeaponName({
-      mainHand: { instanceId: "1", definitionId: "s", name: "Rusty Sword", quantity: 1 },
-    })).toBe("Rusty Sword");
+    expect(
+      getWeaponName({
+        mainHand: { instanceId: "1", definitionId: "s", name: "Rusty Sword", quantity: 1 },
+      }),
+    ).toBe("Rusty Sword");
   });
 });
 
@@ -156,7 +193,12 @@ describe("equipment with custom system", () => {
       exosuit: { name: "Exosuit", category: "armor" },
     },
     itemTypes: {
-      implant: { name: "Implant", equippable: true, defaultSlot: "cranial", equipSlots: ["cranial"] },
+      implant: {
+        name: "Implant",
+        equippable: true,
+        defaultSlot: "cranial",
+        equipSlots: ["cranial"],
+      },
       tech: { name: "Tech", equippable: true, defaultSlot: "cyberdeck" },
       armor: { name: "Armor", equippable: true, defaultSlot: "exosuit" },
     },
@@ -175,12 +217,7 @@ describe("equipment with custom system", () => {
 
 describe("attack resolution", () => {
   test("resolvePlayerAttack returns valid result", () => {
-    const result = resolvePlayerAttack(
-      { str: 14, dex: 10 },
-      {},
-      { str: 10, dex: 12 },
-      2
-    );
+    const result = resolvePlayerAttack({ str: 14, dex: 10 }, {}, { str: 10, dex: 12 }, 2);
     expect(result.roll).toBeGreaterThanOrEqual(1);
     expect(result.roll).toBeLessThanOrEqual(20);
     expect(result.attackBonus).toBe(2); // max(floor((14-10)/2), floor((10-10)/2)) = max(2, 0)
@@ -207,13 +244,7 @@ describe("attack resolution", () => {
   });
 
   test("resolveNpcAttack uses NPC level for bonus", () => {
-    const result = resolveNpcAttack(
-      { str: 12, dex: 14 },
-      2,
-      "Wolf",
-      { str: 10, dex: 10 },
-      {}
-    );
+    const result = resolveNpcAttack({ str: 12, dex: 14 }, 2, "Wolf", { str: 10, dex: 10 }, {});
     expect(result.attackBonus).toBe(3); // dexMod(14)=2 + floor(2/2)=1
     expect(result.defense).toBe(10); // 10 + dexMod(10)=0 + 0 armor
   });
@@ -279,10 +310,22 @@ describe("flee", () => {
 
 describe("formatAttackResult", () => {
   test("formats hit correctly", () => {
-    const result = formatAttackResult("Hero", "Goblin", {
-      hit: true, critical: false, roll: 15, attackBonus: 3,
-      totalAttack: 18, defense: 12, damage: 7, weaponName: "Sword",
-    }, 13, 20);
+    const result = formatAttackResult(
+      "Hero",
+      "Goblin",
+      {
+        hit: true,
+        critical: false,
+        roll: 15,
+        attackBonus: 3,
+        totalAttack: 18,
+        defense: 12,
+        damage: 7,
+        weaponName: "Sword",
+      },
+      13,
+      20,
+    );
     expect(result).toContain("Hero attacks Goblin with Sword");
     expect(result).toContain("18 vs AC 12");
     expect(result).toContain("Hit!");
@@ -291,19 +334,43 @@ describe("formatAttackResult", () => {
   });
 
   test("formats miss correctly", () => {
-    const result = formatAttackResult("Hero", "Goblin", {
-      hit: false, critical: false, roll: 3, attackBonus: 1,
-      totalAttack: 4, defense: 14, damage: 0, weaponName: "fists",
-    }, 20, 20);
+    const result = formatAttackResult(
+      "Hero",
+      "Goblin",
+      {
+        hit: false,
+        critical: false,
+        roll: 3,
+        attackBonus: 1,
+        totalAttack: 4,
+        defense: 14,
+        damage: 0,
+        weaponName: "fists",
+      },
+      20,
+      20,
+    );
     expect(result).toContain("misses");
     expect(result).toContain("Miss!");
   });
 
   test("formats critical hit", () => {
-    const result = formatAttackResult("Hero", "Dragon", {
-      hit: true, critical: true, roll: 20, attackBonus: 5,
-      totalAttack: 25, defense: 18, damage: 14, weaponName: "Greatsword",
-    }, 86, 100);
+    const result = formatAttackResult(
+      "Hero",
+      "Dragon",
+      {
+        hit: true,
+        critical: true,
+        roll: 20,
+        attackBonus: 5,
+        totalAttack: 25,
+        defense: 18,
+        damage: 14,
+        weaponName: "Greatsword",
+      },
+      86,
+      100,
+    );
     expect(result).toContain("CRITICAL HIT");
     expect(result).toContain("14 damage");
   });

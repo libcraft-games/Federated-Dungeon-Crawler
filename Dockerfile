@@ -7,6 +7,7 @@ COPY packages/lexicons/package.json packages/lexicons/
 COPY packages/common/package.json packages/common/
 COPY packages/atproto/package.json packages/atproto/
 COPY packages/protocol/package.json packages/protocol/
+COPY packages/client-common/package.json packages/client-common/
 COPY apps/dungeon-server/package.json apps/dungeon-server/
 COPY apps/cli-client/package.json apps/cli-client/
 COPY apps/web-client/package.json apps/web-client/
@@ -22,7 +23,9 @@ COPY apps/dungeon-server/ apps/dungeon-server/
 FROM oven/bun:1-slim
 WORKDIR /app
 
-COPY --from=base /app /app
+RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
+
+COPY --from=base --chown=appuser:appgroup /app /app
 
 ENV PORT=3000
 ENV HOST=0.0.0.0
@@ -30,6 +33,8 @@ ENV SERVER_NAME="Federated Realms"
 ENV DATA_PATH=/app/apps/dungeon-server/data
 
 EXPOSE 3000
+
+USER appuser
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
   CMD bun -e "fetch('http://localhost:3000/health').then(r=>r.ok?process.exit(0):process.exit(1)).catch(()=>process.exit(1))"

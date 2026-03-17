@@ -21,7 +21,7 @@ export function generateItemId(): string {
 export function createItemInstance(
   definitionId: string,
   definition: ItemDefinition,
-  quantity: number = 1
+  quantity: number = 1,
 ): ItemInstance {
   return {
     instanceId: generateItemId(),

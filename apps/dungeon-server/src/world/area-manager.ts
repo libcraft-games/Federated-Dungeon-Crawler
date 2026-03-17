@@ -1,16 +1,24 @@
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
-import type { RoomRecord, AreaRecord, ItemDefinition, NpcDefinition, NpcBehavior, DialogueNode, DialogueResponse } from "@realms/lexicons";
+import type { RoomRecord, ItemDefinition, NpcDefinition, NpcBehavior } from "@realms/lexicons";
 import { Room } from "./room.js";
 import { createItemInstance, type ItemRegistry } from "@realms/common";
 import { NpcManager, type LootEntry } from "../entities/npc-manager.js";
+import { QuestManager } from "../systems/quest-manager.js";
+import { CraftingSystem } from "../systems/crafting-system.js";
 
 interface AreaManifest {
   id: string;
   title: string;
   description: string;
   levelRange?: { min: number; max: number };
+}
+
+interface RoomFeatureDef {
+  name: string;
+  keywords?: string[];
+  description: string;
 }
 
 interface RoomDef {
@@ -26,6 +34,7 @@ interface RoomDef {
     description?: string;
   }>;
   flags?: string[];
+  features?: RoomFeatureDef[];
 }
 
 interface ItemDef {
@@ -62,6 +71,8 @@ interface NpcDef {
   attributes?: Record<string, number>;
   dialogue?: Record<string, { text: string; responses?: Array<{ text: string; next?: string }> }>;
   art?: string[];
+  shop?: string[];
+  gold?: { min: number; max: number };
   loot?: LootEntry[];
   tags?: string[];
 }
@@ -76,14 +87,95 @@ interface NpcsFile {
   spawns?: NpcSpawn[];
 }
 
+interface QuestObjectiveDef {
+  type: string;
+  description: string;
+  target?: string;
+  count?: number;
+}
+
+interface QuestRewardsDef {
+  xp?: number;
+  gold?: number;
+  items?: string[];
+}
+
+interface QuestDef {
+  id: string;
+  name: string;
+  description: string;
+  level?: number;
+  giver?: string;
+  turnIn?: string;
+  prerequisites?: string[];
+  objectives: QuestObjectiveDef[];
+  rewards?: QuestRewardsDef;
+  repeatable?: boolean;
+  tags?: string[];
+}
+
+interface QuestsFile {
+  quests: QuestDef[];
+}
+
+interface RecipeIngredientYaml {
+  itemId: string;
+  count: number;
+}
+
+interface RecipeOutputYaml {
+  itemId: string;
+  count: number;
+}
+
+interface RecipeDef {
+  id: string;
+  name: string;
+  description?: string;
+  station?: string;
+  levelRequired?: number;
+  ingredients: RecipeIngredientYaml[];
+  output: RecipeOutputYaml;
+  successChance?: number;
+  tags?: string[];
+}
+
+interface RecipesFile {
+  recipes: RecipeDef[];
+}
+
+interface GatherYieldYaml {
+  itemId: string;
+  chance: number;
+  min: number;
+  max: number;
+}
+
+interface GatherNodeYaml {
+  id: string;
+  name: string;
+  description: string;
+  room: string;
+  respawnSeconds: number;
+  yields: GatherYieldYaml[];
+}
+
+interface GatheringFile {
+  nodes: GatherNodeYaml[];
+}
+
 export class AreaManager {
   private rooms = new Map<string, Room>();
   private areas = new Map<string, AreaManifest>();
   private itemDefinitions: ItemRegistry = new Map();
   private npcManager: NpcManager;
+  private questManager: QuestManager;
+  private craftingSystem: CraftingSystem;
 
-  constructor(npcManager: NpcManager) {
+  constructor(npcManager: NpcManager, questManager: QuestManager, craftingSystem: CraftingSystem) {
     this.npcManager = npcManager;
+    this.questManager = questManager;
+    this.craftingSystem = craftingSystem;
   }
 
   async loadFromDirectory(basePath: string): Promise<void> {
@@ -131,7 +223,12 @@ export class AreaManager {
           })),
           flags: def.flags,
         };
-        this.rooms.set(roomId, new Room(roomId, record));
+        const features = def.features?.map((f) => ({
+          name: f.name,
+          keywords: f.keywords ?? [f.name.toLowerCase()],
+          description: f.description,
+        }));
+        this.rooms.set(roomId, new Room(roomId, record, features));
       }
     }
 
@@ -212,9 +309,10 @@ export class AreaManager {
           attributes: def.attributes,
           dialogue: def.dialogue as NpcDefinition["dialogue"],
           art: def.art,
+          shop: def.shop?.map((id) => (id.includes(":") ? id : `${areaId}:${id}`)),
           tags: def.tags,
         };
-        this.npcManager.registerDefinition(defId, npcDef, def.loot);
+        this.npcManager.registerDefinition(defId, npcDef, def.loot, def.gold);
         npcCount++;
       }
 
@@ -237,6 +335,110 @@ export class AreaManager {
       console.log(`  NPCs: ${npcCount} definitions loaded`);
     }
 
+    // Load quests
+    const questsFile = Bun.file(join(areaPath, "quests.yml"));
+    if (await questsFile.exists()) {
+      const questsText = await questsFile.text();
+      const questsData: QuestsFile = parseYaml(questsText);
+      let questCount = 0;
+
+      for (const q of questsData.quests) {
+        const questId = `${areaId}:${q.id}`;
+        const prefixId = (id: string) => (id.includes(":") ? id : `${areaId}:${id}`);
+
+        this.questManager.registerDefinition(questId, {
+          name: q.name,
+          description: q.description,
+          level: q.level,
+          giver: q.giver ? prefixId(q.giver) : undefined,
+          turnIn: q.turnIn ? prefixId(q.turnIn) : undefined,
+          prerequisites: q.prerequisites?.map(prefixId),
+          objectives: q.objectives.map((o) => ({
+            type: o.type as any,
+            description: o.description,
+            target: o.target ? prefixId(o.target) : undefined,
+            count: o.count,
+          })),
+          rewards: q.rewards
+            ? {
+                xp: q.rewards.xp,
+                gold: q.rewards.gold,
+                items: q.rewards.items?.map(prefixId),
+              }
+            : undefined,
+          repeatable: q.repeatable,
+          tags: q.tags,
+        });
+        questCount++;
+      }
+
+      console.log(`  Quests: ${questCount} definitions loaded`);
+    }
+
+    // Load recipes
+    const recipesFile = Bun.file(join(areaPath, "recipes.yml"));
+    if (await recipesFile.exists()) {
+      const recipesText = await recipesFile.text();
+      const recipesData: RecipesFile = parseYaml(recipesText);
+      let recipeCount = 0;
+
+      for (const r of recipesData.recipes) {
+        const recipeId = `${areaId}:${r.id}`;
+        const prefixId = (id: string) => (id.includes(":") ? id : `${areaId}:${id}`);
+
+        this.craftingSystem.registerRecipe(recipeId, {
+          name: r.name,
+          description: r.description,
+          station: r.station,
+          levelRequired: r.levelRequired,
+          ingredients: r.ingredients.map((ing) => ({
+            itemId: prefixId(ing.itemId),
+            count: ing.count,
+          })),
+          output: {
+            itemId: prefixId(r.output.itemId),
+            count: r.output.count,
+          },
+          successChance: r.successChance,
+          tags: r.tags,
+        });
+        recipeCount++;
+      }
+
+      console.log(`  Recipes: ${recipeCount} definitions loaded`);
+    }
+
+    // Load gathering nodes
+    const gatheringFile = Bun.file(join(areaPath, "gathering.yml"));
+    if (await gatheringFile.exists()) {
+      const gatheringText = await gatheringFile.text();
+      const gatheringData: GatheringFile = parseYaml(gatheringText);
+      let nodeCount = 0;
+
+      for (const n of gatheringData.nodes) {
+        const prefixId = (id: string) => (id.includes(":") ? id : `${areaId}:${id}`);
+        const nodeId = `${areaId}:${n.id}`;
+        const roomId = `${areaId}:${n.room}`;
+
+        this.craftingSystem.registerGatheringNode({
+          id: nodeId,
+          name: n.name,
+          description: n.description,
+          roomId,
+          respawnSeconds: n.respawnSeconds,
+          yields: n.yields.map((y) => ({
+            itemId: prefixId(y.itemId),
+            chance: y.chance,
+            min: y.min,
+            max: y.max,
+          })),
+        });
+        nodeCount++;
+      }
+
+      console.log(`  Gathering nodes: ${nodeCount} loaded`);
+    }
+
     console.log(`Loaded area: ${manifest.title} (${this.getRoomCountForArea(areaId)} rooms)`);
   }
 
@@ -250,6 +452,10 @@ export class AreaManager {
 
   getArea(id: string): AreaManifest | undefined {
     return this.areas.get(id);
+  }
+
+  getAllAreas(): Map<string, AreaManifest> {
+    return this.areas;
   }
 
   getItemDefinition(id: string): ItemDefinition | undefined {

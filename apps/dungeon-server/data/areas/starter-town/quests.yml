@@ -1,0 +1,18 @@
+quests:
+  - id: wolf-trouble
+    name: "Wolf Trouble"
+    description: "The roads near town have been plagued by wolves lately. Grimjaw has been losing tools and livestock to them. He needs someone to thin the pack and report back."
+    level: 1
+    giver: starter-town:grimjaw
+    turnIn: starter-town:grimjaw
+    objectives:
+      - type: kill
+        description: "Kill grey wolves in the Dark Forest"
+        target: dark-forest:grey-wolf
+        count: 3
+      - type: talk
+        description: "Report back to Grimjaw"
+        target: starter-town:grimjaw
+    rewards:
+      xp: 150
+      gold: 30

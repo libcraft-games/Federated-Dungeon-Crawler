@@ -1,6 +1,6 @@
 import type { NpcDefinition, ItemDefinition } from "@realms/lexicons";
 import type { NpcInstance, ItemInstance } from "@realms/common";
-import { createNpcInstance, computeNpcMaxHp, createItemInstance } from "@realms/common";
+import { createNpcInstance, createItemInstance } from "@realms/common";
 import type { Room } from "../world/room.js";
 
 /** Server-internal loot table entry (not part of AT Proto lexicon) */
@@ -17,20 +17,36 @@ interface RespawnEntry {
   respawnAt: number; // timestamp
 }
 
+export interface GoldDrop {
+  min: number;
+  max: number;
+}
+
 export class NpcManager {
   private definitions = new Map<string, NpcDefinition>();
   private lootTables = new Map<string, LootEntry[]>();
+  private goldDrops = new Map<string, GoldDrop>();
   private instances = new Map<string, NpcInstance>();
   private respawnQueue: RespawnEntry[] = [];
 
   /** Default respawn time in ms (30 seconds for MVP) */
   static RESPAWN_TIME_MS = 30_000;
 
-  registerDefinition(id: string, def: NpcDefinition, loot?: LootEntry[]): void {
+  registerDefinition(id: string, def: NpcDefinition, loot?: LootEntry[], gold?: GoldDrop): void {
     this.definitions.set(id, def);
     if (loot && loot.length > 0) {
       this.lootTables.set(id, loot);
     }
+    if (gold) {
+      this.goldDrops.set(id, gold);
+    }
+  }
+
+  /** Generate gold drop for a killed NPC */
+  generateGoldDrop(definitionId: string): number {
+    const drop = this.goldDrops.get(definitionId);
+    if (!drop) return 0;
+    return Math.floor(Math.random() * (drop.max - drop.min + 1)) + drop.min;
   }
 
   getDefinition(id: string): NpcDefinition | undefined {
@@ -58,7 +74,11 @@ export class NpcManager {
   findInRoom(roomId: string, name: string): NpcInstance | undefined {
     const lower = name.toLowerCase();
     for (const npc of this.instances.values()) {
-      if (npc.currentRoom === roomId && npc.state !== "dead" && npc.name.toLowerCase().includes(lower)) {
+      if (
+        npc.currentRoom === roomId &&
+        npc.state !== "dead" &&
+        npc.name.toLowerCase().includes(lower)
+      ) {
         return npc;
       }
     }
@@ -115,7 +135,10 @@ export class NpcManager {
   }
 
   /** Generate loot drops for a killed NPC */
-  generateLoot(definitionId: string, getItemDef: (id: string) => ItemDefinition | undefined): ItemInstance[] {
+  generateLoot(
+    definitionId: string,
+    getItemDef: (id: string) => ItemDefinition | undefined,
+  ): ItemInstance[] {
     const loot = this.lootTables.get(definitionId);
     if (!loot) return [];
 
@@ -125,9 +148,11 @@ export class NpcManager {
       if (roll < entry.chance) {
         const itemDef = getItemDef(entry.itemId);
         if (itemDef) {
-          const qty = entry.minQuantity && entry.maxQuantity
-            ? Math.floor(Math.random() * (entry.maxQuantity - entry.minQuantity + 1)) + entry.minQuantity
-            : entry.minQuantity ?? 1;
+          const qty =
+            entry.minQuantity && entry.maxQuantity
+              ? Math.floor(Math.random() * (entry.maxQuantity - entry.minQuantity + 1)) +
+                entry.minQuantity
+              : (entry.minQuantity ?? 1);
           drops.push(createItemInstance(entry.itemId, itemDef, qty));
         }
       }
@@ -156,6 +181,10 @@ export class NpcManager {
 
     this.respawnQueue = remaining;
     return respawned;
+  }
+
+  getAllDefinitions(): Map<string, NpcDefinition> {
+    return this.definitions;
   }
 
   get definitionCount(): number {

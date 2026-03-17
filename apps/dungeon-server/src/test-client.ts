@@ -45,7 +45,9 @@ ws.onopen = () => {
 };
 
 ws.onmessage = (event) => {
-  const msg = decodeServerMessage(typeof event.data === "string" ? event.data : event.data.toString());
+  const msg = decodeServerMessage(
+    typeof event.data === "string" ? event.data : event.data.toString(),
+  );
   if (!msg) return;
 
   switch (msg.type) {
@@ -62,7 +64,9 @@ ws.onmessage = (event) => {
       if (r.players.length > 0) {
         const others = r.players.filter((p) => p.name !== name);
         if (others.length > 0) {
-          console.log(fmt.dim(`Players here: ${others.map((p) => fmt.playerName(p.name)).join(", ")}`));
+          console.log(
+            fmt.dim(`Players here: ${others.map((p) => fmt.playerName(p.name)).join(", ")}`),
+          );
         }
       }
       if (r.npcs.length > 0) {
@@ -89,8 +93,8 @@ ws.onmessage = (event) => {
         msg.style === "error"
           ? fmt.error(msg.text)
           : msg.style === "system"
-          ? fmt.system(msg.text)
-          : fmt.narrative(msg.text)
+            ? fmt.system(msg.text)
+            : fmt.narrative(msg.text),
       );
       rl.prompt();
       break;
@@ -102,7 +106,7 @@ ws.onmessage = (event) => {
 
     case "entity_leave":
       console.log(
-        fmt.system(`${msg.entity.name} left${msg.direction ? ` to the ${msg.direction}` : ""}.`)
+        fmt.system(`${msg.entity.name} left${msg.direction ? ` to the ${msg.direction}` : ""}.`),
       );
       rl.prompt();
       break;

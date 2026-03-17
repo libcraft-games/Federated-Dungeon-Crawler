@@ -38,7 +38,9 @@ export class BlueskyBridge {
     }
 
     if (!this.config.identifier || !this.config.password) {
-      console.warn("Bluesky bridge: enabled but no credentials configured (set BSKY_IDENTIFIER and BSKY_PASSWORD)");
+      console.warn(
+        "Bluesky bridge: enabled but no credentials configured (set BSKY_IDENTIFIER and BSKY_PASSWORD)",
+      );
       return;
     }
 

@@ -1,0 +1,78 @@
+.combat-panel {
+  flex-shrink: 0;
+}
+
+.combat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.combat-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.combat-action {
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.combat-action:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+.enemy-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 0;
+  cursor: pointer;
+}
+.enemy-bar:hover {
+  background: var(--bg-secondary);
+}
+
+.enemy-target .enemy-name {
+  color: var(--text);
+  font-weight: bold;
+}
+
+.enemy-marker {
+  color: var(--color-red);
+  font-weight: bold;
+  width: 12px;
+}
+
+.enemy-name {
+  color: var(--text-dim);
+}
+
+.hp-bar {
+  width: 100px;
+  height: 10px;
+  background: var(--bg-secondary);
+  border-radius: 2px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.hp-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.2s ease;
+}
+
+.combat-detail {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+  align-items: flex-start;
+}
+
+.combat-art {
+  color: var(--color-yellow);
+  line-height: 1.2;
+  font-size: 12px;
+}

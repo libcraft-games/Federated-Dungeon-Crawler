@@ -4,8 +4,6 @@ dist
 .github
 *.md
 .env
-apps/web-client/src
-apps/web-client/tsconfig.json
 apps/cli-client/src
 apps/cli-client/tsconfig.json
 lexicons

@@ -50,8 +50,6 @@ export function NarrativeView({ lines, height }: Props) {
   const emptyLines = Math.max(0, maxVisible - visible.length);
 
   const isAtBottom = scrollOffset === 0;
-  const isAtTop = startIndex === 0 && lines.length > maxVisible;
-
   return (
     <Box flexDirection="column" paddingX={1} height={height}>
       {emptyLines > 0 && <Box height={emptyLines} />}
@@ -67,7 +65,10 @@ export function NarrativeView({ lines, height }: Props) {
       ))}
       {!isAtBottom && (
         <Box position="absolute" marginLeft={-1}>
-          <Text color="yellow" dimColor> PgUp/PgDn to scroll ({scrollOffset} lines up)</Text>
+          <Text color="yellow" dimColor>
+            {" "}
+            PgUp/PgDn to scroll ({scrollOffset} lines up)
+          </Text>
         </Box>
       )}
     </Box>

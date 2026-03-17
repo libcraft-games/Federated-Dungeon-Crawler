@@ -13,15 +13,7 @@
           "title": { "type": "string", "maxLength": 256 },
           "description": { "type": "string", "maxLength": 8192 },
           "area": { "type": "string" },
-          "coordinates": {
-            "type": "object",
-            "required": ["x", "y", "z"],
-            "properties": {
-              "x": { "type": "integer" },
-              "y": { "type": "integer" },
-              "z": { "type": "integer" }
-            }
-          },
+          "coordinates": { "type": "ref", "ref": "#coordinates" },
           "exits": {
             "type": "array",
             "items": { "type": "ref", "ref": "#exit" },
@@ -33,6 +25,15 @@
             "items": { "type": "string" }
           }
         }
+      }
+    },
+    "coordinates": {
+      "type": "object",
+      "required": ["x", "y", "z"],
+      "properties": {
+        "x": { "type": "integer" },
+        "y": { "type": "integer" },
+        "z": { "type": "integer" }
       }
     },
     "exit": {

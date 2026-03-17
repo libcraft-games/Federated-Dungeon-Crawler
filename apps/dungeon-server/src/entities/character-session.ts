@@ -1,7 +1,9 @@
 import type { CharacterProfile, FormulaDef } from "@realms/lexicons";
 import type { CharacterState, ItemInstance } from "@realms/common";
-import { profileToState, computeDerivedStats, xpToNextLevel } from "@realms/common";
+import { profileToState, computeDerivedStats } from "@realms/common";
 import type { ServerWebSocket } from "bun";
+import { AttestationTracker } from "../atproto/attestation-tracker.js";
+import type { ServerIdentity } from "../atproto/server-identity.js";
 
 export interface SessionData {
   sessionId: string;
@@ -11,6 +13,7 @@ export class CharacterSession {
   readonly sessionId: string;
   readonly characterDid: string;
   readonly state: CharacterState;
+  readonly attestations: AttestationTracker;
   ws: ServerWebSocket<SessionData> | null = null;
 
   // Combat state
@@ -22,12 +25,23 @@ export class CharacterSession {
 
   private formulas: Record<string, FormulaDef>;
 
-  constructor(sessionId: string, characterDid: string, profile: CharacterProfile, spawnRoom: string, formulas: Record<string, FormulaDef> = {}) {
+  constructor(
+    sessionId: string,
+    characterDid: string,
+    profile: CharacterProfile,
+    spawnRoom: string,
+    formulas: Record<string, FormulaDef> = {},
+    serverIdentity?: ServerIdentity,
+  ) {
     this.sessionId = sessionId;
     this.characterDid = characterDid;
     this.state = profileToState(profile, spawnRoom, formulas);
     this.formulas = formulas;
     this.visitedRooms.add(spawnRoom);
+    this.attestations = new AttestationTracker(
+      serverIdentity ?? ({ did: "" } as ServerIdentity),
+      characterDid,
+    );
   }
 
   get currentRoom(): string {
@@ -60,9 +74,7 @@ export class CharacterSession {
 
   addItem(item: ItemInstance): void {
     // Try to stack with existing item of same definition
-    const existing = this.state.inventory.find(
-      (i) => i.definitionId === item.definitionId
-    );
+    const existing = this.state.inventory.find((i) => i.definitionId === item.definitionId);
     if (existing) {
       existing.quantity += item.quantity;
     } else {
@@ -73,7 +85,7 @@ export class CharacterSession {
   removeItem(identifier: string, quantity: number = 1): ItemInstance | undefined {
     const lower = identifier.toLowerCase();
     const index = this.state.inventory.findIndex(
-      (i) => i.instanceId === identifier || i.name.toLowerCase().includes(lower)
+      (i) => i.instanceId === identifier || i.name.toLowerCase().includes(lower),
     );
     if (index === -1) return undefined;
 
@@ -96,8 +108,24 @@ export class CharacterSession {
   findItem(identifier: string): ItemInstance | undefined {
     const lower = identifier.toLowerCase();
     return this.state.inventory.find(
-      (i) => i.instanceId === identifier || i.name.toLowerCase().includes(lower)
+      (i) => i.instanceId === identifier || i.name.toLowerCase().includes(lower),
     );
+  }
+
+  countItem(definitionId: string): number {
+    return this.state.inventory.find((i) => i.definitionId === definitionId)?.quantity ?? 0;
+  }
+
+  removeItemByDefId(definitionId: string, quantity: number): boolean {
+    const index = this.state.inventory.findIndex((i) => i.definitionId === definitionId);
+    if (index === -1) return false;
+    const item = this.state.inventory[index];
+    if (quantity >= item.quantity) {
+      this.state.inventory.splice(index, 1);
+    } else {
+      item.quantity -= quantity;
+    }
+    return true;
   }
 
   get inventory(): ItemInstance[] {
@@ -113,6 +141,7 @@ export class CharacterSession {
   equip(slot: string, item: ItemInstance): ItemInstance | undefined {
     const previous = this.state.equipment[slot];
     this.state.equipment[slot] = item;
+    this.recalculateDerived();
     return previous;
   }
 
@@ -120,12 +149,30 @@ export class CharacterSession {
     const item = this.state.equipment[slot];
     if (item) {
       delete this.state.equipment[slot];
+      this.recalculateDerived();
     }
     return item;
   }
 
   getEquipped(slot: string): ItemInstance | undefined {
     return this.state.equipment[slot];
+  }
+
+  // ── Gold ──
+
+  get gold(): number {
+    return this.state.gold;
+  }
+
+  addGold(amount: number): void {
+    this.state.gold += amount;
+    this.attestations.recordGoldChange(this.state.gold);
+  }
+
+  spendGold(amount: number): boolean {
+    if (this.state.gold < amount) return false;
+    this.state.gold -= amount;
+    return true;
   }
 
   // ── Action Points ──
@@ -166,12 +213,13 @@ export class CharacterSession {
     // Check for level up
     const newLevel = this.checkLevelUp();
     if (newLevel > this.state.level) {
-      const oldLevel = this.state.level;
       this.state.level = newLevel;
       this.recalculateDerived();
       // Heal to full on level up
       this.state.currentHp = this.state.maxHp;
       this.state.currentMp = this.state.maxMp;
+      // Attest the level up
+      this.attestations.recordLevelUp(newLevel, this.state.experience);
       return newLevel;
     }
     return null;
@@ -188,9 +236,26 @@ export class CharacterSession {
 
   private recalculateDerived(): void {
     const derived = computeDerivedStats(this.formulas, this.state.level, this.state.attributes);
-    this.state.maxHp = derived.maxHp ?? this.state.maxHp;
-    this.state.maxMp = derived.maxMp ?? this.state.maxMp;
-    this.state.maxAp = derived.maxAp ?? this.state.maxAp;
+    const bonuses = this.getEquipmentBonuses();
+    this.state.maxHp = (derived.maxHp ?? this.state.maxHp) + (bonuses.hp ?? 0);
+    this.state.maxMp = (derived.maxMp ?? this.state.maxMp) + (bonuses.mp ?? 0);
+    this.state.maxAp = (derived.maxAp ?? this.state.maxAp) + (bonuses.ap ?? 0);
+    // Clamp current values to new max
+    this.state.currentHp = Math.min(this.state.currentHp, this.state.maxHp);
+    this.state.currentMp = Math.min(this.state.currentMp, this.state.maxMp);
+  }
+
+  /** Sum bonus_hp / bonus_mp / bonus_ap from all equipped items */
+  private getEquipmentBonuses(): { hp: number; mp: number; ap: number } {
+    let hp = 0,
+      mp = 0,
+      ap = 0;
+    for (const item of Object.values(this.state.equipment)) {
+      if (typeof item.properties?.bonus_hp === "number") hp += item.properties.bonus_hp;
+      if (typeof item.properties?.bonus_mp === "number") mp += item.properties.bonus_mp;
+      if (typeof item.properties?.bonus_ap === "number") ap += item.properties.bonus_ap;
+    }
+    return { hp, mp, ap };
   }
 
   /** Process active effect ticks. Returns names of expired effects. */

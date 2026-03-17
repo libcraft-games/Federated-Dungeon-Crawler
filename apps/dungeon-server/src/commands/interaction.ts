@@ -1,7 +1,7 @@
 import type { ParsedCommand } from "@realms/common";
-import type { NpcDefinition, DialogueNode } from "@realms/lexicons";
 import type { CommandContext } from "./index.js";
 import { sendNarrative, sendRoomState } from "./index.js";
+import { encodeMessage } from "@realms/protocol";
 
 export function handleLook(cmd: ParsedCommand, ctx: CommandContext): void {
   const { session, world } = ctx;
@@ -19,7 +19,7 @@ export function handleLook(cmd: ParsedCommand, ctx: CommandContext): void {
 
   // Look at a player
   const targetPlayer = state.players.find(
-    (p) => p.name.toLowerCase() === cmd.target!.toLowerCase()
+    (p) => p.name.toLowerCase() === cmd.target!.toLowerCase(),
   );
   if (targetPlayer) {
     const targetSession = ctx.sessions.getSession(targetPlayer.id);
@@ -28,15 +28,15 @@ export function handleLook(cmd: ParsedCommand, ctx: CommandContext): void {
       sendNarrative(
         session,
         `${s.name} - Level ${s.level} ${s.race} ${s.class}\n${s.description ?? "You see nothing remarkable."}`,
-        "info"
+        "info",
       );
       return;
     }
   }
 
   // Look at an NPC
-  const targetNpc = state.npcs.find(
-    (n) => n.name.toLowerCase().includes(cmd.target!.toLowerCase())
+  const targetNpc = state.npcs.find((n) =>
+    n.name.toLowerCase().includes(cmd.target!.toLowerCase()),
   );
   if (targetNpc) {
     const npcInstance = ctx.world.npcManager.getInstance(targetNpc.id);
@@ -69,15 +69,20 @@ export function handleLook(cmd: ParsedCommand, ctx: CommandContext): void {
   }
 
   // Look at an exit direction
-  const exit = state.exits.find(
-    (e) => e.direction === cmd.target!.toLowerCase()
-  );
+  const exit = state.exits.find((e) => e.direction === cmd.target!.toLowerCase());
   if (exit) {
     sendNarrative(
       session,
       exit.description ?? `You see an exit leading ${exit.direction}.`,
-      "info"
+      "info",
     );
+    return;
+  }
+
+  // Look at a room feature (notice board, fountain, etc.)
+  const feature = room.findFeature(cmd.target!);
+  if (feature) {
+    sendNarrative(session, `${feature.name}\n${feature.description.trim()}`, "info");
     return;
   }
 
@@ -130,6 +135,13 @@ export function handleTalk(cmd: ParsedCommand, ctx: CommandContext): void {
       const hint = r.next ? ` (talk ${target.toLowerCase()} ${r.next})` : "";
       lines.push(`  ${i + 1}. ${r.text}${hint}`);
     }
+  }
+
+  // Quest talk tracking
+  const talkUpdates = ctx.world.questManager.recordTalk(session.characterDid, npc.definitionId);
+  for (const questId of talkUpdates) {
+    const payload = ctx.world.questManager.buildUpdatePayload(session.characterDid, questId);
+    if (payload) session.send(encodeMessage(payload));
   }
 
   sendNarrative(session, lines.join("\n"), "chat");

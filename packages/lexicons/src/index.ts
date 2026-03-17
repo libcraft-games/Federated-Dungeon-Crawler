@@ -1,14 +1,15 @@
-// Core types derived from AT Proto lexicon schemas
-// These mirror the lexicon definitions in /lexicons/com/cacheblasters/fm/
+// Core lexicon types for Federated Realms, generated from AT Proto lexicon schemas.
+//
+// Generated types live in ./lexicons/ (run `bun run generate` to refresh).
+// This file re-exports them with backward-compatible names and typed open maps.
 
-// ── Open map types ──
-// Attributes, derived stats, item properties, and extensions are all open maps.
-// This allows servers to define their own schemas without code changes.
+// ── Open map type aliases ──
+// Lexicon uses `unknown` for open maps; we layer stronger types here.
 
-/** Open map of attribute ID -> numeric value, e.g. { str: 14, dex: 12, sanity: 80 } */
+/** Open map of attribute ID -> numeric value, e.g. { str: 14, dex: 12 } */
 export type Attributes = Record<string, number>;
 
-/** Cached derived stats computed from server formulas, e.g. { maxHp: 50, maxMp: 30 } */
+/** Cached derived stats computed from server formulas */
 export type DerivedStats = Record<string, number>;
 
 /** Server-specific extension data, keyed by server DID */
@@ -17,101 +18,100 @@ export type Extensions = Record<string, unknown>;
 /** Open map of property ID -> value for items */
 export type ItemProperties = Record<string, unknown>;
 
+// ── Imports from generated types ──
+
+import type { Main as _CharacterProfile } from "./lexicons/com/cacheblasters/fm/character/profile.defs.js";
+import type { Main as _AttributeDef } from "./lexicons/com/cacheblasters/fm/system/attribute.defs.js";
+import type { Main as _ClassDef } from "./lexicons/com/cacheblasters/fm/system/class.defs.js";
+import type { Main as _SpellDef } from "./lexicons/com/cacheblasters/fm/system/spell.defs.js";
+import type { Main as _RaceDef } from "./lexicons/com/cacheblasters/fm/system/race.defs.js";
+import type { Main as _EquipSlotDef } from "./lexicons/com/cacheblasters/fm/system/equipSlot.defs.js";
+import type {
+  Main as _ItemTypeDef,
+  PropertyDef as _PropertyDef,
+} from "./lexicons/com/cacheblasters/fm/system/itemType.defs.js";
+import type { Main as _FormulaDef } from "./lexicons/com/cacheblasters/fm/system/formula.defs.js";
+import type {
+  Main as _RoomRecord,
+  Exit as _RoomExit,
+  Coordinates as _Coordinates,
+} from "./lexicons/com/cacheblasters/fm/world/room.defs.js";
+import type {
+  Main as _AreaRecord,
+  LevelRange,
+} from "./lexicons/com/cacheblasters/fm/world/area.defs.js";
+import type { Main as _ServerRecord } from "./lexicons/com/cacheblasters/fm/world/server.defs.js";
+import type {
+  Main as _FlagRecord,
+  FlagEffect as _FlagEffect,
+} from "./lexicons/com/cacheblasters/fm/world/flag.defs.js";
+import type { Main as _ItemDefinition } from "./lexicons/com/cacheblasters/fm/item/definition.defs.js";
+import type { Main as _NpcDefinition } from "./lexicons/com/cacheblasters/fm/npc/definition.defs.js";
+import type {
+  Main as _QuestDefinition,
+  Objective as _QuestObjective,
+  Rewards as _QuestRewards,
+} from "./lexicons/com/cacheblasters/fm/quest/definition.defs.js";
+import type {
+  Main as _QuestProgress,
+  ObjectiveProgress as _QuestObjectiveProgress,
+} from "./lexicons/com/cacheblasters/fm/quest/progress.defs.js";
+import type {
+  Main as _RecipeDef,
+  Ingredient as _RecipeIngredient,
+  Output as _RecipeOutput,
+} from "./lexicons/com/cacheblasters/fm/craft/recipe.defs.js";
+import type {
+  Main as _FederationRegistration,
+  LevelRange as _FedLevelRange,
+} from "./lexicons/com/cacheblasters/fm/federation/registration.defs.js";
+import type { Main as _PortalRecord } from "./lexicons/com/cacheblasters/fm/world/portal.defs.js";
+import type { Main as _ChatMessage } from "./lexicons/com/cacheblasters/fm/chat/message.defs.js";
+
 // ── Character ──
 
-export interface CharacterProfile {
-  name: string;
-  class: string;
-  race: string;
-  level: number;
-  experience: number;
+export type CharacterProfile = Omit<
+  _CharacterProfile,
+  "$type" | "attributes" | "derived" | "extensions" | "homeServer" | "createdAt" | "updatedAt"
+> & {
+  $type?: string;
   attributes: Attributes;
   derived?: DerivedStats;
-  description?: string;
-  homeServer?: string;
   extensions?: Extensions;
+  homeServer?: string;
   createdAt: string;
   updatedAt?: string;
-}
+};
 
-// ── System schema definitions (published by servers) ──
+// ── System schema definitions ──
 
-export interface AttributeDef {
-  name: string;
-  description: string;
-  min?: number;
-  max?: number;
-  defaultValue?: number;
-  category?: string;
-}
+export type AttributeDef = Omit<_AttributeDef, "$type"> & { $type?: string };
 
-export interface ClassDef {
-  name: string;
-  description: string;
+export type ClassDef = Omit<_ClassDef, "$type" | "baseAttributes" | "attributeBonuses"> & {
+  $type?: string;
   baseAttributes?: Attributes;
   attributeBonuses?: Attributes;
-  spells?: string[];
-  tags?: string[];
-}
+};
 
-export interface SpellDef {
-  name: string;
-  description: string;
-  mpCost: number;
-  /** Action point cost (defaults to 2 if not specified) */
-  apCost?: number;
-  levelRequired?: number;
-  /** Attribute used for spell power scaling (e.g. "int", "wis") */
-  attribute: string;
+export type SpellDef = Omit<_SpellDef, "$type" | "effect" | "target"> & {
+  $type?: string;
   effect: "damage" | "heal" | "buff" | "debuff";
-  /** Base power before attribute scaling */
-  power: number;
-  /** Dice notation for variable component, e.g. "2d6" */
-  dice?: string;
-  /** Target type */
   target: "enemy" | "self" | "ally";
-  tags?: string[];
-}
+};
 
-export interface RaceDef {
-  name: string;
-  description: string;
+export type RaceDef = Omit<_RaceDef, "$type" | "attributeBonuses"> & {
+  $type?: string;
   attributeBonuses?: Attributes;
-  tags?: string[];
-}
+};
 
-export interface EquipSlotDef {
-  name: string;
-  description?: string;
-  category?: string;
-  maxItems?: number;
-  aliases?: string[];
-}
+export type EquipSlotDef = Omit<_EquipSlotDef, "$type"> & { $type?: string };
 
-export interface ItemTypeDef {
-  name: string;
-  description?: string;
-  properties?: PropertyDef[];
-  stackable?: boolean;
-  equippable?: boolean;
-  equipSlots?: string[];
-  defaultSlot?: string;
-}
+export type ItemTypeDef = Omit<_ItemTypeDef, "$type"> & { $type?: string };
 
-export interface PropertyDef {
-  id: string;
-  name: string;
-  valueType: "integer" | "number" | "string" | "boolean";
-  description?: string;
-}
+// Re-export PropertyDef directly (no l. types)
+export type PropertyDef = Omit<_PropertyDef, "$type"> & { $type?: string };
 
-export interface FormulaDef {
-  name: string;
-  description?: string;
-  expression: string;
-  min?: number;
-  max?: number;
-}
+export type FormulaDef = Omit<_FormulaDef, "$type"> & { $type?: string };
 
 // ── World ──
 
@@ -127,68 +127,65 @@ export type Direction =
   | "southeast"
   | "southwest";
 
-export interface RoomExit {
+export type RoomExit = Omit<_RoomExit, "$type" | "direction"> & {
+  $type?: string;
   direction: Direction;
-  target: string;
-  portal?: boolean;
-  requiredLevel?: number;
-  description?: string;
-}
+};
 
-export interface RoomRecord {
-  title: string;
-  description: string;
-  area: string;
-  coordinates: { x: number; y: number; z: number };
+export type { Coordinates as RoomCoordinates } from "./lexicons/com/cacheblasters/fm/world/room.defs.js";
+
+export type RoomRecord = Omit<_RoomRecord, "$type" | "exits"> & {
+  $type?: string;
   exits?: RoomExit[];
-  flags?: string[];
-}
+};
 
-export interface AreaRecord {
-  title: string;
-  description: string;
-  levelRange?: { min: number; max: number };
-}
+export type { LevelRange } from "./lexicons/com/cacheblasters/fm/world/area.defs.js";
 
-export interface ServerRecord {
-  name: string;
-  description: string;
+export type AreaRecord = Omit<_AreaRecord, "$type"> & { $type?: string };
+
+export type ServerRecord = Omit<
+  _ServerRecord,
+  "$type" | "endpoint" | "xrpcEndpoint" | "createdAt"
+> & {
+  $type?: string;
   endpoint: string;
   xrpcEndpoint?: string;
-  minLevel?: number;
-  maxLevel?: number;
-  theme?: string;
-  maxPlayers?: number;
   createdAt: string;
-}
+};
 
-export interface FlagRecord {
-  name: string;
-  description: string;
-  effects?: FlagEffect[];
-}
+export type FlagEffect = Omit<_FlagEffect, "$type"> & { $type?: string };
 
-export interface FlagEffect {
-  type: string;
-  value?: number;
-  description?: string;
-}
+export type FlagRecord = Omit<_FlagRecord, "$type"> & { $type?: string };
+
+export type PortalRecord = Omit<_PortalRecord, "$type" | "direction"> & {
+  $type?: string;
+  direction: Direction;
+};
+
+// ── Chat ──
+
+export type ChatMessage = Omit<_ChatMessage, "$type" | "createdAt"> & {
+  $type?: string;
+  createdAt: string;
+};
+
+// ── Federation ──
+
+export type FederationRegistration = Omit<
+  _FederationRegistration,
+  "$type" | "createdAt" | "updatedAt"
+> & {
+  $type?: string;
+  createdAt: string;
+  updatedAt?: string;
+};
 
 // ── Items ──
 
-export interface ItemDefinition {
-  name: string;
-  type: string;
-  description: string;
-  weight?: number;
-  value?: number;
-  rarity?: string;
-  levelRequired?: number;
-  stackable?: boolean;
-  maxStack?: number;
+export type ItemDefinition = Omit<_ItemDefinition, "$type" | "properties"> & {
+  $type?: string;
   properties?: ItemProperties;
-  tags?: string[];
-}
+};
 
 // ── NPCs ──
 
@@ -204,17 +201,56 @@ export interface DialogueResponse {
   next?: string;
 }
 
-export interface NpcDefinition {
-  name: string;
-  description: string;
+export type NpcDefinition = Omit<
+  _NpcDefinition,
+  "$type" | "behavior" | "attributes" | "dialogue"
+> & {
+  $type?: string;
   behavior: NpcBehavior;
-  level?: number;
   attributes?: Attributes;
   dialogue?: Record<string, DialogueNode>;
-  /** Optional ASCII art lines displayed during combat */
-  art?: string[];
-  tags?: string[];
-}
+};
+
+// ── Quests ──
+
+export type ObjectiveType = "kill" | "collect" | "talk" | "visit" | "deliver";
+export type QuestStatus = "active" | "completed" | "failed";
+
+export type QuestObjective = Omit<_QuestObjective, "$type" | "type"> & {
+  $type?: string;
+  type: ObjectiveType;
+};
+
+export type QuestRewards = Omit<_QuestRewards, "$type"> & { $type?: string };
+
+export type QuestDefinition = Omit<_QuestDefinition, "$type" | "objectives"> & {
+  $type?: string;
+  objectives: QuestObjective[];
+};
+
+export type QuestObjectiveProgress = Omit<_QuestObjectiveProgress, "$type"> & { $type?: string };
+
+export type QuestProgress = Omit<
+  _QuestProgress,
+  "$type" | "status" | "acceptedAt" | "completedAt"
+> & {
+  $type?: string;
+  status: QuestStatus;
+  acceptedAt: string;
+  completedAt?: string;
+};
+
+// ── Crafting ──
+
+export type RecipeIngredient = Omit<_RecipeIngredient, "$type"> & { $type?: string };
+
+export type RecipeOutput = Omit<_RecipeOutput, "$type"> & { $type?: string };
+
+export type RecipeDef = Omit<_RecipeDef, "$type" | "ingredients" | "output"> & {
+  $type?: string;
+  ingredients: RecipeIngredient[];
+  output: RecipeOutput;
+};
 
 // ── NSID constants ──
 
@@ -226,6 +262,7 @@ export const NSID = {
   SystemAttribute: "com.cacheblasters.fm.system.attribute",
   SystemClass: "com.cacheblasters.fm.system.class",
   SystemRace: "com.cacheblasters.fm.system.race",
+  SystemSpell: "com.cacheblasters.fm.system.spell",
   SystemEquipSlot: "com.cacheblasters.fm.system.equipSlot",
   SystemItemType: "com.cacheblasters.fm.system.itemType",
   SystemFormula: "com.cacheblasters.fm.system.formula",
@@ -235,6 +272,7 @@ export const NSID = {
   WorldArea: "com.cacheblasters.fm.world.area",
   WorldRoom: "com.cacheblasters.fm.world.room",
   WorldFlag: "com.cacheblasters.fm.world.flag",
+  WorldPortal: "com.cacheblasters.fm.world.portal",
 
   // Items
   ItemDefinition: "com.cacheblasters.fm.item.definition",
@@ -242,6 +280,25 @@ export const NSID = {
   // NPCs
   NpcDefinition: "com.cacheblasters.fm.npc.definition",
 
+  // Quests
+  QuestDefinition: "com.cacheblasters.fm.quest.definition",
+  QuestProgress: "com.cacheblasters.fm.quest.progress",
+
+  // Crafting
+  CraftRecipe: "com.cacheblasters.fm.craft.recipe",
+
+  // Chat
+  ChatMessage: "com.cacheblasters.fm.chat.message",
+  ChatRelay: "com.cacheblasters.fm.chat.relay",
+  ChatLocatePlayer: "com.cacheblasters.fm.chat.locatePlayer",
+
+  // Federation
+  FederationRegistration: "com.cacheblasters.fm.federation.registration",
+  FederationTransfer: "com.cacheblasters.fm.federation.transfer",
+
   // Actions
   ActionConnect: "com.cacheblasters.fm.action.connect",
 } as const;
+
+// ── Re-export generated namespace for direct access ──
+export * as lexicons from "./lexicons/index.js";
