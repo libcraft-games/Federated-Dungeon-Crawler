@@ -26,7 +26,7 @@ RUN cd apps/web-client && bun run build
 FROM oven/bun:1-slim
 WORKDIR /app
 
-RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
+RUN groupadd --system appgroup && useradd --system --gid appgroup --no-create-home appuser
 
 COPY --from=build --chown=appuser:appgroup /app/apps/web-client/dist ./dist
 COPY --from=build --chown=appuser:appgroup /app/apps/web-client/serve.ts ./serve.ts
