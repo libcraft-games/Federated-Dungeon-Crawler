@@ -288,7 +288,6 @@ export function App() {
     return (
       <div className="splash-container">
         <pre className="splash-art">{SPLASH_ART.join("\n")}</pre>
-        <div className="splash-title">{SPLASH_TITLE}</div>
         <div className="splash-subtitle">{SPLASH_SUBTITLE}</div>
         <div className="dim">{SPLASH_BYLINE}</div>
         <div style={{ display: "flex", gap: "12px" }}>
