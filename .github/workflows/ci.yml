@@ -64,5 +64,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build Docker image
+      - name: Build server image
         run: docker build -t federated-realms .
+
+      - name: Build web-client image
+        run: docker build -t federated-realms-web -f apps/web-client/Dockerfile .
