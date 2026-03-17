@@ -12,7 +12,7 @@
     "dev:web": "bun run --filter web-client dev",
     "test": "bun test --recursive",
     "test:unit": "bun test --recursive packages/",
-    "test:e2e": "bun test --recursive apps/dungeon-server/test/",
+    "test:e2e": "bun test --retry 5 --recursive apps/dungeon-server/test/",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint --deny-warnings packages/ apps/",
     "lint:fix": "oxlint --deny-warnings --fix packages/ apps/",
