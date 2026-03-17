@@ -40,9 +40,7 @@ export function OAuthFlow({ handle, serverUrl, onComplete }: Props) {
 
     (async () => {
       try {
-        const res = await fetch(
-          `${serverUrl}/auth/login?handle=${encodeURIComponent(handle)}`,
-        );
+        const res = await fetch(`${serverUrl}/auth/login?handle=${encodeURIComponent(handle)}`);
         if (!res.ok) {
           const data = (await res.json().catch(() => ({}))) as { error?: string };
           throw new Error(data.error ?? `Login failed (${res.status})`);
@@ -76,9 +74,7 @@ export function OAuthFlow({ handle, serverUrl, onComplete }: Props) {
 
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(
-          `${serverUrl}/auth/poll?ticket=${encodeURIComponent(ticket)}`,
-        );
+        const res = await fetch(`${serverUrl}/auth/poll?ticket=${encodeURIComponent(ticket)}`);
         if (!res.ok) return;
 
         const data = (await res.json()) as {
@@ -184,19 +180,13 @@ export function OAuthFlow({ handle, serverUrl, onComplete }: Props) {
       </Text>
       <Box height={1} />
 
-      {phase === "starting" && (
-        <Text color="yellow">Starting authentication for {handle}...</Text>
-      )}
+      {phase === "starting" && <Text color="yellow">Starting authentication for {handle}...</Text>}
 
       {phase === "waiting" && (
         <>
-          <Text color="green">
-            A browser window has been opened for authentication.
-          </Text>
+          <Text color="green">A browser window has been opened for authentication.</Text>
           <Box height={1} />
-          <Text>
-            Please authorize Federated Realms in your browser, then return here.
-          </Text>
+          <Text>Please authorize Federated Realms in your browser, then return here.</Text>
           <Box height={1} />
           <Text color="gray" dimColor>
             Waiting for authorization...
@@ -224,9 +214,7 @@ export function OAuthFlow({ handle, serverUrl, onComplete }: Props) {
         </>
       )}
 
-      {phase === "password-auth" && (
-        <Text color="yellow">Authenticating...</Text>
-      )}
+      {phase === "password-auth" && <Text color="yellow">Authenticating...</Text>}
 
       {phase === "error" && (
         <>
@@ -238,9 +226,7 @@ export function OAuthFlow({ handle, serverUrl, onComplete }: Props) {
         </>
       )}
 
-      {phase === "complete" && (
-        <Text color="green">Authentication successful! Connecting...</Text>
-      )}
+      {phase === "complete" && <Text color="green">Authentication successful! Connecting...</Text>}
     </Box>
   );
 }

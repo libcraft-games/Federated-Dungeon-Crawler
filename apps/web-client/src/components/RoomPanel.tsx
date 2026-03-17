@@ -73,9 +73,10 @@ export function RoomPanel({ room, playerName, onCommand }: Props) {
               ))}
             </span>
           )}
-          {otherPlayers.length === 0 && room.npcs.length === 0 && room.items.length === 0 && !room.features?.length && (
-            <span className="dim">Nothing of note here.</span>
-          )}
+          {otherPlayers.length === 0 &&
+            room.npcs.length === 0 &&
+            room.items.length === 0 &&
+            !room.features?.length && <span className="dim">Nothing of note here.</span>}
         </div>
         <div className="room-exits">
           <span className="dim">Exits: </span>

@@ -152,31 +152,34 @@ export function App() {
     [account],
   );
 
-  const handleOAuthComplete = useCallback((result: OAuthResult) => {
-    if (result.sessionId) {
-      // Returning player — connect directly
-      setAuthSessionId(result.sessionId);
-      if (result.did) setAuthDid(result.did);
-      setPhase("play");
-    } else if (result.needsCharacter) {
-      // New player — needs character creation
-      if (result.did) setAuthDid(result.did);
-      // Preserve password for /auth/session call after character creation
-      if (result.password && account) {
-        setAccount((prev) => prev ? { ...prev, password: result.password } : prev);
+  const handleOAuthComplete = useCallback(
+    (result: OAuthResult) => {
+      if (result.sessionId) {
+        // Returning player — connect directly
+        setAuthSessionId(result.sessionId);
+        if (result.did) setAuthDid(result.did);
+        setPhase("play");
+      } else if (result.needsCharacter) {
+        // New player — needs character creation
+        if (result.did) setAuthDid(result.did);
+        // Preserve password for /auth/session call after character creation
+        if (result.password && account) {
+          setAccount((prev) => (prev ? { ...prev, password: result.password } : prev));
+        }
+        if (result.gameSystem) {
+          setSystem(result.gameSystem as SystemData);
+        } else {
+          // Fetch system data if not provided
+          fetch(`${serverUrl}/system`)
+            .then((res) => res.json())
+            .then((data) => setSystem(data as SystemData))
+            .catch(() => {});
+        }
+        setPhase("create");
       }
-      if (result.gameSystem) {
-        setSystem(result.gameSystem as SystemData);
-      } else {
-        // Fetch system data if not provided
-        fetch(`${serverUrl}/system`)
-          .then((res) => res.json())
-          .then((data) => setSystem(data as SystemData))
-          .catch(() => {});
-      }
-      setPhase("create");
-    }
-  }, [account, serverUrl]);
+    },
+    [account, serverUrl],
+  );
 
   const handleCreateComplete = useCallback((chosenClass: string, chosenRace: string) => {
     setFinalClass(chosenClass);
@@ -256,7 +259,17 @@ export function App() {
     }
 
     setClient(c);
-  }, [phase, client, account, serverUrl, playerName, finalClass, finalRace, authSessionId, authDid]);
+  }, [
+    phase,
+    client,
+    account,
+    serverUrl,
+    playerName,
+    finalClass,
+    finalRace,
+    authSessionId,
+    authDid,
+  ]);
 
   // ── Render phases ──
 
@@ -275,11 +288,7 @@ export function App() {
 
   if (phase === "authenticate" && account && serverUrl) {
     return (
-      <OAuthFlow
-        handle={account.handle}
-        serverUrl={serverUrl}
-        onComplete={handleOAuthComplete}
-      />
+      <OAuthFlow handle={account.handle} serverUrl={serverUrl} onComplete={handleOAuthComplete} />
     );
   }
 

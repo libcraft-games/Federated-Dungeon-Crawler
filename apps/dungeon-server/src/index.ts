@@ -28,10 +28,10 @@ import { RateLimiter } from "./server/rate-limiter.js";
 const config = loadConfig();
 
 // Rate limiters
-const authLimiter = new RateLimiter(10, 60_000);     // 10 auth attempts per minute per IP
-const accountLimiter = new RateLimiter(3, 60_000);    // 3 account creations per minute per IP
-const commandLimiter = new RateLimiter(30, 1_000);    // 30 commands per second per session
-const MAX_WS_MESSAGE_SIZE = 4096;                      // 4KB max WebSocket message
+const authLimiter = new RateLimiter(10, 60_000); // 10 auth attempts per minute per IP
+const accountLimiter = new RateLimiter(3, 60_000); // 3 account creations per minute per IP
+const commandLimiter = new RateLimiter(30, 1_000); // 30 commands per second per session
+const MAX_WS_MESSAGE_SIZE = 4096; // 4KB max WebSocket message
 const world = new WorldManager(config);
 const sessions = new SessionManager();
 const bluesky = new BlueskyBridge(config.bluesky);
@@ -103,7 +103,10 @@ if (!DEV_MODE && config.atproto.serverPassword) {
     // Cross-server chat relay
     chatRelay = new ChatRelayService(serverIdentity, federation, sessions);
   } catch (err) {
-    console.warn("   AT Proto initialization failed:", err instanceof Error ? err.stack ?? err.message : err);
+    console.warn(
+      "   AT Proto initialization failed:",
+      err instanceof Error ? (err.stack ?? err.message) : err,
+    );
     console.warn("   Running without AT Proto auth (set DEV_MODE=true to suppress)");
   }
 }
@@ -234,11 +237,13 @@ setInterval(() => {
 setInterval(() => {
   for (const session of sessions.getIdleSessions()) {
     if (session.ws) {
-      session.send(encodeMessage({
-        type: "narrative",
-        text: "Disconnected due to inactivity.",
-        style: "error",
-      }));
+      session.send(
+        encodeMessage({
+          type: "narrative",
+          text: "Disconnected due to inactivity.",
+          style: "error",
+        }),
+      );
       session.ws.close(1000, "Idle timeout");
     }
     sessions.removeSession(session.sessionId);
@@ -394,9 +399,12 @@ const server = Bun.serve<SessionData>({
                 websocketUrl: result.websocketUrl,
                 did,
               });
-              return new Response(authSuccessHtml("Authorization successful! You can return to your terminal."), {
-                headers: { "Content-Type": "text/html" },
-              });
+              return new Response(
+                authSuccessHtml("Authorization successful! You can return to your terminal."),
+                {
+                  headers: { "Content-Type": "text/html" },
+                },
+              );
             }
 
             return Response.json(result);
@@ -411,9 +419,14 @@ const server = Bun.serve<SessionData>({
               needsCharacter: true,
               gameSystem: world.gameSystem,
             });
-            return new Response(authSuccessHtml("Authorization successful! Return to your terminal to create your character."), {
-              headers: { "Content-Type": "text/html" },
-            });
+            return new Response(
+              authSuccessHtml(
+                "Authorization successful! Return to your terminal to create your character.",
+              ),
+              {
+                headers: { "Content-Type": "text/html" },
+              },
+            );
           }
 
           return Response.json({
@@ -429,9 +442,12 @@ const server = Bun.serve<SessionData>({
               createdAt: Date.now(),
               error: errorMsg,
             });
-            return new Response(authSuccessHtml("Authentication failed. Return to your terminal."), {
-              headers: { "Content-Type": "text/html" },
-            });
+            return new Response(
+              authSuccessHtml("Authentication failed. Return to your terminal."),
+              {
+                headers: { "Content-Type": "text/html" },
+              },
+            );
           }
           return Response.json({ error: errorMsg }, { status: 500 });
         }
@@ -590,7 +606,10 @@ const server = Bun.serve<SessionData>({
           if (federation) {
             const known = await federation.resolveServer(body.sourceServer);
             if (!known) {
-              return Response.json({ delivered: false, reason: "Unknown source server" }, { status: 403 });
+              return Response.json(
+                { delivered: false, reason: "Unknown source server" },
+                { status: 403 },
+              );
             }
           }
           const target = sessions.findByName(body.recipientName);
@@ -643,10 +662,7 @@ const server = Bun.serve<SessionData>({
             raceId?: string;
           };
           if (!body.handle || !body.password) {
-            return Response.json(
-              { error: "handle and password are required" },
-              { status: 400 },
-            );
+            return Response.json({ error: "handle and password are required" }, { status: 400 });
           }
 
           // Resolve the handle to find the correct PDS service URL
@@ -747,20 +763,14 @@ const server = Bun.serve<SessionData>({
             );
           }
           if (body.handle.length > 256 || body.email.length > 256 || body.password.length > 256) {
-            return Response.json(
-              { error: "Input fields exceed maximum length" },
-              { status: 400 },
-            );
+            return Response.json({ error: "Input fields exceed maximum length" }, { status: 400 });
           }
 
           // Resolve handle: if no dot, append the PDS handle domain
           // PDS uses .test when hostname is localhost
-          const handleDomain = config.atproto.pdsHostname === "localhost"
-            ? "test"
-            : config.atproto.pdsHostname;
-          const handle = body.handle.includes(".")
-            ? body.handle
-            : `${body.handle}.${handleDomain}`;
+          const handleDomain =
+            config.atproto.pdsHostname === "localhost" ? "test" : config.atproto.pdsHostname;
+          const handle = body.handle.includes(".") ? body.handle : `${body.handle}.${handleDomain}`;
 
           const pdsRes = await fetch(
             `${config.atproto.pdsUrl}/xrpc/com.atproto.server.createAccount`,
@@ -804,9 +814,8 @@ const server = Bun.serve<SessionData>({
       // Server info
       if (url.pathname === "/info") {
         // PDS uses .test as handle domain when hostname is localhost
-        const handleDomain = config.atproto.pdsHostname === "localhost"
-          ? "test"
-          : config.atproto.pdsHostname;
+        const handleDomain =
+          config.atproto.pdsHostname === "localhost" ? "test" : config.atproto.pdsHostname;
         return Response.json({
           name: config.name,
           description: config.description,

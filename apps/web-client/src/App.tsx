@@ -157,9 +157,7 @@ export function App() {
         // New player — needs character creation
         if (result.did) setAuthDid(result.did);
         if (result.password && account) {
-          setAccount((prev) =>
-            prev ? { ...prev, password: result.password } : prev,
-          );
+          setAccount((prev) => (prev ? { ...prev, password: result.password } : prev));
         }
         if (result.gameSystem) {
           setSystem(result.gameSystem as SystemData);
@@ -175,14 +173,11 @@ export function App() {
     [account, serverUrl],
   );
 
-  const handleCreateComplete = useCallback(
-    (chosenClass: string, chosenRace: string) => {
-      setFinalClass(chosenClass);
-      setFinalRace(chosenRace);
-      setPhase("play");
-    },
-    [],
-  );
+  const handleCreateComplete = useCallback((chosenClass: string, chosenRace: string) => {
+    setFinalClass(chosenClass);
+    setFinalRace(chosenRace);
+    setPhase("play");
+  }, []);
 
   // -- Connect when entering play phase --
 
@@ -225,19 +220,16 @@ export function App() {
       // OAuth sign-in flow: new character needed after OAuth
       (async () => {
         try {
-          const res = await fetch(
-            `${serverUrl}/xrpc/com.cacheblasters.fm.action.createCharacter`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                did: authDid,
-                name: playerName || account.handle,
-                classId: finalClass,
-                raceId: finalRace,
-              }),
-            },
-          );
+          const res = await fetch(`${serverUrl}/xrpc/com.cacheblasters.fm.action.createCharacter`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              did: authDid,
+              name: playerName || account.handle,
+              classId: finalClass,
+              raceId: finalRace,
+            }),
+          });
           if (!res.ok) throw new Error("Character creation failed");
           const data = (await res.json()) as {
             sessionId: string;
@@ -256,14 +248,9 @@ export function App() {
       const url = new URL(serverUrl);
       c.connect({
         host: url.hostname,
-        port: parseInt(
-          url.port || (url.protocol === "https:" ? "443" : "80"),
-          10,
-        ),
+        port: parseInt(url.port || (url.protocol === "https:" ? "443" : "80"), 10),
         tls: url.protocol === "https:",
-        name:
-          playerName ||
-          `Adventurer_${Math.floor(Math.random() * 9999)}`,
+        name: playerName || `Adventurer_${Math.floor(Math.random() * 9999)}`,
         classId: finalClass,
         raceId: finalRace,
       });
@@ -291,10 +278,7 @@ export function App() {
         <div className="splash-subtitle">{SPLASH_SUBTITLE}</div>
         <div className="dim">{SPLASH_BYLINE}</div>
         <div style={{ display: "flex", gap: "12px" }}>
-          <button
-            className="page-button page-button-primary"
-            onClick={() => setPhase("account")}
-          >
+          <button className="page-button page-button-primary" onClick={() => setPhase("account")}>
             Enter the Realm
           </button>
         </div>
@@ -313,11 +297,7 @@ export function App() {
 
   if (phase === "authenticate" && account && serverUrl) {
     return (
-      <OAuthFlow
-        handle={account.handle}
-        serverUrl={serverUrl}
-        onComplete={handleOAuthComplete}
-      />
+      <OAuthFlow handle={account.handle} serverUrl={serverUrl} onComplete={handleOAuthComplete} />
     );
   }
 
@@ -350,12 +330,7 @@ export function App() {
     );
   }
 
-  return (
-    <GameView
-      client={client}
-      name={playerName || account?.handle || "Adventurer"}
-    />
-  );
+  return <GameView client={client} name={playerName || account?.handle || "Adventurer"} />;
 }
 
 // -- Game View --

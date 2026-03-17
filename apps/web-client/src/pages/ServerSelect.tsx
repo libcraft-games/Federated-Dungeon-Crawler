@@ -68,7 +68,9 @@ export function ServerSelect({ savedProfile, onConnect }: Props) {
     return (
       <div className="page-container">
         <h2 style={{ color: "var(--color-cyan)" }}>Server Connection</h2>
-        <p style={{ color: "var(--color-yellow)" }}>Connecting to {inputValue || currentOrigin}...</p>
+        <p style={{ color: "var(--color-yellow)" }}>
+          Connecting to {inputValue || currentOrigin}...
+        </p>
       </div>
     );
   }

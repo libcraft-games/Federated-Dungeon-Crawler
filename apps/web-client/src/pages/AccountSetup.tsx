@@ -262,7 +262,9 @@ export function AccountSetup({ onComplete }: Props) {
 
         <p className="dim">e.g. yourname.bsky.social or yourname.your-server.com</p>
         {error && <p style={{ color: "var(--color-red)" }}>{error}</p>}
-        <button className="page-button" onClick={goBack}>Back</button>
+        <button className="page-button" onClick={goBack}>
+          Back
+        </button>
       </div>
     );
   }
@@ -292,7 +294,9 @@ export function AccountSetup({ onComplete }: Props) {
 
         <p className="dim">e.g. {currentOrigin} or another-realm.example.com</p>
         {error && <p style={{ color: "var(--color-red)" }}>{error}</p>}
-        <button className="page-button" onClick={goBack}>Back</button>
+        <button className="page-button" onClick={goBack}>
+          Back
+        </button>
       </div>
     );
   }
@@ -335,7 +339,9 @@ export function AccountSetup({ onComplete }: Props) {
             {inputValue}.{pdsHostname}
           </p>
         )}
-        <button className="page-button" onClick={goBack}>Back</button>
+        <button className="page-button" onClick={goBack}>
+          Back
+        </button>
       </div>
     );
   }
@@ -366,7 +372,9 @@ export function AccountSetup({ onComplete }: Props) {
           </button>
         </div>
 
-        <button className="page-button" onClick={goBack}>Back</button>
+        <button className="page-button" onClick={goBack}>
+          Back
+        </button>
       </div>
     );
   }
@@ -396,7 +404,9 @@ export function AccountSetup({ onComplete }: Props) {
         </div>
 
         {error && <p style={{ color: "var(--color-red)" }}>{error}</p>}
-        <button className="page-button" onClick={goBack}>Back</button>
+        <button className="page-button" onClick={goBack}>
+          Back
+        </button>
       </div>
     );
   }

@@ -10,7 +10,9 @@ const DIST_DIR = new URL("./dist", import.meta.url).pathname;
 const PROXY_PREFIXES = ["/ws", "/info", "/health", "/system", "/auth", "/oauth", "/xrpc"];
 
 function shouldProxy(pathname: string): boolean {
-  return PROXY_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/") || pathname.startsWith(p + "?"));
+  return PROXY_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(p + "/") || pathname.startsWith(p + "?"),
+  );
 }
 
 const server = Bun.serve({

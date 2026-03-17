@@ -39,9 +39,7 @@ export function OAuthFlow({ handle, serverUrl, onComplete }: Props) {
 
     (async () => {
       try {
-        const res = await fetch(
-          `${serverUrl}/auth/login?handle=${encodeURIComponent(handle)}`,
-        );
+        const res = await fetch(`${serverUrl}/auth/login?handle=${encodeURIComponent(handle)}`);
         if (!res.ok) {
           const data = (await res.json().catch(() => ({}))) as { error?: string };
           throw new Error(data.error ?? `Login failed (${res.status})`);
@@ -69,9 +67,7 @@ export function OAuthFlow({ handle, serverUrl, onComplete }: Props) {
 
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(
-          `${serverUrl}/auth/poll?ticket=${encodeURIComponent(ticket)}`,
-        );
+        const res = await fetch(`${serverUrl}/auth/poll?ticket=${encodeURIComponent(ticket)}`);
         if (!res.ok) return;
 
         const data = (await res.json()) as {
@@ -154,9 +150,7 @@ export function OAuthFlow({ handle, serverUrl, onComplete }: Props) {
       <h2 style={{ color: "var(--color-cyan)" }}>Sign In</h2>
 
       {phase === "starting" && (
-        <p style={{ color: "var(--color-yellow)" }}>
-          Starting authentication for {handle}...
-        </p>
+        <p style={{ color: "var(--color-yellow)" }}>Starting authentication for {handle}...</p>
       )}
 
       {phase === "waiting" && (
@@ -166,10 +160,7 @@ export function OAuthFlow({ handle, serverUrl, onComplete }: Props) {
           </p>
           <p>Please authorize Federated Realms in your browser, then return here.</p>
           <p className="dim">Waiting for authorization...</p>
-          <button
-            className="page-button"
-            onClick={() => setPhase("password-prompt")}
-          >
+          <button className="page-button" onClick={() => setPhase("password-prompt")}>
             Use password instead
           </button>
         </>
@@ -194,9 +185,7 @@ export function OAuthFlow({ handle, serverUrl, onComplete }: Props) {
               Sign In
             </button>
           </div>
-          {passwordError && (
-            <p style={{ color: "var(--color-red)" }}>{passwordError}</p>
-          )}
+          {passwordError && <p style={{ color: "var(--color-red)" }}>{passwordError}</p>}
         </>
       )}
 

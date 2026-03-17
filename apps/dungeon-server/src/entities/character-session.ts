@@ -247,7 +247,9 @@ export class CharacterSession {
 
   /** Sum bonus_hp / bonus_mp / bonus_ap from all equipped items */
   private getEquipmentBonuses(): { hp: number; mp: number; ap: number } {
-    let hp = 0, mp = 0, ap = 0;
+    let hp = 0,
+      mp = 0,
+      ap = 0;
     for (const item of Object.values(this.state.equipment)) {
       if (typeof item.properties?.bonus_hp === "number") hp += item.properties.bonus_hp;
       if (typeof item.properties?.bonus_mp === "number") mp += item.properties.bonus_mp;
