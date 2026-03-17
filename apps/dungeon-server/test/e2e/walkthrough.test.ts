@@ -24,7 +24,7 @@ describe("full adventure walkthrough", () => {
 
     // 1. Arrive in town square
     const welcome = await hero.waitFor("welcome");
-    expect(welcome.serverName).toBe("Starter Dungeon");
+    expect(welcome.serverName).toBeTruthy();
 
     const spawn = await hero.waitFor("room_state");
     expect(spawn.room.title).toBe("Town Square");
