@@ -156,6 +156,13 @@ function handleExamine(cmd: ParsedCommand, ctx: CommandContext): void {
   }
 
   if (!item) {
+    // Check room features (notice board, fountain, etc.)
+    const room = world.getRoom(session.currentRoom);
+    const feature = room?.findFeature(itemName);
+    if (feature) {
+      sendNarrative(session, `${feature.name}\n${feature.description.trim()}`, "info");
+      return;
+    }
     sendNarrative(session, `You don't see '${itemName}' anywhere.`, "error");
     return;
   }

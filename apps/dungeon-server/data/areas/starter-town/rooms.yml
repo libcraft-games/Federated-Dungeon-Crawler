@@ -9,6 +9,13 @@
     alley winds westward.
   coordinates: { x: 0, y: 0, z: 0 }
   flags: [safe]
+  features:
+    - name: Stone Fountain
+      keywords: [fountain, basin, coins]
+      description: >
+        A weathered stone fountain carved in the shape of a rearing dragon.
+        Its basin is littered with copper coins tossed by travelers making
+        wishes. The water is surprisingly clear despite its age.
   exits:
     - direction: north
       target: tavern
@@ -112,6 +119,24 @@
     corner looks deep and dark.
   coordinates: { x: -2, y: 0, z: 0 }
   flags: [safe]
+  features:
+    - name: Gnarled Oak Tree
+      keywords: [tree, oak, runes, bark]
+      description: >
+        An ancient oak, thick and twisted with age. Crude runes have been
+        carved into the bark — they don't match any script you recognize,
+        but they tingle faintly when you trace them with a finger.
+    - name: Old Well
+      keywords: [well]
+      description: >
+        A stone-rimmed well, its depths shrouded in darkness. You drop a
+        pebble in and listen. It takes a long time to hear the splash.
+    - name: Stone Bench
+      keywords: [bench]
+      description: >
+        A moss-covered stone bench worn smooth by countless sitters. It
+        looks like a pleasant place to rest beneath the oak's shade. Carved on
+        the underside is a strange message: "Junk was here."
   exits:
     - direction: east
       target: alley
@@ -127,6 +152,14 @@
     the gate is covered in parchment notices.
   coordinates: { x: 0, y: -1, z: 0 }
   flags: [safe]
+  features:
+    - name: Notice Board
+      keywords: [notice board, noticeboard, board, notices]
+      description: >
+        A weathered wooden board nailed to a post beside the gate. A few
+        rusted tacks cling to the wood, but whatever notices were once
+        pinned here have long since been torn away or faded to nothing.
+        Perhaps new postings will appear in time.
   exits:
     - direction: north
       target: town-square
@@ -144,6 +177,14 @@
     the letters scratched deep and painted red. The western arm simply reads
     "Ruins" in faded script. Tall grass sways in the breeze on all sides.
   coordinates: { x: 0, y: -2, z: 0 }
+  features:
+    - name: Signpost
+      keywords: [signpost, sign, post]
+      description: >
+        A crooked wooden signpost with three arms. "Town" points north.
+        "Dark Forest" points east — the letters are scratched deep and
+        painted a warning red. "Ruins" points west in faded, barely
+        legible script. Someone has scratched "good luck" beneath it.
   exits:
     - direction: north
       target: town-gate

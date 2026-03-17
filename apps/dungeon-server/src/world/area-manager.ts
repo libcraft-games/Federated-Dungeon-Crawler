@@ -15,6 +15,12 @@ interface AreaManifest {
   levelRange?: { min: number; max: number };
 }
 
+interface RoomFeatureDef {
+  name: string;
+  keywords?: string[];
+  description: string;
+}
+
 interface RoomDef {
   id: string;
   title: string;
@@ -28,6 +34,7 @@ interface RoomDef {
     description?: string;
   }>;
   flags?: string[];
+  features?: RoomFeatureDef[];
 }
 
 interface ItemDef {
@@ -216,7 +223,12 @@ export class AreaManager {
           })),
           flags: def.flags,
         };
-        this.rooms.set(roomId, new Room(roomId, record));
+        const features = def.features?.map((f) => ({
+          name: f.name,
+          keywords: f.keywords ?? [f.name.toLowerCase()],
+          description: f.description,
+        }));
+        this.rooms.set(roomId, new Room(roomId, record, features));
       }
     }
 

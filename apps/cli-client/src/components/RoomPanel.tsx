@@ -28,6 +28,9 @@ export function RoomPanel({ room, playerName, maxDescLines = 3 }: Props) {
       .join(", ");
     infoParts.push(`Items: ${itemList}`);
   }
+  if (room.features && room.features.length > 0) {
+    infoParts.push(`Objects: ${room.features.map((f) => f.name).join(", ")}`);
+  }
 
   const exits = room.exits.map((e) => e.direction);
   const safeTag = room.flags.includes("safe") ? " [safe]" : "";

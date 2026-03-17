@@ -79,6 +79,13 @@ export function handleLook(cmd: ParsedCommand, ctx: CommandContext): void {
     return;
   }
 
+  // Look at a room feature (notice board, fountain, etc.)
+  const feature = room.findFeature(cmd.target!);
+  if (feature) {
+    sendNarrative(session, `${feature.name}\n${feature.description.trim()}`, "info");
+    return;
+  }
+
   sendNarrative(session, `You don't see '${cmd.target}' here.`, "error");
 }
 

@@ -1,5 +1,11 @@
 import type { RoomRecord, Direction, RoomExit } from "@realms/lexicons";
 
+export interface RoomFeature {
+  name: string;
+  keywords: string[];
+  description: string;
+}
+
 export interface RoomState {
   id: string;
   title: string;
@@ -11,6 +17,7 @@ export interface RoomState {
   players: EntityBrief[];
   npcs: EntityBrief[];
   items: ItemBrief[];
+  features?: RoomFeature[];
 }
 
 export interface EntityBrief {

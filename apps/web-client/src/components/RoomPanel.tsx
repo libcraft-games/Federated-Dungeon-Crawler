@@ -60,7 +60,20 @@ export function RoomPanel({ room, playerName, onCommand }: Props) {
               })}
             </span>
           )}
-          {otherPlayers.length === 0 && room.npcs.length === 0 && room.items.length === 0 && (
+          {room.features && room.features.length > 0 && (
+            <span className="entity-group">
+              Objects:{" "}
+              {room.features.map((f, i) => (
+                <span key={f.name + i}>
+                  {i > 0 && ", "}
+                  <span className="entity-link" onClick={() => onCommand?.(`examine ${f.name}`)}>
+                    {f.name}
+                  </span>
+                </span>
+              ))}
+            </span>
+          )}
+          {otherPlayers.length === 0 && room.npcs.length === 0 && room.items.length === 0 && !room.features?.length && (
             <span className="dim">Nothing of note here.</span>
           )}
         </div>
