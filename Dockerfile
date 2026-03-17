@@ -23,7 +23,7 @@ COPY apps/dungeon-server/ apps/dungeon-server/
 FROM oven/bun:1-slim
 WORKDIR /app
 
-RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
+RUN groupadd --system appgroup && useradd --system --gid appgroup --no-create-home appuser
 
 COPY --from=base --chown=appuser:appgroup /app /app
 

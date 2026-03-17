@@ -57,3 +57,12 @@ jobs:
 
       - name: E2E tests
         run: bun run test:e2e
+
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker compose build dungeon-server
