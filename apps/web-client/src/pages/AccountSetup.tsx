@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, type KeyboardEvent } from "react";
-import { loadProfile, type SavedProfile } from "../connection/profile-storage.js";
+import { useState, type KeyboardEvent } from "react";
+import { loadProfile } from "../connection/profile-storage.js";
 import "./pages.css";
 
 export interface AccountResult {
@@ -36,7 +36,6 @@ export function AccountSetup({ onComplete }: Props) {
   const [error, setError] = useState("");
 
   const currentOrigin = window.location.origin;
-  const signupAutoTried = useRef(false);
 
   // Signup state
   const [signupServerUrl, setSignupServerUrl] = useState("");
