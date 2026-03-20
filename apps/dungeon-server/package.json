@@ -21,9 +21,8 @@
     "@realms/common": "workspace:*",
     "@realms/lexicons": "workspace:*",
     "@realms/protocol": "workspace:*",
-    "express": "^4.21.0",
-    "jose": "^6.2.1",
-    "yaml": "^2.7.0"
+    "@realms/server-sdk": "workspace:*",
+    "express": "^4.21.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
