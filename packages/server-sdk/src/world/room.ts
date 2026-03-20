@@ -1,5 +1,5 @@
 import type { RoomRecord, Direction, RoomExit } from "@realms/lexicons";
-import type { RoomState, EntityBrief, ItemInstance } from "@realms/common";
+import type { RoomState, RoomFeature, EntityBrief, ItemInstance } from "@realms/common";
 import { findExit, hasFlag } from "@realms/common";
 
 export class Room {
@@ -10,12 +10,13 @@ export class Room {
   readonly coordinates: { x: number; y: number; z: number };
   readonly exits: RoomExit[];
   readonly flags: string[];
+  readonly features: RoomFeature[];
 
   private players = new Map<string, EntityBrief>();
   private npcs = new Map<string, EntityBrief>();
   private groundItems: ItemInstance[] = [];
 
-  constructor(id: string, record: RoomRecord) {
+  constructor(id: string, record: RoomRecord, features?: RoomFeature[]) {
     this.id = id;
     this.title = record.title;
     this.description = record.description;
@@ -23,6 +24,7 @@ export class Room {
     this.coordinates = record.coordinates;
     this.exits = record.exits ?? [];
     this.flags = record.flags ?? [];
+    this.features = features ?? [];
   }
 
   addPlayer(id: string, name: string): void {
@@ -111,6 +113,13 @@ export class Room {
     return hasFlag(this.toState(), "safe");
   }
 
+  findFeature(keyword: string): RoomFeature | undefined {
+    const lower = keyword.toLowerCase();
+    return this.features.find((f) =>
+      f.keywords.some((k) => k.includes(lower) || lower.includes(k)),
+    );
+  }
+
   toState(): RoomState {
     return {
       id: this.id,
@@ -127,6 +136,7 @@ export class Room {
         name: i.name,
         quantity: i.quantity,
       })),
+      features: this.features.length > 0 ? this.features : undefined,
     };
   }
 }
