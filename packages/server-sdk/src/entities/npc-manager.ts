@@ -3,10 +3,9 @@ import type { NpcInstance, ItemInstance } from "@realms/common";
 import { createNpcInstance, createItemInstance } from "@realms/common";
 import type { Room } from "../world/room.js";
 
-/** Server-internal loot table entry (not part of AT Proto lexicon) */
 export interface LootEntry {
   itemId: string;
-  chance: number; // 0-100 percentage
+  chance: number;
   minQuantity?: number;
   maxQuantity?: number;
 }
@@ -14,7 +13,7 @@ export interface LootEntry {
 interface RespawnEntry {
   definitionId: string;
   roomId: string;
-  respawnAt: number; // timestamp
+  respawnAt: number;
 }
 
 export interface GoldDrop {
@@ -29,7 +28,6 @@ export class NpcManager {
   private instances = new Map<string, NpcInstance>();
   private respawnQueue: RespawnEntry[] = [];
 
-  /** Default respawn time in ms (30 seconds for MVP) */
   static RESPAWN_TIME_MS = 30_000;
 
   registerDefinition(id: string, def: NpcDefinition, loot?: LootEntry[], gold?: GoldDrop): void {
@@ -42,7 +40,6 @@ export class NpcManager {
     }
   }
 
-  /** Generate gold drop for a killed NPC */
   generateGoldDrop(definitionId: string): number {
     const drop = this.goldDrops.get(definitionId);
     if (!drop) return 0;
@@ -59,8 +56,6 @@ export class NpcManager {
 
     const instance = createNpcInstance(definitionId, def, room.id);
     this.instances.set(instance.instanceId, instance);
-
-    // Add to room's NPC list
     room.addNpc(instance.instanceId, instance.name);
 
     return instance;
@@ -70,7 +65,6 @@ export class NpcManager {
     return this.instances.get(instanceId);
   }
 
-  /** Find an NPC instance by name in a specific room */
   findInRoom(roomId: string, name: string): NpcInstance | undefined {
     const lower = name.toLowerCase();
     for (const npc of this.instances.values()) {
@@ -95,9 +89,6 @@ export class NpcManager {
     return result;
   }
 
-  // ── Combat ──
-
-  /** Apply damage to an NPC. Returns true if the NPC died. */
   damageNpc(instanceId: string, amount: number): boolean {
     const npc = this.instances.get(instanceId);
     if (!npc) return false;
@@ -112,7 +103,6 @@ export class NpcManager {
     return false;
   }
 
-  /** Kill an NPC and queue it for respawn */
   killNpc(instanceId: string, room: Room): void {
     const npc = this.instances.get(instanceId);
     if (!npc) return;
@@ -120,21 +110,17 @@ export class NpcManager {
     npc.state = "dead";
     npc.currentHp = 0;
 
-    // Remove from room display
     room.removeNpc(instanceId);
 
-    // Queue respawn
     this.respawnQueue.push({
       definitionId: npc.definitionId,
       roomId: npc.currentRoom,
       respawnAt: Date.now() + NpcManager.RESPAWN_TIME_MS,
     });
 
-    // Remove the dead instance
     this.instances.delete(instanceId);
   }
 
-  /** Generate loot drops for a killed NPC */
   generateLoot(
     definitionId: string,
     getItemDef: (id: string) => ItemDefinition | undefined,
@@ -161,7 +147,6 @@ export class NpcManager {
     return drops;
   }
 
-  /** Process respawn queue — call on game tick */
   processRespawns(getRoom: (id: string) => Room | undefined): NpcInstance[] {
     const now = Date.now();
     const respawned: NpcInstance[] = [];

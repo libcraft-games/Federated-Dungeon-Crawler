@@ -1,16 +1,12 @@
 import { NodeOAuthClient } from "@atproto/oauth-client-node";
 import { Agent } from "@atproto/api";
-import type { AtProtoConfig } from "../config.js";
+import type { AtProtoConfig } from "../types/server-config.js";
 
 interface StoreEntry<V> {
   value: V;
   expiresAt?: number;
 }
 
-/**
- * Simple in-memory store that implements the SimpleStore interface
- * required by @atproto/oauth-client-node.
- */
 class MemoryStore<V> {
   private data = new Map<string, StoreEntry<V>>();
 
@@ -33,14 +29,6 @@ class MemoryStore<V> {
   }
 }
 
-/**
- * Manages OAuth authentication for player connections.
- * Wraps @atproto/oauth-client-node to handle:
- * - Starting auth flows (returns URL to redirect to)
- * - Handling callbacks (exchanges code for session)
- * - Restoring sessions for returning players
- * - Getting authenticated agents for PDS access
- */
 export class GameOAuthClient {
   private client: NodeOAuthClient | null = null;
   private config: AtProtoConfig | null = null;
@@ -72,10 +60,6 @@ export class GameOAuthClient {
     console.log("   OAuth client initialized");
   }
 
-  /**
-   * Start OAuth flow for a player handle.
-   * Returns the authorization URL to redirect the user to.
-   */
   async authorize(handle: string): Promise<URL> {
     if (!this.client) throw new Error("OAuth not initialized");
     return this.client.authorize(handle, {
@@ -83,10 +67,6 @@ export class GameOAuthClient {
     });
   }
 
-  /**
-   * Handle OAuth callback after user approves.
-   * Returns the authenticated session.
-   */
   async callback(params: URLSearchParams): Promise<{
     session: { did: string };
     agent: Agent;
@@ -100,10 +80,6 @@ export class GameOAuthClient {
     };
   }
 
-  /**
-   * Restore an existing session for a returning player.
-   * Returns null if no session exists or it can't be refreshed.
-   */
   async restore(did: string): Promise<Agent | null> {
     if (!this.client) return null;
     try {
@@ -114,9 +90,6 @@ export class GameOAuthClient {
     }
   }
 
-  /**
-   * Revoke a player's session.
-   */
   async revoke(did: string): Promise<void> {
     if (!this.client) return;
     try {
@@ -126,10 +99,6 @@ export class GameOAuthClient {
     }
   }
 
-  /**
-   * Returns the OAuth client metadata JSON for serving at
-   * /oauth/client-metadata.json
-   */
   getClientMetadata(publicUrlOverride?: string): Record<string, unknown> {
     const publicUrl = this.config?.publicUrl ?? publicUrlOverride ?? "http://localhost:3000";
     return {

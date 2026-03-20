@@ -190,7 +190,6 @@ export class AreaManager {
   }
 
   private async loadArea(areaId: string, areaPath: string): Promise<void> {
-    // Load manifest
     const manifestFile = Bun.file(join(areaPath, "manifest.yml"));
     if (!(await manifestFile.exists())) {
       console.warn(`No manifest.yml found in area: ${areaId}`);
@@ -201,7 +200,6 @@ export class AreaManager {
     const manifest: AreaManifest = { id: areaId, ...parseYaml(manifestText) };
     this.areas.set(areaId, manifest);
 
-    // Load rooms
     const roomsFile = Bun.file(join(areaPath, "rooms.yml"));
     if (await roomsFile.exists()) {
       const roomsText = await roomsFile.text();
@@ -232,14 +230,12 @@ export class AreaManager {
       }
     }
 
-    // Load items
     const itemsFile = Bun.file(join(areaPath, "items.yml"));
     if (await itemsFile.exists()) {
       const itemsText = await itemsFile.text();
       const itemsData: ItemsFile = parseYaml(itemsText);
       let itemCount = 0;
 
-      // Register definitions
       for (const def of itemsData.definitions) {
         const defId = `${areaId}:${def.id}`;
         const itemDef: ItemDefinition = {
@@ -259,7 +255,6 @@ export class AreaManager {
         itemCount++;
       }
 
-      // Spawn items into rooms
       if (itemsData.spawns) {
         for (const spawn of itemsData.spawns) {
           const roomId = `${areaId}:${spawn.room}`;
@@ -276,10 +271,8 @@ export class AreaManager {
               continue;
             }
             if (def.stackable) {
-              // Stackable items: one instance with full quantity
               room.addGroundItem(createItemInstance(defId, def, item.quantity), true);
             } else {
-              // Non-stackable items: spawn separate instances
               for (let n = 0; n < item.quantity; n++) {
                 room.addGroundItem(createItemInstance(defId, def, 1));
               }
@@ -291,14 +284,12 @@ export class AreaManager {
       console.log(`  Items: ${itemCount} definitions loaded`);
     }
 
-    // Load NPCs
     const npcsFile = Bun.file(join(areaPath, "npcs.yml"));
     if (await npcsFile.exists()) {
       const npcsText = await npcsFile.text();
       const npcsData: NpcsFile = parseYaml(npcsText);
       let npcCount = 0;
 
-      // Register definitions
       for (const def of npcsData.definitions) {
         const defId = `${areaId}:${def.id}`;
         const npcDef: NpcDefinition = {
@@ -316,7 +307,6 @@ export class AreaManager {
         npcCount++;
       }
 
-      // Spawn NPCs into rooms
       if (npcsData.spawns) {
         for (const spawn of npcsData.spawns) {
           const roomId = `${areaId}:${spawn.room}`;
@@ -335,7 +325,6 @@ export class AreaManager {
       console.log(`  NPCs: ${npcCount} definitions loaded`);
     }
 
-    // Load quests
     const questsFile = Bun.file(join(areaPath, "quests.yml"));
     if (await questsFile.exists()) {
       const questsText = await questsFile.text();
@@ -375,7 +364,6 @@ export class AreaManager {
       console.log(`  Quests: ${questCount} definitions loaded`);
     }
 
-    // Load recipes
     const recipesFile = Bun.file(join(areaPath, "recipes.yml"));
     if (await recipesFile.exists()) {
       const recipesText = await recipesFile.text();
@@ -408,7 +396,6 @@ export class AreaManager {
       console.log(`  Recipes: ${recipeCount} definitions loaded`);
     }
 
-    // Load gathering nodes
     const gatheringFile = Bun.file(join(areaPath, "gathering.yml"));
     if (await gatheringFile.exists()) {
       const gatheringText = await gatheringFile.text();

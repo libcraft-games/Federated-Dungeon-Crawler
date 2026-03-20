@@ -1,5 +1,5 @@
 import { AtpAgent, RichText } from "@atproto/api";
-import type { BlueskyConfig, BlueskyPostType } from "../config.js";
+import type { BlueskyConfig, BlueskyPostType } from "../types/server-config.js";
 
 interface RoomThread {
   rootUri: string;

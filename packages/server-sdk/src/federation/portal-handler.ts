@@ -2,7 +2,7 @@ import type { RoomExit } from "@realms/lexicons";
 import type { CharacterSession } from "../entities/character-session.js";
 import type { ServerIdentity } from "../atproto/server-identity.js";
 import type { PdsClient } from "../atproto/pds-client.js";
-import type { FederationConfig } from "../config.js";
+import type { FederationConfig } from "../types/server-config.js";
 import { encodeMessage } from "@realms/protocol";
 
 /**

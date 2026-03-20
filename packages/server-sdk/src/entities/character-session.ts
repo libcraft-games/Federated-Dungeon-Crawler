@@ -16,11 +16,9 @@ export class CharacterSession {
   readonly attestations: AttestationTracker;
   ws: ServerWebSocket<SessionData> | null = null;
 
-  // Combat state
   combatTarget: string | null = null;
   isDefending: boolean = false;
 
-  // Exploration
   readonly visitedRooms = new Set<string>();
 
   private formulas: Record<string, FormulaDef>;
@@ -70,10 +68,7 @@ export class CharacterSession {
     }
   }
 
-  // ── Inventory ──
-
   addItem(item: ItemInstance): void {
-    // Try to stack with existing item of same definition
     const existing = this.state.inventory.find((i) => i.definitionId === item.definitionId);
     if (existing) {
       existing.quantity += item.quantity;
@@ -132,8 +127,6 @@ export class CharacterSession {
     return this.state.inventory;
   }
 
-  // ── Equipment ──
-
   get equipment(): Record<string, ItemInstance> {
     return this.state.equipment;
   }
@@ -158,8 +151,6 @@ export class CharacterSession {
     return this.state.equipment[slot];
   }
 
-  // ── Gold ──
-
   get gold(): number {
     return this.state.gold;
   }
@@ -175,8 +166,6 @@ export class CharacterSession {
     return true;
   }
 
-  // ── Action Points ──
-
   refreshAp(): void {
     this.state.currentAp = this.state.maxAp;
   }
@@ -186,8 +175,6 @@ export class CharacterSession {
     this.state.currentAp -= amount;
     return true;
   }
-
-  // ── Combat ──
 
   takeDamage(amount: number): void {
     this.state.currentHp = Math.max(0, this.state.currentHp - amount);
@@ -205,20 +192,15 @@ export class CharacterSession {
     return this.state.currentHp <= 0;
   }
 
-  // ── XP and Leveling ──
-
   addXp(amount: number): number | null {
     this.state.experience += amount;
 
-    // Check for level up
     const newLevel = this.checkLevelUp();
     if (newLevel > this.state.level) {
       this.state.level = newLevel;
       this.recalculateDerived();
-      // Heal to full on level up
       this.state.currentHp = this.state.maxHp;
       this.state.currentMp = this.state.maxMp;
-      // Attest the level up
       this.attestations.recordLevelUp(newLevel, this.state.experience);
       return newLevel;
     }
@@ -240,12 +222,10 @@ export class CharacterSession {
     this.state.maxHp = (derived.maxHp ?? this.state.maxHp) + (bonuses.hp ?? 0);
     this.state.maxMp = (derived.maxMp ?? this.state.maxMp) + (bonuses.mp ?? 0);
     this.state.maxAp = (derived.maxAp ?? this.state.maxAp) + (bonuses.ap ?? 0);
-    // Clamp current values to new max
     this.state.currentHp = Math.min(this.state.currentHp, this.state.maxHp);
     this.state.currentMp = Math.min(this.state.currentMp, this.state.maxMp);
   }
 
-  /** Sum bonus_hp / bonus_mp / bonus_ap from all equipped items */
   private getEquipmentBonuses(): { hp: number; mp: number; ap: number } {
     let hp = 0,
       mp = 0,
@@ -258,7 +238,6 @@ export class CharacterSession {
     return { hp, mp, ap };
   }
 
-  /** Process active effect ticks. Returns names of expired effects. */
   tickEffects(): string[] {
     const expired: string[] = [];
     const remaining = [];
@@ -266,7 +245,6 @@ export class CharacterSession {
     for (const effect of this.state.activeEffects) {
       effect.remainingTicks--;
       if (effect.remainingTicks <= 0) {
-        // Undo attribute modification
         if (effect.attribute) {
           const current = this.state.attributes[effect.attribute] ?? 10;
           if (effect.type === "buff") {
@@ -283,10 +261,8 @@ export class CharacterSession {
 
     this.state.activeEffects = remaining;
 
-    // Recalculate derived stats if anything expired (HP/MP caps may change)
     if (expired.length > 0) {
       this.recalculateDerived();
-      // Clamp current values
       this.state.currentHp = Math.min(this.state.currentHp, this.state.maxHp);
       this.state.currentMp = Math.min(this.state.currentMp, this.state.maxMp);
     }
@@ -294,7 +270,6 @@ export class CharacterSession {
     return expired;
   }
 
-  /** Respawn at a room with 1 HP */
   respawn(spawnRoom: string): void {
     this.state.currentRoom = spawnRoom;
     this.state.currentHp = Math.max(1, Math.floor(this.state.maxHp * 0.25));

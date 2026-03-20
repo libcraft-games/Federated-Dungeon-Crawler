@@ -2,7 +2,7 @@ import type { CharacterProfile } from "@realms/lexicons";
 import type { ServerIdentity, SignedAttestation } from "../atproto/server-identity.js";
 import type { SessionManager } from "../server/session-manager.js";
 import type { WorldManager } from "../world/world-manager.js";
-import type { FederationConfig, AtProtoConfig } from "../config.js";
+import type { FederationConfig, AtProtoConfig } from "../types/server-config.js";
 import type { AdaptationRequired } from "@realms/protocol";
 import type { FederationManager } from "./federation-manager.js";
 import { buildAttributes, computeDerivedStats } from "@realms/common";

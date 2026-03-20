@@ -1,5 +1,5 @@
 import type { ServerIdentity } from "../atproto/server-identity.js";
-import type { FederationConfig, AtProtoConfig } from "../config.js";
+import type { FederationConfig, AtProtoConfig } from "../types/server-config.js";
 import { NSID } from "@realms/lexicons";
 
 export interface KnownServer {

@@ -2,28 +2,15 @@ import type { AtpAgent } from "@atproto/api";
 import { NSID } from "@realms/lexicons";
 import type { WorldManager } from "../world/world-manager.js";
 
-/**
- * Publishes world data (areas, rooms, items, NPCs, quests, recipes)
- * as AT Proto records on the server's PDS. This makes the server's
- * content discoverable by other servers and clients via the AT Proto network.
- *
- * Records are keyed by their game ID (e.g., "starter-town:town-square")
- * with colons replaced by dashes for valid rkeys.
- */
 export class WorldPublisher {
   constructor(
     private agent: AtpAgent,
     private did: string,
   ) {}
 
-  /**
-   * Publish all world data from the WorldManager to the server's PDS.
-   * Called once after server initialization.
-   */
   async publishAll(world: WorldManager): Promise<{ portalCount: number }> {
     const stats = { areas: 0, rooms: 0, items: 0, npcs: 0, quests: 0, recipes: 0, portals: 0 };
 
-    // Areas
     for (const [id, area] of world.areaManager.getAllAreas()) {
       await this.putRecord(NSID.WorldArea, toRkey(id), {
         $type: NSID.WorldArea,
@@ -34,7 +21,6 @@ export class WorldPublisher {
       stats.areas++;
     }
 
-    // Rooms
     for (const [id, room] of world.areaManager.getAllRooms()) {
       const areaId = id.split(":")[0];
       await this.putRecord(NSID.WorldRoom, toRkey(id), {
@@ -55,7 +41,6 @@ export class WorldPublisher {
       stats.rooms++;
     }
 
-    // Items
     for (const [id, item] of world.areaManager.getAllItemDefinitions()) {
       await this.putRecord(NSID.ItemDefinition, toRkey(id), {
         $type: NSID.ItemDefinition,
@@ -74,7 +59,6 @@ export class WorldPublisher {
       stats.items++;
     }
 
-    // NPCs
     for (const [id, npc] of world.npcManager.getAllDefinitions()) {
       await this.putRecord(NSID.NpcDefinition, toRkey(id), {
         $type: NSID.NpcDefinition,
@@ -89,7 +73,6 @@ export class WorldPublisher {
       stats.npcs++;
     }
 
-    // Quests
     for (const [id, quest] of world.questManager.getAllDefinitions()) {
       await this.putRecord(NSID.QuestDefinition, toRkey(id), {
         $type: NSID.QuestDefinition,
@@ -112,7 +95,6 @@ export class WorldPublisher {
       stats.quests++;
     }
 
-    // Recipes
     for (const [id, recipe] of world.craftingSystem.getAllRecipes()) {
       await this.putRecord(NSID.CraftRecipe, toRkey(id), {
         $type: NSID.CraftRecipe,
@@ -128,14 +110,12 @@ export class WorldPublisher {
       stats.recipes++;
     }
 
-    // Portals (extracted from room exits with portal: true)
     for (const [id, room] of world.areaManager.getAllRooms()) {
       for (const exit of room.exits) {
         if (!exit.portal) continue;
 
-        // Portal targets are "did:plc:xxx:room-id" format
         const parts = exit.target.split(":");
-        if (parts.length < 4) continue; // Need at least did:method:id:room
+        if (parts.length < 4) continue;
 
         const targetRoom = parts.pop()!;
         const targetServerDid = parts.join(":");
@@ -184,7 +164,6 @@ export class WorldPublisher {
   }
 }
 
-/** Convert a game ID to a valid AT Proto rkey (alphanumeric + hyphens) */
 function toRkey(id: string): string {
   return id.replace(/:/g, "-").replace(/[^a-zA-Z0-9._~-]/g, "-");
 }

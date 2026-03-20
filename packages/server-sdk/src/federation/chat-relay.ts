@@ -69,8 +69,6 @@ export class ChatRelayService {
     }
 
     // Player not found online — try to store offline message
-    // Use the sender's DID as senderDid; we need the recipient's DID for the record.
-    // For offline storage we need the recipient DID — query servers for it
     const recipientDid = await this.resolvePlayerDid(targetName, servers, results);
     if (recipientDid) {
       await this.storeOfflineMessage(sender, recipientDid, targetName, message);

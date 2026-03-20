@@ -71,7 +71,6 @@ export class Room {
   }
 
   removeGroundItem(identifier: string, quantity: number = 1): ItemInstance | undefined {
-    // Find by instanceId first, then by name (case-insensitive partial match)
     let index = this.groundItems.findIndex((i) => i.instanceId === identifier);
     if (index === -1) {
       const lower = identifier.toLowerCase();
@@ -85,7 +84,6 @@ export class Room {
       return item;
     }
 
-    // Partial take — split the stack
     item.quantity -= quantity;
     return {
       instanceId: item.instanceId,

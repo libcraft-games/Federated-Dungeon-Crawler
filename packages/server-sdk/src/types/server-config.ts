@@ -47,7 +47,7 @@ export interface ServerConfig {
   federation: FederationConfig;
 }
 
-export function loadConfig(): ServerConfig {
+export function loadConfig(defaultDataPath?: string): ServerConfig {
   return {
     name: process.env.SERVER_NAME ?? "Starter Dungeon",
     description: process.env.SERVER_DESCRIPTION ?? "A mysterious dungeon awaits...",
@@ -55,8 +55,7 @@ export function loadConfig(): ServerConfig {
     host: process.env.HOST ?? "0.0.0.0",
     tickRate: parseInt(process.env.TICK_RATE ?? "250", 10),
     defaultSpawnRoom: process.env.DEFAULT_SPAWN ?? "starter-town:town-square",
-    dataPath:
-      process.env.DATA_PATH ?? decodeURIComponent(new URL("../data", import.meta.url).pathname),
+    dataPath: process.env.DATA_PATH ?? defaultDataPath ?? "./data",
     bluesky: {
       enabled: process.env.BSKY_ENABLED === "true",
       identifier: process.env.BSKY_IDENTIFIER ?? "",

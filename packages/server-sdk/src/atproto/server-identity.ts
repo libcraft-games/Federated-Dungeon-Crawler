@@ -2,13 +2,13 @@ import { AtpAgent } from "@atproto/api";
 import { Secp256k1Keypair } from "@atproto/crypto";
 import { verifySig } from "@atproto/crypto/dist/secp256k1/operations";
 import * as jose from "jose";
-import type { AtProtoConfig } from "../config.js";
+import type { AtProtoConfig } from "../types/server-config.js";
 import { NSID } from "@realms/lexicons";
 
 export interface TransferPayload {
-  iss: string; // source server DID
-  sub: string; // player DID
-  aud: string; // target server DID
+  iss: string;
+  sub: string;
+  aud: string;
   iat: number;
   exp: number;
   characterHash: string;
@@ -24,11 +24,11 @@ export interface AttestationClaims {
 }
 
 export interface SignedAttestation {
-  iss: string; // server DID
-  sub: string; // player DID
+  iss: string;
+  sub: string;
   iat: number;
   claims: AttestationClaims;
-  sig: string; // base64url-encoded signature
+  sig: string;
 }
 
 export class ServerIdentity {
@@ -44,13 +44,11 @@ export class ServerIdentity {
   ): Promise<void> {
     this.agent = new AtpAgent({ service: config.pdsUrl });
 
-    // PDS uses .test as handle domain when hostname is localhost
     const handle = config.serverHandle.endsWith(".localhost")
       ? config.serverHandle.replace(/\.localhost$/, ".test")
       : config.serverHandle;
 
     if (config.serverDid) {
-      // Existing server identity — log in
       await this.agent.login({
         identifier: handle,
         password: config.serverPassword,
@@ -58,7 +56,6 @@ export class ServerIdentity {
       this.did = config.serverDid;
       console.log(`   Server identity: ${this.did}`);
     } else {
-      // First boot — create server account on co-located PDS
       console.log("   Creating server account on PDS...");
       try {
         const result = await this.agent.createAccount({
@@ -70,7 +67,6 @@ export class ServerIdentity {
         console.log(`   Server account created: ${this.did}`);
         console.log(`   ⚠  Set SERVER_DID=${this.did} in your environment for subsequent boots`);
       } catch (err: unknown) {
-        // Account may already exist if SERVER_DID was lost
         const message = err instanceof Error ? err.message : String(err);
         if (message.includes("handle already taken") || message.includes("Handle already taken")) {
           console.log("   Server account already exists, logging in...");
@@ -87,8 +83,6 @@ export class ServerIdentity {
       }
     }
 
-    // Generate signing key for attestations and transfer JWTs
-    // Non-fatal: signing key is only needed for federation features
     try {
       await this.initSigningKey();
     } catch (err) {
@@ -98,16 +92,11 @@ export class ServerIdentity {
       );
     }
 
-    // Publish server metadata record
     await this.publishServerRecord(config, serverName, serverDescription);
   }
 
   private async initSigningKey(): Promise<void> {
-    // Generate an ephemeral signing key for this server instance
-    // In production, this should be loaded from persistent storage
     this.signingKey = await Secp256k1Keypair.create({ exportable: true });
-
-    // Convert to jose-compatible key for JWT operations (transfer tokens)
     await this.initJwtKey();
   }
 
@@ -125,10 +114,6 @@ export class ServerIdentity {
     )) as CryptoKey;
   }
 
-  /**
-   * Initialize just the signing key (without jose JWT key).
-   * Used for testing attestation signing in isolation.
-   */
   async initSigningKeyOnly(): Promise<void> {
     this.signingKey = await Secp256k1Keypair.create({ exportable: true });
   }
@@ -179,10 +164,6 @@ export class ServerIdentity {
     return this.verifyTransferTokenWithKey(jwt, expectedAudience, this.jwtPrivateKey);
   }
 
-  /**
-   * Verify a transfer JWT signed by a remote server using their public key.
-   * The publicKeyBytes should come from the server's federation registration record.
-   */
   async verifyRemoteTransferToken(
     jwt: string,
     expectedAudience: string,
@@ -229,7 +210,6 @@ export class ServerIdentity {
       sig: "",
     };
 
-    // Sign the payload (excluding sig field) with the server's secp256k1 key
     const { sig: _, ...payload } = attestation;
     const data = new TextEncoder().encode(JSON.stringify(payload));
     const sigBytes = await this.signingKey.sign(data);
@@ -238,17 +218,10 @@ export class ServerIdentity {
     return attestation;
   }
 
-  /**
-   * Verify an attestation signature against our own public key.
-   */
   async verifyAttestation(attestation: SignedAttestation): Promise<boolean> {
     return this.verifyAttestationWithKey(attestation, this.signingKey.publicKeyBytes());
   }
 
-  /**
-   * Verify an attestation signed by a remote server using their public key.
-   * The publicKeyBytes should come from the server's federation registration record.
-   */
   async verifyRemoteAttestation(
     attestation: SignedAttestation,
     publicKeyBytes: Uint8Array,
@@ -270,12 +243,7 @@ export class ServerIdentity {
     }
   }
 
-  /**
-   * Import a remote server's base64url-encoded public key bytes into a CryptoKey
-   * suitable for jose JWT verification.
-   */
   private async importRemotePublicKey(publicKeyBytes: Uint8Array): Promise<CryptoKey> {
-    // secp256k1 uncompressed public key is 65 bytes: 0x04 || x (32) || y (32)
     const x = publicKeyBytes.slice(1, 33);
     const y = publicKeyBytes.slice(33, 65);
 

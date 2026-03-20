@@ -4,18 +4,9 @@ type AnyAgent = Agent | AtpAgent;
 import { NSID, type CharacterProfile } from "@realms/lexicons";
 import type { ServerIdentity } from "./server-identity.js";
 
-/**
- * Reads and writes character/quest data to a player's PDS.
- * Uses the server's authenticated agent to act on behalf of the server account.
- * For player PDS writes, uses the player's own agent (obtained via OAuth).
- */
 export class PdsClient {
   constructor(private serverIdentity: ServerIdentity) {}
 
-  /**
-   * Load a character profile from the player's PDS.
-   * Returns null if no character exists (new player).
-   */
   async loadCharacter(playerAgent: AnyAgent, did: string): Promise<CharacterProfile | null> {
     try {
       const { data } = await playerAgent.com.atproto.repo.getRecord({
@@ -25,16 +16,11 @@ export class PdsClient {
       });
       return data.value as unknown as CharacterProfile;
     } catch (err: unknown) {
-      // 404 means no character yet — that's fine
       if (isNotFound(err)) return null;
       throw err;
     }
   }
 
-  /**
-   * Save character profile to the player's PDS.
-   * Called on level up, disconnect, and periodically.
-   */
   async saveCharacter(
     playerAgent: AnyAgent,
     did: string,
@@ -52,9 +38,6 @@ export class PdsClient {
     });
   }
 
-  /**
-   * Save quest progress to the player's PDS.
-   */
   async saveQuestProgress(
     playerAgent: AnyAgent,
     did: string,
@@ -81,9 +64,6 @@ export class PdsClient {
     });
   }
 
-  /**
-   * Load all quest progress records from the player's PDS.
-   */
   async loadQuestProgress(
     playerAgent: AnyAgent,
     did: string,
@@ -112,7 +92,6 @@ export class PdsClient {
 function isNotFound(err: unknown): boolean {
   if (err && typeof err === "object") {
     if ("status" in err && (err as { status: number }).status === 404) return true;
-    // PDS returns "RecordNotFound" or "Could not locate record" for missing records
     if ("error" in err && (err as { error: string }).error === "RecordNotFound") return true;
     if (
       "message" in err &&
