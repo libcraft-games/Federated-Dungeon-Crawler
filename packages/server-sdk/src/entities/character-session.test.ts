@@ -148,7 +148,10 @@ describe("CharacterSession", () => {
       const session = makeSession();
       session.equip("mainHand", makeItem({ name: "Old Sword" }));
 
-      const replaced = session.equip("mainHand", makeItem({ instanceId: "item-2", name: "New Sword" }));
+      const replaced = session.equip(
+        "mainHand",
+        makeItem({ instanceId: "item-2", name: "New Sword" }),
+      );
       expect(replaced?.name).toBe("Old Sword");
       expect(session.getEquipped("mainHand")?.name).toBe("New Sword");
     });
@@ -157,11 +160,14 @@ describe("CharacterSession", () => {
       const session = makeSession();
       const hpBefore = session.state.maxHp;
 
-      session.equip("ring", makeItem({
-        instanceId: "ring-1",
-        name: "Ring of Vitality",
-        properties: { bonus_hp: 10 },
-      }));
+      session.equip(
+        "ring",
+        makeItem({
+          instanceId: "ring-1",
+          name: "Ring of Vitality",
+          properties: { bonus_hp: 10 },
+        }),
+      );
 
       expect(session.state.maxHp).toBe(hpBefore + 10);
 

@@ -15,11 +15,7 @@ export { loadConfig } from "./types/server-config.js";
 
 export type { ServerHooks } from "./types/hooks.js";
 
-export type {
-  CommandContext,
-  CommandHandler,
-  CommandRegistry,
-} from "./types/command.js";
+export type { CommandContext, CommandHandler, CommandRegistry } from "./types/command.js";
 
 // ── AT Proto ──
 export {
@@ -31,9 +27,7 @@ export {
 
 export { PdsClient } from "./atproto/pds-client.js";
 
-export {
-  AttestationTracker,
-} from "./atproto/attestation-tracker.js";
+export { AttestationTracker } from "./atproto/attestation-tracker.js";
 
 export { GameOAuthClient } from "./atproto/oauth.js";
 
@@ -46,27 +40,14 @@ export { AreaManager } from "./world/area-manager.js";
 export { WorldManager } from "./world/world-manager.js";
 
 // ── Entities ──
-export {
-  CharacterSession,
-  type SessionData,
-} from "./entities/character-session.js";
+export { CharacterSession, type SessionData } from "./entities/character-session.js";
 
-export {
-  NpcManager,
-  type LootEntry,
-  type GoldDrop,
-} from "./entities/npc-manager.js";
+export { NpcManager, type LootEntry, type GoldDrop } from "./entities/npc-manager.js";
 
 // ── Systems ──
-export {
-  CombatSystem,
-  type CombatContext,
-} from "./systems/combat-system.js";
+export { CombatSystem, type CombatContext } from "./systems/combat-system.js";
 
-export {
-  QuestManager,
-  type ActiveQuestState,
-} from "./systems/quest-manager.js";
+export { QuestManager, type ActiveQuestState } from "./systems/quest-manager.js";
 
 export {
   CraftingSystem,
@@ -77,10 +58,7 @@ export {
 } from "./systems/crafting-system.js";
 
 // ── Federation ──
-export {
-  FederationManager,
-  type KnownServer,
-} from "./federation/federation-manager.js";
+export { FederationManager, type KnownServer } from "./federation/federation-manager.js";
 
 export { PortalHandler } from "./federation/portal-handler.js";
 
@@ -98,7 +76,4 @@ export { SessionManager } from "./server/session-manager.js";
 export { RateLimiter } from "./server/rate-limiter.js";
 
 // ── Integrations ──
-export {
-  BlueskyBridge,
-  type GameEvent,
-} from "./integrations/bluesky-bridge.js";
+export { BlueskyBridge, type GameEvent } from "./integrations/bluesky-bridge.js";

@@ -72,7 +72,10 @@ export class TransferHandler {
     let payload;
 
     if (!sourceServerKey) {
-      return { accepted: false, reason: "Source server signing key not found — cannot verify transfer" };
+      return {
+        accepted: false,
+        reason: "Source server signing key not found — cannot verify transfer",
+      };
     }
 
     // Verify JWT with the source server's published public key

@@ -9,9 +9,7 @@ function makeQuest(overrides: Partial<QuestDefinition> = {}): QuestDefinition {
     name: "Test Quest",
     description: "A test quest.",
     giver: "npc-elder",
-    objectives: [
-      { type: "kill", target: "goblin", description: "Kill 3 goblins", count: 3 },
-    ],
+    objectives: [{ type: "kill", target: "goblin", description: "Kill 3 goblins", count: 3 }],
     ...overrides,
   } as QuestDefinition;
 }
@@ -120,12 +118,15 @@ describe("QuestManager", () => {
 
     test("sequential objectives must complete in order", () => {
       const qm = new QuestManager();
-      qm.registerDefinition("q1", makeQuest({
-        objectives: [
-          { type: "kill", target: "goblin", description: "Kill goblin", count: 1 },
-          { type: "talk", target: "npc-elder", description: "Report back", count: 1 },
-        ],
-      } as any));
+      qm.registerDefinition(
+        "q1",
+        makeQuest({
+          objectives: [
+            { type: "kill", target: "goblin", description: "Kill goblin", count: 1 },
+            { type: "talk", target: "npc-elder", description: "Report back", count: 1 },
+          ],
+        } as any),
+      );
       qm.acceptQuest(PLAYER, "q1");
 
       // Talking before killing should not advance
@@ -145,11 +146,14 @@ describe("QuestManager", () => {
 
     test("recordCollect with count", () => {
       const qm = new QuestManager();
-      qm.registerDefinition("q1", makeQuest({
-        objectives: [
-          { type: "collect", target: "herb", description: "Collect 5 herbs", count: 5 },
-        ],
-      } as any));
+      qm.registerDefinition(
+        "q1",
+        makeQuest({
+          objectives: [
+            { type: "collect", target: "herb", description: "Collect 5 herbs", count: 5 },
+          ],
+        } as any),
+      );
       qm.acceptQuest(PLAYER, "q1");
 
       qm.recordCollect(PLAYER, "herb", 3);
@@ -162,11 +166,19 @@ describe("QuestManager", () => {
 
     test("recordVisit tracks room visits", () => {
       const qm = new QuestManager();
-      qm.registerDefinition("q1", makeQuest({
-        objectives: [
-          { type: "visit", target: "dark-forest:clearing", description: "Visit the clearing", count: 1 },
-        ],
-      } as any));
+      qm.registerDefinition(
+        "q1",
+        makeQuest({
+          objectives: [
+            {
+              type: "visit",
+              target: "dark-forest:clearing",
+              description: "Visit the clearing",
+              count: 1,
+            },
+          ],
+        } as any),
+      );
       qm.acceptQuest(PLAYER, "q1");
 
       const updated = qm.recordVisit(PLAYER, "dark-forest:clearing");
@@ -264,9 +276,12 @@ describe("QuestManager", () => {
   describe("completable quests", () => {
     test("returns quests with all objectives done at the right NPC", () => {
       const qm = new QuestManager();
-      qm.registerDefinition("q1", makeQuest({
-        objectives: [{ type: "kill", target: "goblin", description: "Kill goblin", count: 1 }],
-      } as any));
+      qm.registerDefinition(
+        "q1",
+        makeQuest({
+          objectives: [{ type: "kill", target: "goblin", description: "Kill goblin", count: 1 }],
+        } as any),
+      );
       qm.acceptQuest(PLAYER, "q1");
 
       // Not completable yet
@@ -280,11 +295,14 @@ describe("QuestManager", () => {
 
     test("uses turnIn NPC when specified", () => {
       const qm = new QuestManager();
-      qm.registerDefinition("q1", makeQuest({
-        giver: "npc-elder",
-        turnIn: "npc-blacksmith",
-        objectives: [{ type: "kill", target: "goblin", description: "Kill goblin", count: 1 }],
-      } as any));
+      qm.registerDefinition(
+        "q1",
+        makeQuest({
+          giver: "npc-elder",
+          turnIn: "npc-blacksmith",
+          objectives: [{ type: "kill", target: "goblin", description: "Kill goblin", count: 1 }],
+        } as any),
+      );
       qm.acceptQuest(PLAYER, "q1");
       qm.recordKill(PLAYER, "goblin");
 

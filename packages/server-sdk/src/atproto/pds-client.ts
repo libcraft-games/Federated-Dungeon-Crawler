@@ -93,8 +93,12 @@ function isNotFound(err: unknown): boolean {
   if (err && typeof err === "object") {
     if ("status" in err && (err as { status: number }).status === 404) return true;
     if ("error" in err && (err as { error: string }).error === "RecordNotFound") return true;
-    if ("message" in err && typeof (err as { message: string }).message === "string" &&
-      (err as { message: string }).message.includes("Could not locate record")) return true;
+    if (
+      "message" in err &&
+      typeof (err as { message: string }).message === "string" &&
+      (err as { message: string }).message.includes("Could not locate record")
+    )
+      return true;
   }
   return false;
 }

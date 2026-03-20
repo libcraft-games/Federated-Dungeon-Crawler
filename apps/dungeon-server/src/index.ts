@@ -26,9 +26,7 @@ import {
 } from "./commands/index.js";
 import type { CharacterProfile } from "@realms/lexicons";
 
-const config = loadConfig(
-  decodeURIComponent(new URL("../data", import.meta.url).pathname),
-);
+const config = loadConfig(decodeURIComponent(new URL("../data", import.meta.url).pathname));
 
 // Rate limiters
 const authLimiter = new RateLimiter(10, 60_000); // 10 auth attempts per minute per IP

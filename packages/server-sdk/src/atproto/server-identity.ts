@@ -86,8 +86,10 @@ export class ServerIdentity {
     try {
       await this.initSigningKey();
     } catch (err) {
-      console.warn("   Signing key init failed (federation features disabled):",
-        err instanceof Error ? err.message : err);
+      console.warn(
+        "   Signing key init failed (federation features disabled):",
+        err instanceof Error ? err.message : err,
+      );
     }
 
     await this.publishServerRecord(config, serverName, serverDescription);
